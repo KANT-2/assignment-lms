@@ -1,3 +1,126 @@
 {# apps/tutor/templates/tutor/submission_dashboard.html #}
-{# 튜터A — FR-007 제출 현황 / FR-008 제출물 상세 / FR-010 재제출 요청 #}
-{# base.html 상속. 제출자·미제출자 목록, 제출률, 제출물 상세 링크 #}
+{# 튜터A — FR-010 제출 현황 대시보드 (제출률 + 제출자/미제출자 명단 + 검색/필터/정렬) #}
+{# base.html 상속. 성취율(튜터:AI 가중합산)은 ERD v6 §4.3 폐기안이라 포함하지 않음 #}
+{% extends "base.html" %}
+
+{% block title %}제출 현황 — {{ assignment.title }}{% endblock %}
+
+{% block page_header %}
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+      <h1 class="h3 mb-1">제출 현황 — {{ assignment.title }}</h1>
+      <p class="text-muted mb-0">
+        마감 {{ assignment.due_at|date:"Y-m-d H:i" }}
+        · {% if assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}
+        · {% if assignment.allow_late %}지각 허용{% else %}지각 불가{% endif %}
+        {% if is_overdue %}<span class="badge text-bg-warning ms-1">마감됨</span>{% endif %}
+      </p>
+    </div>
+    <a href="{% url 'tutor:assignment-list' %}" class="btn btn-outline-secondary">과제 목록</a>
+  </div>
+{% endblock %}
+
+{% block content %}
+{# ── 요약 ─────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-muted small">제출률</div>
+      <div class="h4 mb-0">{{ stats.rate }}%</div>
+      <div class="text-muted small">{{ stats.submitted }} / {{ stats.total }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-muted small">제출</div>
+      <div class="h4 mb-0">{{ stats.submitted }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-muted small">미제출</div>
+      <div class="h4 mb-0">{{ stats.unsubmitted }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-muted small">피드백 대기</div>
+      <div class="h4 mb-0">{{ stats.pending }}</div>
+    </div></div>
+  </div>
+</div>
+
+{# ── 검색 / 필터 / 정렬 ───────────────────────────────── #}
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-12 col-md-5">
+    <label for="q" class="form-label">이름 검색{% if assignment.is_team %} (팀명·팀원){% endif %}</label>
+    <input type="search" class="form-control" id="q" name="q" value="{{ filters.q }}"
+           placeholder="{% if assignment.is_team %}팀명 또는 팀원 이름{% else %}학생 이름{% endif %}">
+  </div>
+  <div class="col-6 col-md-3">
+    <label for="status" class="form-label">상태</label>
+    <select class="form-select" id="status" name="status">
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <label for="sort" class="form-label">정렬</label>
+    <select class="form-select" id="sort" name="sort">
+      {% for value, label in sort_choices %}
+        <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-md-1 d-grid">
+    <button type="submit" class="btn btn-primary">적용</button>
+  </div>
+</form>
+
+{# ── 명단 ─────────────────────────────────────────────── #}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% if assignment.is_team %}팀{% else %}학생{% endif %}</th>
+          {% if assignment.is_team %}<th scope="col">팀원</th>{% endif %}
+          <th scope="col">상태</th>
+          <th scope="col">제출 시각</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="fw-semibold">{{ row.name }}</td>
+            {% if assignment.is_team %}
+              <td class="text-muted small">{{ row.member_names|join:", " }}</td>
+            {% endif %}
+            <td>
+              {% if row.submitted %}
+                <span class="badge text-bg-success">제출</span>
+                {% if row.is_late %}<span class="badge text-bg-warning">지각 제출</span>{% endif %}
+                {% if row.feedback_done %}
+                  <span class="badge text-bg-light border">피드백 완료</span>
+                {% else %}
+                  <span class="badge text-bg-light border">피드백 대기</span>
+                {% endif %}
+              {% else %}
+                <span class="badge text-bg-danger">미제출</span>
+              {% endif %}
+            </td>
+            <td>{% if row.submitted_at %}{{ row.submitted_at|date:"Y-m-d H:i" }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="{% if assignment.is_team %}4{% else %}3{% endif %}" class="text-center text-muted py-4">
+              조건에 맞는 대상이 없습니다.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

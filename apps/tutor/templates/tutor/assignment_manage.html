@@ -1,3 +1,208 @@
 {# apps/tutor/templates/tutor/assignment_manage.html #}
 {# 튜터A — FR-001 과제 생성 / FR-002 수정·삭제·공개설정 #}
 {# base.html 상속. 과제 목록 + 생성/편집 폼 #}
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}과제 관리{% endblock %}
+
+{% block page_header %}
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+      <h1 class="h3 mb-1">과제 관리</h1>
+      <p class="text-muted mb-0">과제를 등록·수정·삭제하고 제출 현황을 확인합니다.</p>
+    </div>
+    <a href="#assignment-form" class="btn btn-primary">새 과제 등록</a>
+  </div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  {# ── 과제 목록 ─────────────────────────────────────── #}
+  <div class="col-12 col-xl-8">
+    <div class="card">
+      <div class="card-header bg-white">
+        <span class="fw-semibold">과제 목록</span>
+        <span class="text-muted small">({{ assignments|length }}건)</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">과제명</th>
+              <th scope="col">구분</th>
+              <th scope="col">마감일시</th>
+              <th scope="col" class="text-end">제출</th>
+              <th scope="col" class="text-end">관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in assignments %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ a.title }}</div>
+                  <div class="d-flex gap-1 mt-1">
+                    {% if a.is_required %}
+                      <span class="badge text-bg-primary">필수</span>
+                    {% else %}
+                      <span class="badge text-bg-secondary">선택</span>
+                    {% endif %}
+                    {% if a.allow_late %}
+                      <span class="badge text-bg-light border">지각 허용</span>
+                    {% else %}
+                      <span class="badge text-bg-light border">지각 불가</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>{% if a.is_team %}팀 과제{% else %}개인 과제{% endif %}</td>
+                <td>{{ a.due_at|date:"Y-m-d H:i" }}</td>
+                <td class="text-end">
+                  <a href="{% url 'tutor:submission-dashboard' a.pk %}">{{ a.submission_count }}건</a>
+                </td>
+                <td class="text-end text-nowrap">
+                  <a href="{% url 'tutor:assignment-edit' a.pk %}" class="btn btn-sm btn-outline-secondary">수정</a>
+                  {% if a.submission_count %}
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal-{{ a.pk }}">삭제</button>
+                  {% else %}
+                    <form method="post" action="{% url 'tutor:assignment-delete' a.pk %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">등록된 과제가 없습니다.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if deleted_assignments %}
+      <div class="card mt-3">
+        <div class="card-header bg-white">
+          <span class="fw-semibold">삭제된 과제</span>
+          <span class="text-muted small">— 실행취소로 되살릴 수 있습니다</span>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for a in deleted_assignments %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span class="text-muted">{{ a.title }} <small>({{ a.deleted_at|date:"Y-m-d H:i" }} 삭제)</small></span>
+              <form method="post" action="{% url 'tutor:assignment-restore' a.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary">실행취소</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ── 등록 / 수정 폼 ────────────────────────────────── #}
+  <div class="col-12 col-xl-4">
+    <div class="card" id="assignment-form">
+      <div class="card-header bg-white fw-semibold">
+        {% if form_mode == "edit" %}과제 수정 — {{ editing.title }}{% else %}새 과제 등록{% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post"
+              action="{% if form_mode == 'edit' %}{% url 'tutor:assignment-edit' editing.pk %}{% else %}{% url 'tutor:assignment-list' %}{% endif %}"
+              novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+            {% render_field form.title class+="form-control" %}
+            {% for e in form.title.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+            {% render_field form.description class+="form-control" %}
+            {% for e in form.description.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.due_at.id_for_label }}" class="form-label">{{ form.due_at.label }}</label>
+            {% render_field form.due_at class+="form-control" %}
+            {% for e in form.due_at.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="form-check mb-2">
+            {% render_field form.is_required class+="form-check-input" %}
+            <label for="{{ form.is_required.id_for_label }}" class="form-check-label">{{ form.is_required.label }}</label>
+            {% if form.is_required.help_text %}<div class="form-text">{{ form.is_required.help_text }}</div>{% endif %}
+          </div>
+
+          <div class="form-check mb-2">
+            {% render_field form.allow_late class+="form-check-input" %}
+            <label for="{{ form.allow_late.id_for_label }}" class="form-check-label">{{ form.allow_late.label }}</label>
+            {% if form.allow_late.help_text %}<div class="form-text">{{ form.allow_late.help_text }}</div>{% endif %}
+          </div>
+
+          <div class="form-check mb-3">
+            {% if form.has_submissions %}
+              {# 제출물이 있어 잠금: 보이는 체크박스는 disabled, 실제 값은 hidden 으로 유지 #}
+              <input type="checkbox" class="form-check-input" disabled
+                     {% if form.is_team.value %}checked{% endif %}>
+              <input type="hidden" name="{{ form.is_team.html_name }}"
+                     value="{% if form.is_team.value %}on{% endif %}">
+            {% else %}
+              {% render_field form.is_team class+="form-check-input" %}
+            {% endif %}
+            <label for="{{ form.is_team.id_for_label }}" class="form-check-label">{{ form.is_team.label }}</label>
+            {% if form.is_team.help_text %}<div class="form-text">{{ form.is_team.help_text }}</div>{% endif %}
+            {% for e in form.is_team.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              {% if form_mode == "edit" %}수정 저장{% else %}등록{% endif %}
+            </button>
+            {% if form_mode == "edit" %}
+              <a href="{% url 'tutor:assignment-list' %}" class="btn btn-outline-secondary">취소</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── 삭제 확인 모달 (제출물 있는 과제만) ─────────────────── #}
+{% for a in assignments %}
+  {% if a.submission_count %}
+    <div class="modal fade" id="deleteModal-{{ a.pk }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title h5">과제 삭제 확인</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-1"><strong>{{ a.title }}</strong> 과제에는 이미 제출물 {{ a.submission_count }}건이 있습니다.</p>
+            <p class="text-muted mb-0">삭제해도 실행취소로 되돌릴 수 있습니다.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+            <form method="post" action="{% url 'tutor:assignment-delete' a.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="confirm" value="yes">
+              <button type="submit" class="btn btn-danger">삭제</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endfor %}
+{% endblock %}
