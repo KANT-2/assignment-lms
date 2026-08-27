@@ -4,12 +4,14 @@
 # 별도의 accounts DB 에 이미 존재하는 테이블을 읽기 전용으로 매핑
 # settings 의 DATABASE_ROUTERS 가 이 모델들을 accounts DB 로 라우팅
 #
-# 여기에 들어갈 모델:
+# 여기에 들어갈 모델 (상세: docs/assignment-lms-ERD.md):
 # - AccountsUser (Meta: managed=False, db_table="accounts_user")
-#     - id, email, name, role(학생/튜터), is_active, date_joined ...
+#     - id, email, name, role("STUDENT" | "TUTOR"), is_active, date_joined ...
 # - TeamsTeam   (Meta: managed=False, db_table="teams_team")
 #     - id, name, ...
-# - (필요 시) 팀-멤버 매핑 테이블 모델
+# - TeamMember  (Meta: managed=False) — 팀-학생 매핑
+#     - team_id, user_id, is_representative(팀 대표 여부 — AX Evaluator에 추가 요청중, PRD 9장)
+#     - 실제 테이블명/컬럼은 AX Evaluator 스키마 확인 후 확정
 #
 # 주의:
 # - 이 모델들로 write/save 하지 않는다 (읽기 전용)
