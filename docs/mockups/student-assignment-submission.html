@@ -1,0 +1,1109 @@
+<title>AX 프로젝트 과제 확인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1f8;
+    --surface: #ffffff;
+    --surface-muted: #f4f6fb;
+    --surface-sunken: #eef1f8;
+    --text: #1c2130;
+    --text-muted: #6b7280;
+    --text-faint: #9aa1b1;
+    --border: #e4e8f1;
+    --border-strong: #d5dbe8;
+    --accent: #4f6df5;
+    --accent-soft: #eaefff;
+    --accent-text: #3a56d4;
+    --green: #1fa971;
+    --green-soft: #e5f7ee;
+    --red: #ef4b4b;
+    --red-soft: #fdecec;
+    --amber: #c98a1a;
+    --amber-soft: #fbf0dd;
+    --purple: #7c4fd6;
+    --purple-soft: #f1e9ff;
+    --ai: #0f9488;
+    --ai-soft: #e3f7f3;
+    --shadow: 0 1px 2px rgba(24, 30, 51, 0.03), 0 1px 10px rgba(24, 30, 51, 0.03);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  /* This mockup commits to a single light look by design (no dark mode),
+     except the embedded code preview, which is intentionally always dark. */
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Noto Sans KR", "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+    padding: 28px 20px 60px;
+  }
+
+  a { color: inherit; }
+
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .nav-links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    text-decoration: none;
+    width: fit-content;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+  }
+  .back-link:hover { color: var(--accent-text); }
+
+  .page-head { display: flex; flex-direction: column; gap: 6px; }
+  .breadcrumb { font-size: 12.5px; color: var(--text-faint); font-weight: 600; }
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1.page-title {
+    font-size: 21px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .page-sub { font-size: 12.5px; color: var(--text-muted); }
+
+  .badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge.type { background: var(--accent-soft); color: var(--accent-text); }
+  .badge.type.optional { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.unit { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.unit.team { background: var(--purple-soft); color: var(--purple); }
+  .badge.dday { background: var(--red-soft); color: var(--red); }
+  .badge.dday.muted { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.dday.danger { background: var(--red); color: #fff; }
+  .due-text { font-size: 12.5px; color: var(--text-muted); }
+
+  /* ---------- Deadline-passed alert ---------- */
+  .alert-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--red-soft);
+    border: 1px solid #f6c9c9;
+    border-radius: var(--radius-lg);
+  }
+  .alert-banner .ab-icon { font-size: 20px; flex-shrink: 0; }
+  .alert-banner .ab-title { font-size: 13.5px; font-weight: 800; color: #b53030; }
+  .alert-banner .ab-sub { font-size: 12px; color: #c25050; margin-top: 2px; }
+
+  .dropzone.disabled { cursor: not-allowed; opacity: 0.55; background: var(--surface-sunken); }
+  .dropzone.disabled:hover { background: var(--surface-sunken); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 20px 22px 22px;
+  }
+
+  .card-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .flag {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10.5px;
+    font-weight: 800;
+    flex-shrink: 0;
+    border: 1.5px solid currentColor;
+    cursor: default;
+  }
+  .flag.required { color: var(--red); }
+  .flag.help { color: var(--accent); font-size: 10px; }
+
+  /* ---------- Assignment info card ---------- */
+  .info-line {
+    display: flex;
+    gap: 8px;
+    font-size: 13.5px;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .info-line:last-child { border-bottom: none; }
+  .info-line .k { flex-shrink: 0; width: 84px; color: var(--text-muted); font-weight: 600; }
+  .info-line .v { flex: 1; }
+  .instructor-note {
+    margin-top: 12px;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  /* ---------- Upload card ---------- */
+  .dropzone {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .dropzone:hover { background: var(--surface-muted); }
+  .dropzone.dragging { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone .up-icon { font-size: 26px; margin-bottom: 8px; }
+  .dropzone .up-main { font-size: 13.5px; font-weight: 600; }
+  .dropzone .up-sub { font-size: 11.5px; color: var(--text-faint); margin-top: 4px; }
+
+  .file-chip {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-muted);
+  }
+  .file-chip.show { display: flex; }
+  .file-chip .fi-icon { font-size: 20px; flex-shrink: 0; }
+  .file-chip .fi-body { flex: 1; min-width: 0; }
+  .file-chip .fi-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-chip .fi-size { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .file-chip .fi-remove { flex-shrink: 0; border: none; background: none; color: var(--text-faint); font-size: 16px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+  .file-chip .fi-remove:hover { background: var(--border); color: var(--text); }
+
+  .preview-wrap { margin-top: 14px; }
+  .preview-head { font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .preview-empty { color: var(--text-faint); font-size: 12.5px; padding: 18px 0; text-align: center; }
+  .preview-fallback { display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--surface-sunken); border-radius: var(--radius-md); font-size: 13px; color: var(--text-muted); }
+  .preview-fallback .pf-icon { font-size: 28px; }
+  .preview-fallback b { color: var(--text); }
+
+  /* ---------- Code block (dark, fixed theme) ---------- */
+  .code-block {
+    background: #1e1e2e;
+    border-radius: var(--radius-md);
+    padding: 12px 0;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .code-row { display: flex; white-space: pre; }
+  .code-row .ln { flex-shrink: 0; width: 38px; text-align: right; padding-right: 14px; color: #565873; user-select: none; }
+  .code-row .code-line { flex: 1; padding-right: 16px; color: #f2f2f7; }
+  .tok-comment { color: #8890b5; font-style: italic; }
+  .tok-string { color: #ffb86c; }
+  .tok-keyword { color: #ff79c6; font-weight: 600; }
+  .tok-const { color: #bd93f9; font-weight: 600; }
+  .tok-builtin { color: #8be9fd; }
+  .tok-number { color: #bd93f9; }
+  .tok-interp { color: #50fa7b; }
+
+  /* ---------- Notebook view ---------- */
+  .nb-view { display: flex; flex-direction: column; gap: 10px; }
+  .nb-cell { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+  .nb-cell-label { font-size: 10.5px; font-weight: 700; padding: 6px 12px; color: var(--text-faint); background: var(--surface-muted); letter-spacing: 0.02em; }
+  .nb-code .code-block { border-radius: 0; max-height: 260px; }
+  .nb-out-note { font-size: 11px; color: var(--text-faint); padding: 6px 12px; background: var(--surface-muted); border-top: 1px solid var(--border); }
+  .nb-md-body { padding: 12px 14px; font-size: 13px; line-height: 1.7; color: var(--text); }
+  .nb-md-body h2, .nb-md-body h3, .nb-md-body h4 { margin: 0 0 6px; font-size: 14.5px; }
+  .nb-md-body code { background: var(--surface-sunken); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: "SFMono-Regular", Consolas, monospace; }
+
+  /* ---------- Description card ---------- */
+  textarea#descInput {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13.5px;
+    color: var(--text);
+    font-family: inherit;
+    line-height: 1.6;
+  }
+  textarea#descInput:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .char-count { text-align: right; font-size: 11px; color: var(--text-faint); margin-top: 6px; }
+
+  /* ---------- Submit bar ---------- */
+  .submit-bar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .btn {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 11px 22px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-primary:disabled { background: var(--border-strong); color: var(--text-faint); cursor: not-allowed; filter: none; }
+  .btn-ghost { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border-strong); }
+  .btn-ghost:hover { background: var(--surface-muted); }
+
+  /* ---------- Confirm screen ---------- */
+  .success-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    background: var(--green-soft);
+    border-radius: var(--radius-lg);
+    border: 1px solid #cdeedd;
+  }
+  .success-banner .sb-icon {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--green);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+  .success-banner .sb-title { font-size: 14.5px; font-weight: 800; color: #147a52; }
+  .success-banner .sb-sub { font-size: 12px; color: #2f8a63; margin-top: 2px; }
+
+  .desc-view {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .desc-view.empty { color: var(--text-faint); }
+
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ================= SCREEN 0: 과제 확인 목록 ================= */
+  .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .list-head-left { display: flex; align-items: baseline; gap: 9px; }
+  .list-count { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+  .assign-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .assign-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .assign-row:hover { border-color: var(--border-strong); box-shadow: 0 2px 10px rgba(24,30,51,0.06); }
+  .assign-row.closed { background: var(--surface-muted); }
+  .assign-row .ar-main { flex: 1; min-width: 0; }
+  .assign-row .ar-title { font-size: 13.5px; font-weight: 700; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .assign-row .ar-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .assign-row .ar-due { font-size: 11.5px; color: var(--text-faint); }
+  .assign-row .ar-status {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .ar-status.st-done { background: var(--green-soft); color: #147a52; }
+  .ar-status.st-graded { background: var(--accent-soft); color: var(--accent-text); }
+  .ar-status.st-pending { background: var(--surface-sunken); color: var(--text-muted); }
+  .ar-status.st-none { background: var(--surface-sunken); color: var(--text-faint); }
+  .ar-status.st-missed { background: var(--red-soft); color: var(--red); }
+  .assign-row .ar-chevron { flex-shrink: 0; color: var(--text-faint); font-size: 15px; }
+
+  /* ================= SCREEN 3: 마감된 과제 결과 보기 ================= */
+  .ai-score-badge {
+    font-size: 13px;
+    font-weight: 800;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: var(--ai-soft);
+    color: var(--ai);
+    flex-shrink: 0;
+  }
+  .score-badge-accent {
+    font-size: 13px;
+    font-weight: 800;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    flex-shrink: 0;
+  }
+  .ai-feedback-text {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--ai-soft);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .tutor-feedback-text {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--accent-soft);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .ai-note { font-size: 11.5px; color: var(--text-faint); margin-top: 10px; }
+  .eval-pending { font-size: 12.5px; color: var(--text-faint); background: var(--surface-sunken); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .final-score-card { background: linear-gradient(135deg, var(--accent-soft), var(--ai-soft)); }
+  .final-score-big { font-size: 32px; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .final-score-max { font-size: 15px; font-weight: 700; color: var(--text-faint); }
+  .final-score-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+  .result-empty { text-align: center; color: var(--text-faint); font-size: 13px; padding: 32px 0; }
+
+  @media (max-width: 560px) {
+    .info-line { flex-direction: column; gap: 2px; }
+    .info-line .k { width: auto; }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="nav-links">
+    <a class="back-link" href="https://claude.ai/code/artifact/b1dd8ee5-8564-40c2-8577-2a04e09cf18b" target="_blank" rel="noopener">‹ 학생 대시보드로 돌아가기</a>
+    <a class="back-link" href="https://claude.ai/code/artifact/14f3403e-a1e9-4c7f-8229-f53e6b3c7b26" target="_blank" rel="noopener">튜터 과제 관리 보기 ›</a>
+  </div>
+
+  <!-- ============ SCREEN 0: 과제 확인 목록 ============ -->
+  <div class="screen active" id="listScreen">
+    <div class="page-head">
+      <div class="breadcrumb">AX 3차 프로젝트 평가 · 나의 과제</div>
+      <h1 class="page-title">과제 확인</h1>
+      <div class="page-sub">과제를 클릭하면 제출하거나, 마감된 과제는 내 제출물과 평가 결과를 확인할 수 있습니다.</div>
+    </div>
+    <div class="card">
+      <div class="list-head">
+        <div class="list-head-left">
+          <div class="card-title" style="margin-bottom:0;">📋 전체 과제</div>
+          <div class="list-count" id="listCount">0개</div>
+        </div>
+      </div>
+      <div class="assign-list" id="assignList"></div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 1: 제출 폼 ============ -->
+  <div class="screen" id="formScreen">
+    <button class="back-link" id="formBackBtn" type="button">‹ 과제 확인으로 돌아가기</button>
+
+    <div class="page-head">
+      <div class="breadcrumb" id="formBreadcrumb">AX 3차 프로젝트 평가</div>
+      <div class="title-row">
+        <h1 class="page-title">과제 제출</h1>
+        <span id="formBadges"></span>
+      </div>
+      <div class="due-text" id="dueText">-</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="flag help" title="과제 안내">?</span> 과제 안내</div>
+      <div class="info-line"><div class="k">과제명</div><div class="v" id="formInfoTitle">-</div></div>
+      <div class="info-line"><div class="k">필수 여부</div><div class="v" id="infoType">필수 과제</div></div>
+      <div class="info-line"><div class="k">과제 구분</div><div class="v" id="infoUnit">개인 과제 (본인 제출분만 채점됩니다)</div></div>
+      <div class="info-line"><div class="k">지각 제출</div><div class="v" id="infoLate">허용</div></div>
+      <div class="info-line"><div class="k">제출 형식</div><div class="v">.py 또는 .ipynb 권장 (그 외 형식도 첨부 가능)</div></div>
+      <div class="instructor-note" id="formInstructorNote"></div>
+    </div>
+
+    <div class="alert-banner" id="deadlineAlert" style="display:none;">
+      <div class="ab-icon">⛔</div>
+      <div>
+        <div class="ab-title">제출 마감이 지났습니다</div>
+        <div class="ab-sub">이 과제는 마감 후 제출이 허용되지 않아 더 이상 제출할 수 없습니다.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="flag required">!</span> 과제 파일 업로드</div>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="파일 업로드">
+        <div class="up-icon" id="dzIcon">📤</div>
+        <div class="up-main" id="dzMain">파일을 드래그하거나 클릭하여 업로드</div>
+        <div class="up-sub" id="dzSub">.py, .ipynb 파일은 자동으로 미리보기가 표시됩니다</div>
+      </div>
+      <input type="file" id="fileInput" accept=".py,.ipynb,.txt,.pdf,.zip,.docx,.hwp" hidden>
+
+      <div class="file-chip" id="fileChip">
+        <div class="fi-icon" id="fiIcon">📄</div>
+        <div class="fi-body">
+          <div class="fi-name" id="fiName"></div>
+          <div class="fi-size" id="fiSize"></div>
+        </div>
+        <button class="fi-remove" id="fiRemove" aria-label="파일 제거" type="button">×</button>
+      </div>
+
+      <div class="preview-wrap" id="previewWrap" style="display:none;">
+        <div class="preview-head">🔍 미리보기</div>
+        <div id="previewArea"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 과제 설명</div>
+      <textarea id="descInput" maxlength="500" placeholder="과제에 대해 간단히 설명해주세요. (예: 구현 방식, 어려웠던 점, 참고한 자료 등)"></textarea>
+      <div class="char-count"><span id="descCount">0</span> / 500자</div>
+    </div>
+
+    <div class="submit-bar">
+      <button class="btn btn-primary" id="submitBtn" disabled>제출하기</button>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 2: 제출 확인 ============ -->
+  <div class="screen" id="confirmScreen">
+    <button class="back-link" id="confirmBackBtn" type="button">‹ 과제 확인으로 돌아가기</button>
+
+    <div class="success-banner">
+      <div class="sb-icon">✓</div>
+      <div>
+        <div class="sb-title">과제가 제출되었습니다</div>
+        <div class="sb-sub" id="submittedAt">제출 시각: -</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📄 제출 정보</div>
+      <div class="info-line"><div class="k">과제명</div><div class="v" id="confirmTitle">-</div></div>
+      <div class="info-line"><div class="k">제출 파일</div><div class="v" id="confirmFileName">-</div></div>
+      <div class="info-line"><div class="k">상태</div><div class="v" style="color:var(--green); font-weight:700;">제출 완료</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 과제 설명</div>
+      <div class="desc-view" id="confirmDesc"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔍 제출 파일 미리보기</div>
+      <div id="confirmPreviewArea"></div>
+    </div>
+
+    <div class="submit-bar" style="justify-content: space-between;">
+      <span class="due-text" id="confirmDueNote"></span>
+      <button class="btn btn-ghost" id="resubmitBtn" type="button">다시 제출하기</button>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 3: 마감된 과제 결과 보기 ============ -->
+  <div class="screen" id="resultScreen">
+    <button class="back-link" id="resultBackBtn" type="button">‹ 과제 확인으로 돌아가기</button>
+
+    <div class="page-head">
+      <div class="breadcrumb">AX 3차 프로젝트 평가 · 마감된 과제</div>
+      <div class="title-row">
+        <h1 class="page-title" id="resultTitle">-</h1>
+        <span id="resultBadges"></span>
+      </div>
+      <div class="due-text" id="resultDueText">-</div>
+    </div>
+
+    <div id="resultBody"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var KEYWORDS = ["if","elif","else","for","while","def","return","import","from","as","in","is","not","and","or","class","try","except","finally","with","lambda","pass","break","continue","global","nonlocal","yield","del","assert","raise"];
+  var CONSTS = ["True","False","None"];
+  var BUILTINS = ["int","str","float","bool","input","print","len","range","type","list","dict","set","tuple","open","sum","min","max","abs","sorted","enumerate","zip","map","filter","round"];
+  var KEYWORD_SET = {}; KEYWORDS.forEach(function(k){ KEYWORD_SET[k] = true; });
+  var CONST_SET = {}; CONSTS.forEach(function(k){ CONST_SET[k] = true; });
+  var BUILTIN_SET = {}; BUILTINS.forEach(function(k){ BUILTIN_SET[k] = true; });
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function isIdentStart(ch) { return /[A-Za-z_]/.test(ch); }
+  function isIdentPart(ch) { return /[A-Za-z0-9_]/.test(ch); }
+  function isDigit(ch) { return /[0-9]/.test(ch); }
+
+  function highlightFString(raw) {
+    var out = "";
+    var i = 0, n = raw.length;
+    while (i < n) {
+      if (raw[i] === "{" && raw[i + 1] !== "{") {
+        var j = i + 1, depth = 1;
+        while (j < n && depth > 0) {
+          if (raw[j] === "{") depth++;
+          else if (raw[j] === "}") depth--;
+          j++;
+        }
+        var inner = raw.slice(i + 1, Math.max(i + 1, j - 1));
+        out += "{<span class=\"tok-interp\">" + escapeHtml(inner) + "</span>}";
+        i = j;
+        continue;
+      }
+      out += escapeHtml(raw[i]);
+      i++;
+    }
+    return out;
+  }
+
+  function highlightPythonLine(line) {
+    var out = "";
+    var i = 0, n = line.length;
+    while (i < n) {
+      var ch = line[i];
+      if (ch === "#") {
+        out += "<span class=\"tok-comment\">" + escapeHtml(line.slice(i)) + "</span>";
+        break;
+      }
+      if ((ch === "f" || ch === "F") && (line[i + 1] === "\"" || line[i + 1] === "'")) {
+        var quote = line[i + 1];
+        var j2 = i + 2;
+        while (j2 < n && line[j2] !== quote) { if (line[j2] === "\\") j2++; j2++; }
+        j2 = Math.min(j2 + 1, n);
+        out += "<span class=\"tok-string\">" + highlightFString(line.slice(i, j2)) + "</span>";
+        i = j2;
+        continue;
+      }
+      if (ch === "\"" || ch === "'") {
+        var j = i + 1;
+        while (j < n && line[j] !== ch) { if (line[j] === "\\") j++; j++; }
+        j = Math.min(j + 1, n);
+        out += "<span class=\"tok-string\">" + escapeHtml(line.slice(i, j)) + "</span>";
+        i = j;
+        continue;
+      }
+      if (isIdentStart(ch)) {
+        var k = i + 1;
+        while (k < n && isIdentPart(line[k])) k++;
+        var word = line.slice(i, k);
+        if (KEYWORD_SET[word]) out += "<span class=\"tok-keyword\">" + word + "</span>";
+        else if (CONST_SET[word]) out += "<span class=\"tok-const\">" + word + "</span>";
+        else if (BUILTIN_SET[word]) out += "<span class=\"tok-builtin\">" + word + "</span>";
+        else out += escapeHtml(word);
+        i = k;
+        continue;
+      }
+      if (isDigit(ch)) {
+        var m = i + 1;
+        while (m < n && /[0-9.]/.test(line[m])) m++;
+        out += "<span class=\"tok-number\">" + line.slice(i, m) + "</span>";
+        i = m;
+        continue;
+      }
+      out += escapeHtml(ch);
+      i++;
+    }
+    return out;
+  }
+
+  function buildCodeBlock(code) {
+    var lines = String(code).replace(/\r\n/g, "\n").split("\n");
+    if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+    var rows = lines.map(function (line, idx) {
+      var highlighted = highlightPythonLine(line);
+      return '<div class="code-row"><span class="ln">' + (idx + 1) + '</span><span class="code-line">' + (highlighted || "&nbsp;") + "</span></div>";
+    }).join("");
+    return '<div class="code-block">' + rows + "</div>";
+  }
+
+  function simpleMarkdown(src) {
+    var s = escapeHtml(src);
+    s = s.replace(/^#### (.*)$/gm, "<h4>$1</h4>")
+         .replace(/^### (.*)$/gm, "<h4>$1</h4>")
+         .replace(/^## (.*)$/gm, "<h3>$1</h3>")
+         .replace(/^# (.*)$/gm, "<h2>$1</h2>")
+         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+         .replace(/`([^`]+)`/g, "<code>$1</code>")
+         .replace(/\n/g, "<br>");
+    return s;
+  }
+
+  function renderNotebook(nb) {
+    var cells = nb.cells || [];
+    if (!cells.length) return '<div class="preview-empty">셀이 없는 노트북입니다.</div>';
+    var html = '<div class="nb-view">';
+    cells.forEach(function (cell) {
+      var src = Array.isArray(cell.source) ? cell.source.join("") : (cell.source || "");
+      if (cell.cell_type === "code") {
+        var execCount = (cell.execution_count === null || cell.execution_count === undefined) ? " " : cell.execution_count;
+        html += '<div class="nb-cell nb-code">'
+          + '<div class="nb-cell-label">In [' + execCount + ']:</div>'
+          + buildCodeBlock(src)
+          + ((cell.outputs && cell.outputs.length) ? '<div class="nb-out-note">▸ 실행 결과 ' + cell.outputs.length + '개 (미리보기 생략)</div>' : "")
+          + "</div>";
+      } else if (cell.cell_type === "markdown") {
+        html += '<div class="nb-cell nb-markdown"><div class="nb-cell-label">Markdown</div><div class="nb-md-body">' + simpleMarkdown(src) + "</div></div>";
+      }
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  }
+
+  function extOf(name) {
+    var parts = name.split(".");
+    return parts.length > 1 ? parts.pop().toLowerCase() : "";
+  }
+
+  var ICONS = { py: "🐍", ipynb: "📓", pdf: "📕", zip: "🗜️", txt: "📄", docx: "📘", hwp: "📗", pptx: "📙" };
+  function iconFor(ext) { return ICONS[ext] || "📎"; }
+
+  function renderPreviewHtml(ext, content) {
+    if (ext === "py") {
+      return buildCodeBlock(content);
+    }
+    if (ext === "ipynb") {
+      try {
+        var nb = JSON.parse(content);
+        return renderNotebook(nb);
+      } catch (e) {
+        return '<div class="preview-fallback"><div class="pf-icon">⚠️</div><div>노트북 파일 형식을 해석하지 못했습니다.<br>파일이 손상되었거나 올바른 .ipynb 형식이 아닐 수 있어요.</div></div>';
+      }
+    }
+    return '<div class="preview-fallback"><div class="pf-icon">' + iconFor(ext) + '</div><div>이 파일 형식은 미리보기를 지원하지 않아요.<br>제출 시 파일명과 크기만 표시됩니다.</div></div>';
+  }
+
+  // ---------- Date helpers ----------
+  var WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function formatDue(d) {
+    return d.getFullYear() + "." + pad(d.getMonth() + 1) + "." + pad(d.getDate()) + " (" + WEEKDAYS[d.getDay()] + ") " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function formatTimestamp(d) {
+    return d.getFullYear() + "." + pad(d.getMonth() + 1) + "." + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function isPast(due) { return new Date().getTime() > due.getTime(); }
+  function ddayLabel(due) {
+    var now = new Date();
+    var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var startOfDue = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    var diffDays = Math.round((startOfDue - startOfToday) / 86400000);
+    if (now.getTime() > due.getTime()) return "마감됨";
+    if (diffDays === 0) return "오늘 마감";
+    return "마감 D-" + diffDays;
+  }
+
+  // ---------- Assignments (mirrors the tutor-side 과제 관리 seed data) ----------
+  var ASSIGNMENTS = [
+    { id: "a1", title: "1차 프로젝트 기획서 제출", desc: "이번 프로젝트의 목표와 추진 계획을 정리한 기획서를 제출하세요. 문제 정의, 목표, 일정 계획이 포함되어야 합니다.", due: new Date(2026, 7, 10, 23, 59), required: true, late: false, team: false },
+    { id: "a2", title: "2차 프로젝트 중간 발표 자료 제출", desc: "중간 발표에 사용할 슬라이드를 제출하세요. 진행 상황, 어려웠던 점, 향후 계획을 포함해주세요.", due: new Date(2026, 7, 20, 18, 0), required: true, late: true, team: true },
+    { id: "a3", title: "3차 프로젝트 실습 코드 제출", desc: "조건문을 활용해 상품 금액에 따라 할인율을 안내하는 프로그램을 작성하세요. 입력값 검증, 예외 케이스 처리 여부도 함께 평가합니다.", due: new Date(2026, 7, 27, 18, 0), required: true, late: true, team: false },
+    { id: "a4", title: "4차 프로젝트 최종 발표", desc: "최종 결과물과 발표 자료를 함께 제출하세요. 팀별로 한 명이 대표 제출하면 됩니다.", due: new Date(2026, 8, 3, 18, 0), required: false, late: true, team: true }
+  ];
+  function findAssignment(id) { return ASSIGNMENTS.filter(function (x) { return x.id === id; })[0]; }
+
+  // ---------- "나" = 김도윤. 튜터 과제 관리 목업의 1차/2차/3차 제출 데이터와 동일하게 맞춘 값입니다. ----------
+  var PY_SAMPLE_1 =
+"def discount_rate(amount):\n" +
+"    if amount >= 100000:\n" +
+"        return 0.2\n" +
+"    elif amount >= 50000:\n" +
+"        return 0.1\n" +
+"    elif amount >= 10000:\n" +
+"        return 0.05\n" +
+"    else:\n" +
+"        return 0.0\n" +
+"\n" +
+"def main():\n" +
+"    amount = int(input(\"상품 금액을 입력하세요: \"))\n" +
+"    if amount < 0:\n" +
+"        print(\"금액은 0 이상이어야 합니다.\")\n" +
+"        return\n" +
+"    rate = discount_rate(amount)\n" +
+"    discounted = amount * (1 - rate)\n" +
+"    print(f\"할인율: {rate*100:.0f}% / 최종 결제 금액: {discounted:.0f}원\")\n" +
+"\n" +
+"main()\n";
+
+  var MY_SUBMISSIONS = {
+    a1: {
+      status: "submitted", submittedAt: new Date(2026, 7, 9, 10, 0),
+      fileName: "김도윤_1차_기획서.pdf", ext: "pdf", content: "",
+      desc: "문제 정의와 목표, 추진 일정을 정리해 제출했습니다.", submittedBy: null,
+      feedback: "기획서 잘 작성했습니다. 다음 단계 일정도 조금 더 구체적으로 잡아주세요.", tutorScore: 94,
+      aiFeedback: { score: 90, text: "목표와 추진 일정이 명확하게 정리되어 있습니다. 리스크 관리 계획까지 포함하면 더 완성도 높은 기획서가 될 것 같습니다." }
+    },
+    a2: {
+      status: "submitted", submittedAt: new Date(2026, 7, 19, 14, 30),
+      fileName: "1팀_2차_발표자료.pdf", ext: "pdf", content: "",
+      desc: "중간까지 진행 상황과 다음 스프린트 계획을 담았습니다.", submittedBy: "김도윤",
+      feedback: "발표자료 깔끔하게 정리됐네요. 다음 발표 때는 리스크 요인도 함께 다뤄주세요.", tutorScore: 90,
+      aiFeedback: { score: 95, text: "발표 자료의 구성이 체계적이며 핵심 진행 상황이 잘 드러납니다. 다만 리스크 요인에 대한 언급이 부족해 보완이 필요합니다." }
+    },
+    a3: {
+      status: "submitted", submittedAt: new Date(2026, 7, 26, 14, 0),
+      fileName: "3차_실습코드.py", ext: "py", content: PY_SAMPLE_1,
+      desc: "if-elif로 구간별 할인율을 계산하도록 구현했습니다.", submittedBy: null,
+      feedback: null, tutorScore: null, aiFeedback: null
+    }
+    // a4: 아직 제출하지 않음 (미제출)
+  };
+
+  function badgeHtml(a) {
+    var typeCls = a.required ? "type" : "type optional";
+    var unitCls = a.team ? "unit team" : "unit";
+    var past = isPast(a.due);
+    var ddayCls = "dday" + (past ? (a.late ? " muted" : " danger") : "");
+    return '<span class="badge ' + typeCls + '">' + (a.required ? "필수" : "선택") + '</span> '
+      + '<span class="badge ' + unitCls + '">' + (a.team ? "팀 과제" : "개인 과제") + '</span> '
+      + '<span class="badge ' + ddayCls + '">' + ddayLabel(a.due) + '</span>';
+  }
+
+  // ========================================================================
+  // Screen switching
+  // ========================================================================
+  var screens = {
+    list: document.getElementById("listScreen"),
+    form: document.getElementById("formScreen"),
+    confirm: document.getElementById("confirmScreen"),
+    result: document.getElementById("resultScreen")
+  };
+  function showScreen(name) {
+    Object.keys(screens).forEach(function (k) { screens[k].classList.toggle("active", k === name); });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ========================================================================
+  // SCREEN 0: 과제 확인 목록
+  // ========================================================================
+  // AI 평가와 튜터 점수를 8:2(튜터:AI) 비율로 합산한 최종 점수. AI 점수가 없으면 튜터 100%.
+  function computeFinalScore(tutorScore, aiScore) {
+    if (aiScore === null || aiScore === undefined) return tutorScore;
+    return tutorScore * 0.8 + aiScore * 0.2;
+  }
+  function formatScore(n) {
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    var rounded = Math.round(n * 10) / 10;
+    return (rounded % 1 === 0) ? String(rounded) : String(rounded.toFixed(1));
+  }
+
+  function statusInfo(a, sub) {
+    var past = isPast(a.due);
+    if (sub) {
+      if (past) {
+        if (sub.feedback) {
+          var finalScore = computeFinalScore(sub.tutorScore, sub.aiFeedback ? sub.aiFeedback.score : null);
+          return { text: "평가 완료 · " + formatScore(finalScore) + "점", cls: "st-graded" };
+        }
+        return { text: "제출 완료 · 평가 대기 중", cls: "st-pending" };
+      }
+      return { text: sub.status === "late" ? "제출 완료 (지각)" : "제출 완료", cls: "st-done" };
+    }
+    if (past) {
+      return a.late ? { text: "미제출 (지각 제출 가능)", cls: "st-none" } : { text: "미제출로 마감", cls: "st-missed" };
+    }
+    return { text: "미제출", cls: "st-none" };
+  }
+
+  function renderAssignmentList() {
+    var list = document.getElementById("assignList");
+    document.getElementById("listCount").textContent = ASSIGNMENTS.length + "개";
+    list.innerHTML = "";
+    var sorted = ASSIGNMENTS.slice().sort(function (a, b) { return a.due - b.due; });
+    sorted.forEach(function (a) {
+      var sub = MY_SUBMISSIONS[a.id] || null;
+      var st = statusInfo(a, sub);
+      var row = document.createElement("div");
+      row.className = "assign-row" + (isPast(a.due) ? " closed" : "");
+      row.setAttribute("data-id", a.id);
+      row.innerHTML =
+        '<div class="ar-main">' +
+          '<div class="ar-title">' + escapeHtml(a.title) + '</div>' +
+          '<div class="ar-badges">' + badgeHtml(a) + ' <span class="ar-due">' + formatDue(a.due) + '</span></div>' +
+        '</div>' +
+        '<div class="ar-status ' + st.cls + '">' + st.text + '</div>' +
+        '<div class="ar-chevron">›</div>';
+      list.appendChild(row);
+    });
+  }
+  document.getElementById("assignList").addEventListener("click", function (e) {
+    var row = e.target.closest(".assign-row");
+    if (row) openAssignment(row.getAttribute("data-id"));
+  });
+
+  function openAssignment(id) {
+    var a = findAssignment(id);
+    if (!a) return;
+    var sub = MY_SUBMISSIONS[id] || null;
+    var past = isPast(a.due);
+    if (past) {
+      if (sub) openResultScreen(a, sub);
+      else if (a.late) openFormScreen(a);
+      else openResultScreen(a, null);
+    } else {
+      if (sub) openConfirmScreen(a, sub);
+      else openFormScreen(a);
+    }
+  }
+
+  function backToList() {
+    renderAssignmentList();
+    showScreen("list");
+  }
+  document.getElementById("formBackBtn").addEventListener("click", backToList);
+  document.getElementById("confirmBackBtn").addEventListener("click", backToList);
+  document.getElementById("resultBackBtn").addEventListener("click", backToList);
+
+  // ========================================================================
+  // SCREEN 1: 제출 폼
+  // ========================================================================
+  var activeAssignmentId = null;
+  var currentFile = null; // { name, size, ext, content }
+  var blockedByDeadline = false;
+
+  var dropzone = document.getElementById("dropzone");
+  var fileInput = document.getElementById("fileInput");
+  var fileChip = document.getElementById("fileChip");
+  var fiIcon = document.getElementById("fiIcon");
+  var fiName = document.getElementById("fiName");
+  var fiSize = document.getElementById("fiSize");
+  var fiRemove = document.getElementById("fiRemove");
+  var previewWrap = document.getElementById("previewWrap");
+  var previewArea = document.getElementById("previewArea");
+  var submitBtn = document.getElementById("submitBtn");
+  var descInput = document.getElementById("descInput");
+  var descCount = document.getElementById("descCount");
+  var dzIcon = document.getElementById("dzIcon");
+  var dzMain = document.getElementById("dzMain");
+  var dzSub = document.getElementById("dzSub");
+  var deadlineAlert = document.getElementById("deadlineAlert");
+
+  var TEXT_EXTS = { py: true, ipynb: true, txt: true, json: true, md: true };
+
+  function refreshSubmitState() { submitBtn.disabled = blockedByDeadline || !currentFile; }
+
+  function resetFileUI() {
+    currentFile = null;
+    fileChip.classList.remove("show");
+    previewWrap.style.display = "none";
+    previewArea.innerHTML = "";
+    fileInput.value = "";
+    refreshSubmitState();
+  }
+
+  function handleFile(file) {
+    var ext = extOf(file.name);
+    var size = file.size;
+    function finish(content) {
+      currentFile = { name: file.name, size: size, ext: ext, content: content };
+      fiIcon.textContent = iconFor(ext);
+      fiName.textContent = file.name;
+      fiSize.textContent = formatBytes(size);
+      fileChip.classList.add("show");
+      refreshSubmitState();
+      previewWrap.style.display = "block";
+      previewArea.innerHTML = renderPreviewHtml(ext, content || "");
+    }
+    if (ext === "py" || ext === "ipynb" || ext === "txt" || ext === "json" || ext === "md") {
+      var reader = new FileReader();
+      reader.onload = function () { finish(reader.result); };
+      reader.onerror = function () { finish(""); };
+      reader.readAsText(file);
+    } else {
+      finish("");
+    }
+  }
+
+  dropzone.addEventListener("click", function () { if (!blockedByDeadline) fileInput.click(); });
+  dropzone.addEventListener("keydown", function (e) {
+    if (blockedByDeadline) return;
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+  });
+  dropzone.addEventListener("dragover", function (e) { if (blockedByDeadline) return; e.preventDefault(); dropzone.classList.add("dragging"); });
+  dropzone.addEventListener("dragleave", function () { dropzone.classList.remove("dragging"); });
+  dropzone.addEventListener("drop", function (e) {
+    e.preventDefault();
+    dropzone.classList.remove("dragging");
+    if (blockedByDeadline) return;
+    if (e.dataTransfer.files && e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files && fileInput.files.length) handleFile(fileInput.files[0]);
+  });
+  fiRemove.addEventListener("click", function (e) { e.stopPropagation(); resetFileUI(); });
+  descInput.addEventListener("input", function () { descCount.textContent = descInput.value.length; });
+
+  function openFormScreen(a) {
+    activeAssignmentId = a.id;
+    resetFileUI();
+    descInput.value = "";
+    descCount.textContent = "0";
+
+    document.getElementById("formBreadcrumb").textContent = "AX 3차 프로젝트 평가 · " + (a.team ? "팀 과제" : "개인 과제");
+    document.getElementById("formBadges").innerHTML = badgeHtml(a);
+    document.getElementById("formInfoTitle").textContent = a.title;
+    document.getElementById("infoType").textContent = a.required ? "필수 과제" : "선택 과제 (제출 방식·마감·집계 방식은 필수 과제와 동일)";
+    document.getElementById("infoUnit").textContent = a.team ? "팀 과제 (팀 대표가 제출하면 팀 전체 제출로 처리됩니다)" : "개인 과제 (본인 제출분만 채점됩니다)";
+    document.getElementById("infoLate").textContent = a.late ? "허용 (마감 후에도 제출 가능하며, 지각 여부는 별도로 표시되지 않습니다)" : "불가 (마감 이후에는 제출이 차단됩니다)";
+    document.getElementById("formInstructorNote").textContent = a.desc;
+
+    var past = isPast(a.due);
+    blockedByDeadline = false; // openFormScreen is only ever called when submission is still allowed
+    if (past && a.late) {
+      deadlineAlert.style.display = "none";
+      document.getElementById("dueText").textContent = "제출 마감: " + formatDue(a.due) + " (지남 · 지각 제출 가능)";
+    } else {
+      deadlineAlert.style.display = "none";
+      document.getElementById("dueText").textContent = "제출 마감: " + formatDue(a.due);
+    }
+    dropzone.classList.remove("disabled");
+    descInput.disabled = false;
+    dzIcon.textContent = "📤";
+    dzMain.textContent = "파일을 드래그하거나 클릭하여 업로드";
+    dzSub.textContent = ".py, .ipynb 파일은 자동으로 미리보기가 표시됩니다";
+
+    refreshSubmitState();
+    showScreen("form");
+  }
+
+  submitBtn.addEventListener("click", function () {
+    if (!currentFile || blockedByDeadline || !activeAssignmentId) return;
+    var a = findAssignment(activeAssignmentId);
+    var now = new Date();
+    var sub = {
+      status: isPast(a.due) ? "late" : "submitted",
+      submittedAt: now,
+      fileName: currentFile.name, ext: currentFile.ext, content: currentFile.content,
+      desc: descInput.value.trim(),
+      submittedBy: a.team ? "김도윤" : null,
+      feedback: null, tutorScore: null, aiFeedback: null
+    };
+    MY_SUBMISSIONS[a.id] = sub;
+    openConfirmScreen(a, sub);
+  });
+
+  // ========================================================================
+  // SCREEN 2: 제출 확인
+  // ========================================================================
+  function openConfirmScreen(a, sub) {
+    activeAssignmentId = a.id;
+    document.getElementById("submittedAt").textContent = "제출 시각: " + formatTimestamp(sub.submittedAt) + (sub.status === "late" ? " (지각 제출)" : "");
+    document.getElementById("confirmTitle").textContent = a.title;
+    document.getElementById("confirmFileName").textContent = sub.fileName + (sub.content && currentFile && currentFile.size ? " (" + formatBytes(currentFile.size) + ")" : "");
+    var descView = document.getElementById("confirmDesc");
+    if (sub.desc && sub.desc.trim()) { descView.textContent = sub.desc; descView.classList.remove("empty"); }
+    else { descView.textContent = "작성된 설명이 없습니다."; descView.classList.add("empty"); }
+    document.getElementById("confirmPreviewArea").innerHTML = renderPreviewHtml(sub.ext, sub.content || "");
+    document.getElementById("confirmDueNote").textContent = "제출 마감: " + formatDue(a.due) + (isPast(a.due) ? " (지남)" : "");
+    showScreen("confirm");
+  }
+
+  document.getElementById("resubmitBtn").addEventListener("click", function () {
+    var a = findAssignment(activeAssignmentId);
+    if (a) openFormScreen(a);
+  });
+
+  // ========================================================================
+  // SCREEN 3: 마감된 과제 결과 보기
+  // ========================================================================
+  function evalBlockHtml(title, iconClass, score, text, scoreCls, textCls, note) {
+    return '<div class="card">' +
+      '<div class="list-head" style="margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">' +
+        '<div class="card-title" style="margin-bottom:0;">' + title + '</div>' +
+        (score !== null ? '<span class="' + scoreCls + '">' + score + '/100</span>' : '') +
+      '</div>' +
+      (text !== null ? '<div class="' + textCls + '">' + escapeHtml(text) + '</div>' + (note ? '<div class="ai-note">' + note + '</div>' : '')
+        : '<div class="eval-pending">아직 평가가 등록되지 않았습니다. 평가가 등록되면 여기에 표시됩니다.</div>') +
+    '</div>';
+  }
+
+  function openResultScreen(a, sub) {
+    activeAssignmentId = a.id;
+    document.getElementById("resultTitle").textContent = a.title;
+    document.getElementById("resultBadges").innerHTML = badgeHtml(a);
+    document.getElementById("resultDueText").textContent = "제출 마감: " + formatDue(a.due) + " (마감됨)";
+
+    var body = document.getElementById("resultBody");
+    if (!sub) {
+      body.innerHTML = '<div class="card"><div class="result-empty">이 과제는 마감되었으며, 제출 기록이 없습니다.</div></div>';
+      return;
+    }
+
+    var html = "";
+    html += '<div class="card">' +
+      '<div class="card-title">📄 내 제출 정보</div>' +
+      '<div class="info-line"><div class="k">제출 파일</div><div class="v">' + escapeHtml(sub.fileName) + '</div></div>' +
+      '<div class="info-line"><div class="k">제출 시각</div><div class="v">' + formatTimestamp(sub.submittedAt) + (sub.status === "late" ? " (지각 제출)" : "") + '</div></div>' +
+      (a.team ? '<div class="info-line"><div class="k">제출자</div><div class="v">' + escapeHtml(sub.submittedBy) + ' (팀 대표)</div></div>' : "") +
+    '</div>';
+
+    html += '<div class="card"><div class="card-title">🔍 제출 파일 미리보기</div>' + renderPreviewHtml(sub.ext, sub.content || "") + '</div>';
+
+    html += '<div class="card"><div class="card-title">📝 내가 작성한 설명</div><div class="desc-view' + (sub.desc && sub.desc.trim() ? "" : " empty") + '">' +
+      escapeHtml(sub.desc && sub.desc.trim() ? sub.desc : "작성된 설명이 없습니다.") + '</div></div>';
+
+    if (sub.feedback) {
+      var aiScore = sub.aiFeedback ? sub.aiFeedback.score : null;
+      var finalScore = computeFinalScore(sub.tutorScore, aiScore);
+      var breakdown = (aiScore !== null)
+        ? ("튜터 " + sub.tutorScore + "점 · AI " + aiScore + "점 반영 (8:2)")
+        : "AI 미평가 · 튜터 점수 100% 반영";
+      html += '<div class="card final-score-card">' +
+        '<div class="card-title" style="margin-bottom:6px;">🏆 최종 점수</div>' +
+        '<div class="final-score-big">' + formatScore(finalScore) + ' <span class="final-score-max">/ 100</span></div>' +
+        '<div class="final-score-sub">' + breakdown + '</div>' +
+      '</div>';
+    }
+
+    var aiTitle = "🤖 AI 평가" + (sub.feedback && sub.aiFeedback ? " (20% 반영)" : "");
+    var tutorTitle = "🧑‍🏫 튜터 평가" + (sub.feedback ? (sub.aiFeedback ? " (80% 반영)" : " (100% 반영)") : "");
+
+    html += evalBlockHtml(aiTitle, "", sub.aiFeedback ? sub.aiFeedback.score : null, sub.aiFeedback ? sub.aiFeedback.text : null, "ai-score-badge", "ai-feedback-text", "AI 기반 1차 평가입니다 (시뮬레이션).");
+
+    html += evalBlockHtml(tutorTitle, "", sub.tutorScore !== null && sub.tutorScore !== undefined ? sub.tutorScore : null, sub.feedback, "score-badge-accent", "tutor-feedback-text", null);
+
+    body.innerHTML = html;
+    showScreen("result");
+  }
+
+  // ========================================================================
+  // Init
+  // ========================================================================
+  renderAssignmentList();
+})();
+</script>

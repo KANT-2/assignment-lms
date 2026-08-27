@@ -11,7 +11,7 @@
 |---|---|---|---|
 | `student-dashboard.html` | 학생 대시보드 — 공지 배너, 달력(강의/과제·평가 일정), 오늘 일정, TODO 위젯, 내 팀, 최근 공개 결과 | PRD 7장 | 학생팀 공용 |
 | `student-assignment-submission.html` | 학생 — 과제 목록 → 제출 폼(파일 업로드 + .py/.ipynb 미리보기 + 설명) → 제출 확인 → 재제출 → 마감된 과제 결과(AI/튜터 평가) | FR-003·004·005·006·014 | 학생 A(제출/미리보기), 학생 B(재제출/결과) |
-| `tutor-assignment-management.html` | 튜터 — 과제 목록 + 등록/수정 모달 + 삭제(undo 토스트) → 제출 현황 명단(검색·상태필터·정렬, 팀 전개) → 제출물 검토(이전/다음 이동, AI 채점 생성, 튜터 점수+피드백) | FR-001·002·007·008·010·011·012·013 | 튜터 A(과제관리/현황), 튜터 B(검토/평가) |
+| `tutor-assign-management.html` | 튜터 — 과제 목록 + 등록/수정 모달 + 삭제(undo 토스트) → 제출 현황 명단(검색·상태필터·정렬, 팀 전개) → 제출물 검토(이전/다음 이동, AI 채점 생성, 튜터 점수+피드백) | FR-001·002·007·008·010·011·012·013 | 튜터 A(과제관리/현황), 튜터 B(검토/평가) |
 
 ---
 
@@ -55,4 +55,4 @@ function computeFinalScore(tutorScore, aiScore) {
 
 ## agent에게 시킬 때 예시
 
-> `docs/mockups/tutor-assignment-management.html` 의 "제출물 검토" 화면을 `DESIGN.md` / `LAYOUT.md` 기준 Bootstrap 5.3 Django 템플릿으로 구현해줘. 단 `docs/mockups/README.md` 의 "목업 ≠ 실제 명세" 3가지는 반영하지 말 것. 데이터는 `apps/core` 모델과 `apps/accounts_client` 헬퍼를 쓴다.
+> `docs/mockups/tutor-assign-management.html` 의 "제출물 검토" 화면을 `DESIGN.md` / `LAYOUT.md` 기준 Bootstrap 5.3 Django 템플릿으로 구현해줘. 단 `docs/mockups/README.md` 의 "목업 ≠ 실제 명세" 3가지는 반영하지 말 것. 데이터는 `apps/core` 모델과 `apps/accounts_client` 헬퍼를 쓴다.

@@ -1,0 +1,1118 @@
+<title>AX 프로젝트 학생 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1f8;
+    --surface: #ffffff;
+    --surface-muted: #f4f6fb;
+    --surface-sunken: #eef1f8;
+    --text: #1c2130;
+    --text-muted: #6b7280;
+    --text-faint: #9aa1b1;
+    --border: #e4e8f1;
+    --border-strong: #d5dbe8;
+    --accent: #4f6df5;
+    --accent-soft: #eaefff;
+    --accent-text: #3a56d4;
+    --green: #1fa971;
+    --green-soft: #e5f7ee;
+    --red: #ef4b4b;
+    --red-soft: #fdecec;
+    --shadow: 0 1px 2px rgba(24, 30, 51, 0.03), 0 1px 10px rgba(24, 30, 51, 0.03);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  /* This mockup commits to a single light look by design (no dark mode). */
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Noto Sans KR", "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+    padding: 28px 20px 60px;
+  }
+
+  a { color: inherit; }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ---------- Banner ---------- */
+  .banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13.5px;
+  }
+  .banner-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-text);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .banner-text {
+    flex: 1;
+    color: var(--text);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .banner-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .banner-nav button {
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .banner-nav button:hover { background: var(--surface-muted); color: var(--text); }
+  .banner-more {
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ---------- Page title ---------- */
+  h1.page-title {
+    font-size: 21px;
+    font-weight: 800;
+    margin: 4px 0 0;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---------- Generic grid / card ---------- */
+  .row {
+    display: grid;
+    gap: 18px;
+  }
+  .row.cols-2 { grid-template-columns: 2fr 1fr; align-items: start; }
+  .col-stack { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 20px 22px 22px;
+  }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .card-title .dot-icon { font-size: 13px; }
+  .card-sub {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  /* ---------- Calendar ---------- */
+  .cal-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .cal-head .card-title { flex: 1; }
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cal-nav button {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cal-nav button:hover { background: var(--surface-muted); color: var(--text); }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend i {
+    width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+  }
+  .legend i.g { background: var(--green); }
+  .legend i.r { background: var(--red); }
+
+  .cal-grid-head {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .cal-grid-head span:first-child { color: #e2837e; }
+  .cal-grid-head span:last-child { color: #7f9bdb; }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 42px;
+    gap: 3px;
+  }
+
+  .cal-cell {
+    position: relative;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 5px;
+    gap: 3px;
+    cursor: default;
+    font-size: 12px;
+    color: var(--text);
+    border: 1.5px solid transparent;
+  }
+  .cal-cell.empty { visibility: hidden; }
+  .cal-cell.in-range { background: var(--green-soft); }
+  .cal-cell.has-day { cursor: pointer; }
+  .cal-cell.has-day:hover { background: var(--surface-muted); }
+  .cal-cell.today {
+    border-color: var(--green);
+  }
+  .cal-cell.today .num {
+    color: var(--green);
+    font-weight: 700;
+  }
+  .cal-cell.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .cal-cell.selected.today .num { color: var(--accent-text); }
+  .cal-cell .num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    font-size: 12px;
+  }
+  .cal-cell .dots {
+    display: flex;
+    gap: 2px;
+    height: 4px;
+  }
+  .cal-cell .dots i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+  }
+  .cal-cell .dots i.g { background: var(--green); }
+  .cal-cell .dots i.r { background: var(--red); }
+  .cal-caption {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .cal-caption b { color: var(--green); font-weight: 700; }
+
+  /* ---------- Day schedule list ---------- */
+  .day-panel {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-strong);
+  }
+  .day-panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .day-panel-head .label {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .day-panel-head .count {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .day-empty {
+    padding: 14px 0;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 12.5px;
+  }
+
+  .sched-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .sched-item:hover { background: var(--surface-muted); }
+  .sched-item:active { transform: scale(0.995); }
+  .sched-item + .sched-item { margin-top: 0; }
+
+  .sched-item .chk {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--surface);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .sched-item .chk.done { background: var(--accent); border-color: var(--accent); }
+
+  .sched-item .type-chip {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .sched-item .type-chip.g { background: var(--green); }
+  .sched-item .type-chip.r { background: var(--red); }
+
+  .sched-item .body { flex: 1; min-width: 0; }
+  .sched-item .title {
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sched-item.is-done .title { color: var(--text-faint); text-decoration: line-through; }
+  .sched-item .meta {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .sched-item .type-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 5px;
+  }
+  .sched-item .type-tag.g { background: var(--green-soft); color: var(--green); }
+  .sched-item .type-tag.r { background: var(--red-soft); color: var(--red); }
+
+  .sched-item .go {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .sched-item:hover .go { color: var(--accent-text); }
+
+  /* ---------- TODO box ---------- */
+  .todo-card { display: flex; flex-direction: column; }
+  .todo-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .todo-input-row input {
+    flex: 1;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--text);
+    font-family: inherit;
+  }
+  .todo-input-row input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+  .todo-input-row button {
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    width: 36px;
+    border-radius: var(--radius-sm);
+    font-size: 17px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .todo-input-row button:hover { filter: brightness(1.06); }
+
+  .todo-list {
+    overflow-y: auto;
+    max-height: 216px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-right: 2px;
+  }
+  .todo-list::-webkit-scrollbar { width: 6px; }
+  .todo-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; }
+  .todo-list::-webkit-scrollbar-track { background: transparent; }
+
+  .todo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 6px;
+    border-radius: 8px;
+  }
+  .todo-item:hover { background: var(--surface-muted); }
+  .todo-item .chk {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px;
+  }
+  .todo-item .chk.done { background: var(--green); border-color: var(--green); }
+  .todo-item span.text { flex: 1; font-size: 13px; word-break: break-all; }
+  .todo-item.is-done span.text { color: var(--text-faint); text-decoration: line-through; }
+  .todo-item .del {
+    opacity: 0;
+    border: none; background: none; color: var(--text-faint);
+    cursor: pointer; font-size: 15px; padding: 2px 4px; flex-shrink: 0;
+  }
+  .todo-item:hover .del { opacity: 1; }
+  .todo-empty {
+    color: var(--text-faint);
+    font-size: 12.5px;
+    text-align: center;
+    padding: 20px 0;
+  }
+  .todo-footer {
+    margin-top: 10px;
+    font-size: 11.5px;
+    color: var(--text-faint);
+    text-align: right;
+  }
+
+  /* ---------- Progress card ---------- */
+  .progress-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+  }
+  .progress-status { color: var(--green); font-weight: 700; }
+  .progress-dday {
+    color: var(--red);
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .progress-bar-track {
+    height: 6px;
+    border-radius: 4px;
+    background: var(--surface-sunken);
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), #8aa2ff);
+    border-radius: 4px;
+  }
+  .progress-pct {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-align: right;
+    margin-bottom: 14px;
+  }
+
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    background: var(--surface);
+  }
+  .task-row + .task-row { margin-top: 8px; }
+  .task-row:hover { background: var(--surface-muted); }
+  .task-row .icon {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .task-row .label { flex: 1; font-size: 13.5px; font-weight: 600; }
+  .task-badges { display: flex; gap: 6px; flex-shrink: 0; }
+  .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .task-row .chev { color: var(--text-faint); flex-shrink: 0; }
+
+  .progress-note {
+    margin-top: 12px;
+    font-size: 11.5px;
+    color: var(--text-faint);
+    display: flex;
+    gap: 6px;
+  }
+
+  /* ---------- Team card ---------- */
+  .team-card { display: flex; flex-direction: column; }
+  .team-badge {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+  }
+  .team-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+  }
+  .team-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    border-radius: 9px;
+    min-width: 0;
+  }
+  .team-row:hover { background: var(--surface-muted); }
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .team-row .info { min-width: 0; }
+  .team-row .name {
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .team-row .email {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 520px) {
+    .team-list { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Results card ---------- */
+  .results-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 6px; }
+  .results-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .result-tile {
+    background: var(--surface-sunken);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .result-tile.final {
+    background: var(--accent-soft);
+  }
+  .result-tile .r-label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .result-tile .r-value { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+  .result-tile.final .r-value { color: var(--accent-text); }
+
+  /* ---------- Toast (navigation feedback) ---------- */
+  .toast {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    background: var(--text);
+    color: var(--surface);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    transform: translateY(16px) scale(0.96);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.22s cubic-bezier(.2,.8,.2,1), opacity 0.22s ease;
+    z-index: 50;
+    max-width: 320px;
+  }
+  .toast.show { transform: translateY(0) scale(1); opacity: 1; }
+  .toast .spinner {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .flash {
+    animation: flashBg 0.5s ease;
+  }
+  @keyframes flashBg {
+    0% { background: var(--accent-soft); }
+    100% { background: transparent; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sched-item, .toast, .flash, .spinner { animation: none !important; transition: none !important; }
+  }
+
+  @media (max-width: 860px) {
+    .row.cols-2 { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+
+  <!-- Banner -->
+  <div class="banner">
+    <span class="banner-tag">🔔 공지</span>
+    <span class="banner-text" id="noticeText">[안내] 평가 작성 전 확인사항을 반드시 읽어주세요.</span>
+    <div class="banner-nav">
+      <button id="noticePrev" aria-label="이전 공지">‹</button>
+      <span id="noticeIdx">1 / 3</span>
+      <button id="noticeNext" aria-label="다음 공지">›</button>
+      <span class="banner-more">더보기</span>
+    </div>
+  </div>
+
+  <h1 class="page-title">학생 대시보드</h1>
+
+  <!-- Two columns: main content (left) + sidebar widgets (right) -->
+  <div class="row cols-2">
+    <div class="col-stack">
+      <div class="card" id="calendarCard">
+        <div class="cal-head">
+          <div class="card-title" id="calTitle">2026년 8월 · 평가 일정</div>
+          <div class="cal-nav">
+            <button id="prevMonth" aria-label="이전 달">‹</button>
+            <button id="nextMonth" aria-label="다음 달">›</button>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span><i class="g"></i> 온라인 강의</span>
+          <span><i class="r"></i> 과제 · 평가</span>
+        </div>
+
+        <div class="cal-grid-head">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+
+        <div class="cal-caption"><b>●</b> AX 3차 프로젝트 진행 기간 &nbsp;·&nbsp; ● 오늘</div>
+
+        <div class="day-panel">
+          <div class="day-panel-head">
+            <div class="label" id="dayLabel">8월 26일 일정</div>
+            <div class="count" id="dayCount">0건</div>
+          </div>
+          <div id="dayList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">🔵 AX 3차 프로젝트 평가 진행률</div>
+          <div class="card-sub">0 / 8단계</div>
+        </div>
+        <div class="progress-top">
+          <span class="progress-status">평가 진행중</span>
+          <span class="progress-dday">마감 D-2</span>
+        </div>
+        <div class="progress-bar-track"><div class="progress-bar-fill" style="width:0%"></div></div>
+        <div class="progress-pct">0%</div>
+
+        <div class="task-row" data-target="평가 제출 페이지">
+          <div class="icon">📄</div>
+          <div class="label">평가 제출 페이지로 이동</div>
+          <div class="task-badges">
+            <span class="badge">팀 0/3</span>
+            <span class="badge">개인 0/5</span>
+          </div>
+          <div class="chev">›</div>
+        </div>
+        <div class="task-row" data-target="결과 제출 페이지">
+          <div class="icon">📊</div>
+          <div class="label">결과 제출 페이지로 이동</div>
+          <div class="task-badges">
+            <span class="badge">팀 0/3</span>
+            <span class="badge">개인 0/5</span>
+          </div>
+          <div class="chev">›</div>
+        </div>
+
+        <div class="progress-note">ℹ️ 팀 평가와 개인 평가가 모두 제출돼야 최종 점수에 반영됩니다.</div>
+      </div>
+    </div>
+
+    <div class="col-stack">
+      <div class="card todo-card">
+        <div class="card-head">
+          <div class="card-title">📝 TODO</div>
+        </div>
+        <div class="todo-input-row">
+          <input id="todoInput" type="text" placeholder="할 일을 입력하고 Enter" maxlength="80" />
+          <button id="todoAdd" aria-label="추가">+</button>
+        </div>
+        <div class="todo-list" id="todoList"></div>
+        <div class="todo-footer" id="todoFooter"></div>
+      </div>
+
+      <div class="card team-card">
+        <div class="card-head">
+          <div class="card-title">👥 내 팀</div>
+          <span class="team-badge">4팀</span>
+        </div>
+        <div class="team-list" id="teamList"></div>
+      </div>
+
+      <div class="card">
+        <div class="results-head">
+          <div class="card-title">🏆 최근 공개 결과</div>
+          <span class="badge">AX2차 평가</span>
+        </div>
+        <div class="results-grid">
+          <div class="result-tile"><div class="r-label">팀 점수</div><div class="r-value">3.98</div></div>
+          <div class="result-tile"><div class="r-label">개인 점수</div><div class="r-value">3.13</div></div>
+          <div class="result-tile final"><div class="r-label">최종 점수</div><div class="r-value">3.47</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"><span class="spinner"></span><span id="toastText"></span></div>
+
+<script>
+(function () {
+  // ---------- Data ----------
+  var TODAY = new Date(2026, 7, 26); // 2026-08-26
+  var RANGE_START = new Date(2026, 7, 20);
+  var RANGE_END = new Date(2026, 7, 27);
+
+  var schedule = {
+    "2026-08-05": [ { type: "lecture", title: "AX 이론 강의 1주차", time: "10:00", done: true } ],
+    "2026-08-12": [ { type: "lecture", title: "AX 이론 강의 2주차", time: "10:00", done: true } ],
+    "2026-08-19": [ { type: "lecture", title: "3차 프로젝트 오리엔테이션", time: "10:00", done: true, target: "강의 시청 페이지" } ],
+    "2026-08-20": [
+      { type: "lecture", title: "실습 온라인 강의 3-1", time: "14:00", done: true, target: "강의 시청 페이지" },
+      { type: "assignment", title: "사전 준비 과제 제출", time: "23:59", done: true, target: "과제 제출 페이지" }
+    ],
+    "2026-08-21": [
+      { type: "lecture", title: "실습 온라인 강의 3-2", time: "14:00", done: false, target: "강의 시청 페이지" }
+    ],
+    "2026-08-24": [
+      { type: "assignment", title: "중간 산출물 제출", time: "23:59", done: false, target: "과제 제출 페이지" }
+    ],
+    "2026-08-26": [
+      { type: "lecture", title: "평가 대비 특강", time: "11:00", done: false, target: "강의 시청 페이지" },
+      { type: "assignment", title: "팀 평가 제출", time: "18:00", done: false, target: "평가 제출 페이지" },
+      { type: "assignment", title: "개인 평가 제출", time: "18:00", done: false, target: "평가 제출 페이지" }
+    ],
+    "2026-08-27": [
+      { type: "assignment", title: "AX 3차 프로젝트 최종 마감", time: "23:59", done: false, target: "결과 제출 페이지" }
+    ]
+  };
+
+  var todos = [
+    { text: "평가 항목별 근거 자료 정리하기", done: false },
+    { text: "팀원 피드백 취합", done: false },
+    { text: "발표 자료 초안 확인", done: true }
+  ];
+
+  var notices = [
+    "[안내] 평가 작성 전 확인사항을 반드시 읽어주세요.",
+    "[안내] 팀 평가는 8/27 18:00까지 제출해야 합니다.",
+    "[안내] 결과 공개는 제출 마감 다음날 오전 10시입니다."
+  ];
+  var noticeIdx = 0;
+
+  var view = { year: 2026, month: 7 }; // month: 0-indexed
+  var selectedKey = dateKey(TODAY);
+
+  // ---------- Helpers ----------
+  function dateKey(d) {
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+  function inRange(d) { return d >= RANGE_START && d <= RANGE_END; }
+  function typeLabel(t) { return t === "lecture" ? "강의" : "과제/평가"; }
+  function typeClass(t) { return t === "lecture" ? "g" : "r"; }
+
+  // ---------- Notice banner ----------
+  function renderNotice() {
+    document.getElementById("noticeText").textContent = notices[noticeIdx];
+    document.getElementById("noticeIdx").textContent = (noticeIdx + 1) + " / " + notices.length;
+  }
+  document.getElementById("noticePrev").addEventListener("click", function () {
+    noticeIdx = (noticeIdx - 1 + notices.length) % notices.length;
+    renderNotice();
+  });
+  document.getElementById("noticeNext").addEventListener("click", function () {
+    noticeIdx = (noticeIdx + 1) % notices.length;
+    renderNotice();
+  });
+
+  // ---------- Calendar ----------
+  function renderCalendar() {
+    var y = view.year, m = view.month;
+    document.getElementById("calTitle").textContent = y + "년 " + (m + 1) + "월 · 평가 일정";
+
+    var grid = document.getElementById("calGrid");
+    grid.innerHTML = "";
+
+    var firstDay = new Date(y, m, 1);
+    var startOffset = firstDay.getDay(); // 0=Sun
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+
+    for (var i = 0; i < startOffset; i++) {
+      var empty = document.createElement("div");
+      empty.className = "cal-cell empty";
+      grid.appendChild(empty);
+    }
+
+    for (var day = 1; day <= daysInMonth; day++) {
+      var d = new Date(y, m, day);
+      var key = dateKey(d);
+      var cell = document.createElement("div");
+      cell.className = "cal-cell has-day";
+      if (inRange(d)) cell.className += " in-range";
+      if (sameDay(d, TODAY)) cell.className += " today";
+      if (key === selectedKey) cell.className += " selected";
+
+      var num = document.createElement("div");
+      num.className = "num";
+      num.textContent = day;
+      cell.appendChild(num);
+
+      var items = schedule[key];
+      var dots = document.createElement("div");
+      dots.className = "dots";
+      if (items && items.length) {
+        var hasLecture = items.some(function (it) { return it.type === "lecture"; });
+        var hasTask = items.some(function (it) { return it.type === "assignment"; });
+        if (hasLecture) { var g = document.createElement("i"); g.className = "g"; dots.appendChild(g); }
+        if (hasTask) { var r = document.createElement("i"); r.className = "r"; dots.appendChild(r); }
+      }
+      cell.appendChild(dots);
+
+      (function (key) {
+        cell.addEventListener("click", function () {
+          selectedKey = key;
+          renderCalendar();
+          renderDayPanel();
+        });
+      })(key);
+
+      grid.appendChild(cell);
+    }
+  }
+
+  document.getElementById("prevMonth").addEventListener("click", function () {
+    view.month -= 1;
+    if (view.month < 0) { view.month = 11; view.year -= 1; }
+    renderCalendar();
+  });
+  document.getElementById("nextMonth").addEventListener("click", function () {
+    view.month += 1;
+    if (view.month > 11) { view.month = 0; view.year += 1; }
+    renderCalendar();
+  });
+
+  // ---------- Day panel ----------
+  function renderDayPanel() {
+    var parts = selectedKey.split("-");
+    document.getElementById("dayLabel").textContent = parseInt(parts[1], 10) + "월 " + parseInt(parts[2], 10) + "일 일정";
+    var items = schedule[selectedKey] || [];
+    document.getElementById("dayCount").textContent = items.length + "건";
+
+    var list = document.getElementById("dayList");
+    list.innerHTML = "";
+
+    if (!items.length) {
+      var empty = document.createElement("div");
+      empty.className = "day-empty";
+      empty.textContent = "등록된 일정이 없습니다.";
+      list.appendChild(empty);
+      return;
+    }
+
+    items.forEach(function (item, idx) {
+      var row = document.createElement("div");
+      row.className = "sched-item" + (item.done ? " is-done" : "");
+
+      var chk = document.createElement("div");
+      chk.className = "chk" + (item.done ? " done" : "");
+      chk.textContent = item.done ? "✓" : "";
+      chk.title = item.done ? "완료됨" : "미완료";
+      chk.addEventListener("click", function (e) {
+        e.stopPropagation();
+        item.done = !item.done;
+        renderDayPanel();
+      });
+      row.appendChild(chk);
+
+      var chip = document.createElement("div");
+      chip.className = "type-chip " + typeClass(item.type);
+      row.appendChild(chip);
+
+      var body = document.createElement("div");
+      body.className = "body";
+      var title = document.createElement("div");
+      title.className = "title";
+      title.textContent = item.title;
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      var tag = document.createElement("span");
+      tag.className = "type-tag " + typeClass(item.type);
+      tag.textContent = typeLabel(item.type);
+      meta.appendChild(tag);
+      var time = document.createElement("span");
+      time.textContent = item.time;
+      meta.appendChild(time);
+      body.appendChild(title);
+      body.appendChild(meta);
+      row.appendChild(body);
+
+      var go = document.createElement("div");
+      go.className = "go";
+      go.textContent = (item.target || "상세 페이지") + " ›";
+      row.appendChild(go);
+
+      row.addEventListener("click", function () {
+        goTo(item.target || "상세 페이지", row);
+      });
+
+      list.appendChild(row);
+    });
+  }
+
+  // ---------- Navigation feedback (mock only) ----------
+  var toast = document.getElementById("toast");
+  var toastText = document.getElementById("toastText");
+  var toastTimer = null;
+  function goTo(target, rowEl) {
+    if (rowEl) {
+      rowEl.classList.remove("flash");
+      void rowEl.offsetWidth;
+      rowEl.classList.add("flash");
+    }
+    toastText.textContent = "'" + target + "'(으)로 이동합니다";
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove("show"); }, 1400);
+  }
+
+  document.querySelectorAll(".task-row").forEach(function (row) {
+    row.addEventListener("click", function () {
+      goTo(row.getAttribute("data-target"), row);
+    });
+  });
+
+  // ---------- TODO ----------
+  function renderTodos() {
+    var list = document.getElementById("todoList");
+    list.innerHTML = "";
+    if (!todos.length) {
+      var empty = document.createElement("div");
+      empty.className = "todo-empty";
+      empty.textContent = "할 일을 추가해보세요.";
+      list.appendChild(empty);
+    } else {
+      todos.forEach(function (t, idx) {
+        var row = document.createElement("div");
+        row.className = "todo-item" + (t.done ? " is-done" : "");
+
+        var chk = document.createElement("div");
+        chk.className = "chk" + (t.done ? " done" : "");
+        chk.textContent = t.done ? "✓" : "";
+        chk.addEventListener("click", function () {
+          t.done = !t.done;
+          renderTodos();
+        });
+
+        var span = document.createElement("span");
+        span.className = "text";
+        span.textContent = t.text;
+
+        var del = document.createElement("button");
+        del.className = "del";
+        del.textContent = "×";
+        del.setAttribute("aria-label", "삭제");
+        del.addEventListener("click", function () {
+          todos.splice(idx, 1);
+          renderTodos();
+        });
+
+        row.appendChild(chk);
+        row.appendChild(span);
+        row.appendChild(del);
+        list.appendChild(row);
+      });
+    }
+    var doneCount = todos.filter(function (t) { return t.done; }).length;
+    document.getElementById("todoFooter").textContent = todos.length ? (doneCount + " / " + todos.length + " 완료") : "";
+  }
+
+  function addTodo() {
+    var input = document.getElementById("todoInput");
+    var val = input.value.trim();
+    if (!val) return;
+    todos.push({ text: val, done: false });
+    input.value = "";
+    renderTodos();
+  }
+  document.getElementById("todoAdd").addEventListener("click", addTodo);
+  document.getElementById("todoInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") addTodo();
+  });
+
+  // ---------- Team ----------
+  var team = [
+    { name: "리오넬 메시", email: "lionel.messi@example.com", color: "#4f6df5" },
+    { name: "비욘세", email: "beyonce@example.com", color: "#ef8a4b" },
+    { name: "엠마 왓슨", email: "emma.watson@example.com", color: "#1fa971" },
+    { name: "우사인 볼트", email: "usain.bolt@example.com", color: "#c24bd1" },
+    { name: "일론 머스크", email: "elon.musk@example.com", color: "#4bb0d1" },
+    { name: "테일러 스위프트", email: "taylor.swift@example.com", color: "#e2645f" }
+  ];
+  function initials(name) { return name.trim().charAt(0); }
+  function renderTeam() {
+    var list = document.getElementById("teamList");
+    list.innerHTML = "";
+    team.forEach(function (m) {
+      var row = document.createElement("div");
+      row.className = "team-row";
+      var av = document.createElement("div");
+      av.className = "avatar";
+      av.style.background = m.color;
+      av.textContent = initials(m.name);
+      var info = document.createElement("div");
+      info.className = "info";
+      var name = document.createElement("div");
+      name.className = "name";
+      name.textContent = m.name;
+      var email = document.createElement("div");
+      email.className = "email";
+      email.textContent = m.email;
+      info.appendChild(name);
+      info.appendChild(email);
+      row.appendChild(av);
+      row.appendChild(info);
+      list.appendChild(row);
+    });
+  }
+
+  // ---------- Init ----------
+  renderNotice();
+  renderCalendar();
+  renderDayPanel();
+  renderTodos();
+  renderTeam();
+})();
+</script>

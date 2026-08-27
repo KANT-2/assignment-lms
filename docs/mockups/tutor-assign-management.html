@@ -1,0 +1,1789 @@
+<title>AX 프로젝트 과제 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1f8;
+    --surface: #ffffff;
+    --surface-muted: #f4f6fb;
+    --surface-sunken: #eef1f8;
+    --text: #1c2130;
+    --text-muted: #6b7280;
+    --text-faint: #9aa1b1;
+    --border: #e4e8f1;
+    --border-strong: #d5dbe8;
+    --accent: #4f6df5;
+    --accent-soft: #eaefff;
+    --accent-text: #3a56d4;
+    --green: #1fa971;
+    --green-soft: #e5f7ee;
+    --red: #ef4b4b;
+    --red-soft: #fdecec;
+    --amber: #c98a1a;
+    --amber-soft: #fbf0dd;
+    --purple: #7c4fd6;
+    --purple-soft: #f1e9ff;
+    --ai: #0f9488;
+    --ai-soft: #e3f7f3;
+    --shadow: 0 1px 2px rgba(24, 30, 51, 0.03), 0 1px 10px rgba(24, 30, 51, 0.03);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  /* This mockup commits to a single light look by design (no dark mode),
+     except the embedded code preview, which is intentionally always dark. */
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Noto Sans KR", "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+    padding: 28px 20px 60px;
+  }
+  body.modal-open { overflow: hidden; }
+
+  a { color: inherit; }
+
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .nav-links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+  }
+  .back-link:hover { color: var(--accent-text); }
+
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page-head-text { display: flex; flex-direction: column; gap: 6px; }
+  .breadcrumb { font-size: 12.5px; color: var(--text-faint); font-weight: 600; }
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1.page-title {
+    font-size: 21px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .page-sub { font-size: 12.5px; color: var(--text-muted); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 20px 22px 22px;
+  }
+  .card-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .flag {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10.5px;
+    font-weight: 800;
+    flex-shrink: 0;
+    border: 1.5px solid currentColor;
+    cursor: default;
+  }
+  .flag.required { color: var(--red); }
+  .flag.help { color: var(--accent); font-size: 10px; }
+
+  .btn {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 11px 20px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-primary:disabled { background: var(--border-strong); color: var(--text-faint); cursor: not-allowed; filter: none; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { filter: brightness(1.06); }
+  .btn-ghost { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border-strong); }
+  .btn-ghost:hover { background: var(--surface-muted); }
+  .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-sm { padding: 8px 14px; font-size: 12.5px; }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge.type { background: var(--accent-soft); color: var(--accent-text); }
+  .badge.type.optional { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.unit { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.unit.team { background: var(--purple-soft); color: var(--purple); }
+  .badge.dday { background: var(--red-soft); color: var(--red); }
+  .badge.dday.later { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.status-submitted { background: var(--green-soft); color: #147a52; }
+  .badge.status-late { background: var(--amber-soft); color: var(--amber); }
+  .badge.status-none { background: var(--surface-sunken); color: var(--text-faint); }
+  .badge.fb-done { background: var(--accent-soft); color: var(--accent-text); }
+  .badge.fb-pending { background: var(--surface-sunken); color: var(--text-muted); }
+
+  /* ---------- AI evaluation ---------- */
+  .btn-ai { background: var(--ai); color: #fff; }
+  .btn-ai:hover { filter: brightness(1.08); }
+  .ai-score-badge {
+    font-size: 13px;
+    font-weight: 800;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: var(--ai-soft);
+    color: var(--ai);
+    flex-shrink: 0;
+  }
+  .ai-feedback-text {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--ai-soft);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .ai-note { font-size: 11.5px; color: var(--text-faint); margin-top: 10px; }
+
+  /* ---------- Tutor score field ---------- */
+  .score-field { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .score-field label { font-size: 12.5px; font-weight: 700; }
+  .score-field input[type="number"] {
+    width: 68px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 13.5px;
+    font-family: inherit;
+    text-align: center;
+    color: var(--text);
+  }
+  .score-field input[type="number"]:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .score-field .suffix { font-size: 12.5px; color: var(--text-muted); }
+  .score-field.invalid input { border-color: var(--red); background: var(--red-soft); }
+  .score-field-error { font-size: 11.5px; color: var(--red); margin: -6px 0 12px; display: none; }
+  .score-field.invalid + .score-field-error { display: block; }
+  .fb-score-line { font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
+  .final-score-preview { font-size: 12.5px; font-weight: 700; color: var(--ai); background: var(--ai-soft); border-radius: var(--radius-sm); padding: 8px 12px; margin: -2px 0 12px; }
+
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ================= SCREEN A: 과제 목록 ================= */
+  .list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .list-head-left { display: flex; align-items: baseline; gap: 9px; }
+  .list-count { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+  .assign-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .assign-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+  }
+  .assign-row:hover { border-color: var(--border-strong); box-shadow: 0 2px 10px rgba(24,30,51,0.06); }
+  .assign-row.past { background: var(--surface-muted); }
+  .assign-row .ar-main { flex: 1; min-width: 0; }
+  .assign-row .ar-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .assign-row .ar-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .assign-row .ar-due { font-size: 11.5px; color: var(--text-faint); }
+  .assign-row .ar-stats {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--surface-sunken);
+    padding: 5px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .assign-row .ar-chevron { flex-shrink: 0; color: var(--text-faint); font-size: 15px; }
+  .assign-row .ar-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .icon-btn {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { background: var(--surface-muted); color: var(--text); }
+  .icon-btn.danger:hover { background: var(--red-soft); color: var(--red); border-color: #f6c9c9; }
+  .list-empty { text-align: center; color: var(--text-faint); font-size: 12.5px; padding: 40px 0; }
+  .list-empty .btn { margin-top: 12px; }
+
+  /* ================= SCREEN B: 학생 관리(명단) ================= */
+  .stat-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .stat-num { font-size: 20px; font-weight: 800; }
+  .stat-label { font-size: 12px; color: var(--text-muted); }
+  .progress-track {
+    flex: 1;
+    min-width: 120px;
+    height: 8px;
+    border-radius: 20px;
+    background: var(--surface-sunken);
+    overflow: hidden;
+  }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 20px; transition: width 0.2s ease; }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .search-input {
+    flex: 1;
+    min-width: 140px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--text);
+    font-family: inherit;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .select-input {
+    border: 1px solid var(--border-strong);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 9px 10px;
+    font-size: 12.5px;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .roster-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .roster-row {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .roster-row-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .roster-name-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .roster-name { font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+  .roster-meta { font-size: 11.5px; color: var(--text-faint); flex-shrink: 0; }
+  .roster-actions { flex-shrink: 0; }
+  .not-submitted-label { font-size: 12px; color: var(--text-faint); padding: 8px 10px; }
+  .expand-toggle {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s ease;
+  }
+  .roster-row.expanded .expand-toggle { transform: rotate(90deg); }
+  .team-members {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 14px 12px 48px;
+  }
+  .roster-row.expanded .team-members { display: flex; }
+  .member-chip {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    background: var(--surface-sunken);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .member-chip.rep { color: var(--accent-text); background: var(--accent-soft); font-weight: 700; }
+  .roster-empty { text-align: center; color: var(--text-faint); font-size: 12.5px; padding: 32px 0; }
+
+  /* ================= SCREEN C: 제출물 검토 ================= */
+  .review-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .review-nav { display: flex; align-items: center; gap: 8px; }
+  .review-pos { font-size: 12px; color: var(--text-muted); font-weight: 600; padding: 0 4px; }
+
+  .review-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .review-header h2 { font-size: 17px; font-weight: 800; margin: 0; }
+  .review-sub { font-size: 12px; color: var(--text-muted); }
+
+  .info-line {
+    display: flex;
+    gap: 8px;
+    font-size: 13.5px;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .info-line:last-child { border-bottom: none; }
+  .info-line .k { flex-shrink: 0; width: 84px; color: var(--text-muted); font-weight: 600; }
+  .info-line .v { flex: 1; }
+
+  .desc-view {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .desc-view.empty { color: var(--text-faint); }
+
+  .preview-fallback {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .preview-fallback .pf-icon { font-size: 28px; }
+  .preview-fallback b { color: var(--text); }
+
+  .code-block {
+    background: #1e1e2e;
+    border-radius: var(--radius-md);
+    padding: 12px 0;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .code-row { display: flex; white-space: pre; }
+  .code-row .ln { flex-shrink: 0; width: 38px; text-align: right; padding-right: 14px; color: #565873; user-select: none; }
+  .code-row .code-line { flex: 1; padding-right: 16px; color: #f2f2f7; }
+  .tok-comment { color: #8890b5; font-style: italic; }
+  .tok-string { color: #ffb86c; }
+  .tok-keyword { color: #ff79c6; font-weight: 600; }
+  .tok-const { color: #bd93f9; font-weight: 600; }
+  .tok-builtin { color: #8be9fd; }
+  .tok-number { color: #bd93f9; }
+  .tok-interp { color: #50fa7b; }
+
+  .nb-view { display: flex; flex-direction: column; gap: 10px; }
+  .nb-cell { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+  .nb-cell-label { font-size: 10.5px; font-weight: 700; padding: 6px 12px; color: var(--text-faint); background: var(--surface-muted); letter-spacing: 0.02em; }
+  .nb-code .code-block { border-radius: 0; max-height: 260px; }
+  .nb-out-note { font-size: 11px; color: var(--text-faint); padding: 6px 12px; background: var(--surface-muted); border-top: 1px solid var(--border); }
+  .nb-md-body { padding: 12px 14px; font-size: 13px; line-height: 1.7; color: var(--text); }
+  .nb-md-body h2, .nb-md-body h3, .nb-md-body h4 { margin: 0 0 6px; font-size: 14.5px; }
+  .nb-md-body code { background: var(--surface-sunken); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: "SFMono-Regular", Consolas, monospace; }
+
+  .alert-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid transparent;
+  }
+  .alert-banner .ab-icon { font-size: 20px; flex-shrink: 0; }
+  .alert-banner .ab-title { font-size: 13.5px; font-weight: 800; }
+  .alert-banner .ab-sub { font-size: 12px; margin-top: 2px; }
+  .alert-banner.locked { background: var(--accent-soft); border-color: #d3ddff; }
+  .alert-banner.locked .ab-title { color: var(--accent-text); }
+  .alert-banner.locked .ab-sub { color: #5468c9; }
+
+  .feedback-text-display {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-top: 10px;
+  }
+  textarea#feedbackInput {
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13.5px;
+    color: var(--text);
+    font-family: inherit;
+    line-height: 1.6;
+    margin-top: 10px;
+  }
+  textarea#feedbackInput:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .feedback-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+  /* ================= Modal (create/edit assignment) ================= */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 22, 38, 0.46);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 18px;
+    overflow-y: auto;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s ease;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 64px rgba(15, 20, 40, 0.28);
+    width: 100%;
+    max-width: 520px;
+    padding: 22px 24px 24px;
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.16s cubic-bezier(.2,.8,.2,1);
+  }
+  .modal-overlay.show .modal-card { transform: translateY(0) scale(1); }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .modal-close {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: var(--surface-muted); color: var(--text); }
+
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
+  .field:last-of-type { margin-bottom: 0; }
+  .field-label { font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .field input[type="text"],
+  .field input[type="datetime-local"],
+  .field textarea {
+    width: 100%;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 13.5px;
+    color: var(--text);
+    font-family: inherit;
+    line-height: 1.5;
+  }
+  .field textarea { min-height: 78px; resize: vertical; }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .field.invalid input, .field.invalid textarea { border-color: var(--red); background: var(--red-soft); }
+  .field-error { font-size: 11.5px; color: var(--red); display: none; }
+  .field.invalid .field-error { display: block; }
+
+  .static-note { font-size: 12px; color: var(--text-muted); background: var(--surface-sunken); border-radius: var(--radius-sm); padding: 9px 12px; line-height: 1.5; }
+
+  .seg-group {
+    display: inline-flex;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    padding: 3px;
+    background: var(--surface-sunken);
+    width: fit-content;
+  }
+  .seg-btn {
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .seg-btn.active { background: var(--accent); color: #fff; }
+  .seg-group.semantic .seg-btn[data-value="allow"].active { background: var(--green); }
+  .seg-group.semantic .seg-btn[data-value="deny"].active { background: var(--red); }
+  .team-note { font-size: 11.5px; color: var(--purple); margin-top: 2px; display: none; }
+  .team-note.show { display: block; }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-actions .btn { flex: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .modal-overlay, .modal-card { transition: none; }
+  }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    background: var(--text);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    transform: translateY(16px) scale(0.96);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.22s cubic-bezier(.2,.8,.2,1), opacity 0.22s ease;
+    z-index: 150;
+    max-width: 340px;
+  }
+  .toast.show { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+  .toast .toast-undo {
+    color: #9db4ff;
+    font-weight: 700;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+  @media (max-width: 560px) {
+    .info-line { flex-direction: column; gap: 2px; }
+    .info-line .k { width: auto; }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="nav-links">
+    <a class="back-link" href="https://claude.ai/code/artifact/b1dd8ee5-8564-40c2-8577-2a04e09cf18b" target="_blank" rel="noopener">‹ 학생 대시보드 보기</a>
+    <a class="back-link" href="https://claude.ai/code/artifact/78e77664-6f50-40b0-94a5-dfd4d6f913f5" target="_blank" rel="noopener">학생 제출 화면 보기 ›</a>
+  </div>
+
+  <!-- ============ SCREEN A: 과제 목록 ============ -->
+  <div class="screen active" id="listScreen">
+    <div class="page-head">
+      <div class="page-head-text">
+        <div class="breadcrumb">AX 3차 프로젝트 평가 · 과제 관리 (교수)</div>
+        <h1 class="page-title">과제 관리</h1>
+        <div class="page-sub">과제를 클릭하면 학생별 제출 현황을 확인하고 피드백을 남길 수 있습니다.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="list-head">
+        <div class="list-head-left">
+          <div class="card-title" style="margin-bottom:0;">📋 등록된 과제</div>
+          <div class="list-count" id="listCount">0개</div>
+        </div>
+        <button class="btn btn-primary" id="openCreateBtn" type="button">+ 새 과제 등록</button>
+      </div>
+      <div class="assign-list" id="assignList"></div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN B: 학생 관리(명단) ============ -->
+  <div class="screen" id="rosterScreen">
+    <button class="back-link" id="rosterBackBtn" type="button">‹ 과제 관리로 돌아가기</button>
+
+    <div class="page-head">
+      <div class="page-head-text">
+        <div class="breadcrumb" id="rosterBreadcrumb">AX 3차 프로젝트 평가 · 학생 제출 관리</div>
+        <div class="title-row">
+          <h1 class="page-title" id="rosterTitle">-</h1>
+          <span class="badge type" id="rosterTypeBadge">필수</span>
+          <span class="badge unit" id="rosterUnitBadge">개인 과제</span>
+          <span class="badge dday" id="rosterDdayBadge">-</span>
+        </div>
+        <div class="page-sub" id="rosterDueText">-</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stat-row">
+        <div>
+          <div class="stat-num" id="rosterStatNum">0/0</div>
+          <div class="stat-label">제출 완료</div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="rosterProgressFill" style="width:0%;"></div></div>
+        <div class="stat-label" id="rosterFbStat">피드백 0건</div>
+      </div>
+
+      <div class="toolbar">
+        <input type="text" class="search-input" id="rosterSearch" placeholder="이름으로 검색 (팀원 이름도 검색돼요)">
+        <select class="select-input" id="rosterStatusFilter">
+          <option value="all">전체 상태</option>
+          <option value="submitted">제출 완료</option>
+          <option value="late">지각 제출</option>
+          <option value="none">미제출</option>
+          <option value="fb_pending">피드백 대기</option>
+          <option value="fb_done">피드백 완료</option>
+        </select>
+        <select class="select-input" id="rosterSort">
+          <option value="name">이름순</option>
+          <option value="recent">최근 제출순</option>
+          <option value="unsubmitted_first">미제출 우선</option>
+        </select>
+      </div>
+
+      <div class="roster-list" id="rosterList"></div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN C: 제출물 검토 + 피드백 ============ -->
+  <div class="screen" id="reviewScreen">
+    <div class="review-topbar">
+      <button class="back-link" id="reviewBackBtn" type="button">‹ 목록으로</button>
+      <div class="review-nav">
+        <button class="btn btn-ghost btn-sm" id="reviewPrevBtn" type="button">◀ 이전</button>
+        <span class="review-pos" id="reviewPos">1 / 1</span>
+        <button class="btn btn-ghost btn-sm" id="reviewNextBtn" type="button">다음 ▶</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="review-header">
+        <h2 id="reviewName">-</h2>
+        <span class="badge" id="reviewStatusBadge">제출 완료</span>
+      </div>
+      <div class="review-sub" id="reviewSub">-</div>
+      <div class="team-members" style="display:flex; padding:10px 0 0;" id="reviewMembers"></div>
+    </div>
+
+    <div class="card">
+      <div class="list-head" style="margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">🔍 제출 파일 미리보기</div>
+        <button class="btn btn-ai btn-sm" id="aiGenBtn" type="button">✨ AI 생성</button>
+      </div>
+      <div id="reviewPreviewArea"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 학생이 작성한 설명</div>
+      <div class="desc-view" id="reviewDescArea"></div>
+    </div>
+
+    <div class="card" id="aiFeedbackCard" style="display:none;">
+      <div class="list-head" style="margin-bottom:10px;">
+        <div class="card-title" style="margin-bottom:0;">🤖 AI 피드백</div>
+        <span class="ai-score-badge" id="aiScoreBadge">-/100</span>
+      </div>
+      <div class="ai-feedback-text" id="aiFeedbackText"></div>
+      <div class="ai-note">AI 기반 1차 평가입니다 (시뮬레이션). 이 점수는 튜터 점수와 8:2 비율로 합산되어 학생에게 보이는 최종 점수가 됩니다. 이 제출물에 대해 1회만 생성되며 재생성할 수 없습니다 (단, 학생이 재제출하면 새 제출물에 대해 다시 1회 생성할 수 있습니다).</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="flag help">?</span> 튜터 피드백</div>
+      <div id="reviewFeedbackArea"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ---------- Create / Edit assignment modal ---------- -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle"><span class="flag required">!</span> 새 과제 등록</div>
+      <button class="modal-close" id="modalCloseBtn" type="button" aria-label="닫기">✕</button>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="flag required">!</span> 과제명</label>
+      <input type="text" id="fTitle" placeholder="예: 4차 프로젝트 최종 보고서 제출" maxlength="60">
+      <div class="field-error">과제명을 입력해주세요.</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="flag required">!</span> 과제 설명 (학생에게 표시됩니다)</label>
+      <textarea id="fDesc" placeholder="학생들에게 안내할 과제 내용을 입력하세요. (예: 무엇을 해야 하는지, 평가 기준 등)" maxlength="600"></textarea>
+      <div class="field-error">과제 설명을 입력해주세요.</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="flag required">!</span> 제출 마감일시</label>
+      <input type="datetime-local" id="fDue">
+      <div class="field-error">마감일시를 선택해주세요.</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="flag help" title="라벨만 다르고 마감·제출방식·집계 방식은 동일하게 동작합니다">?</span> 필수 여부</label>
+      <div class="seg-group" id="segType">
+        <button class="seg-btn active" data-value="required" type="button">필수</button>
+        <button class="seg-btn" data-value="optional" type="button">선택</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="flag help" title="지각 제출이 허용된 과제는 마감 후 제출도 일반 제출과 동일하게 처리되며 별도 표시되지 않습니다">?</span> 지각 제출</label>
+      <div class="seg-group semantic" id="segLate">
+        <button class="seg-btn active" data-value="allow" type="button">허용</button>
+        <button class="seg-btn" data-value="deny" type="button">불가</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="flag help" title="팀 과제는 팀 대표 제출이 팀 전체 제출로 처리됩니다">?</span> 과제 구분</label>
+      <div class="seg-group" id="segUnit">
+        <button class="seg-btn active" data-value="individual" type="button">개인 과제</button>
+        <button class="seg-btn" data-value="team" type="button">팀 과제</button>
+      </div>
+      <div class="team-note" id="teamNote">팀 대표가 제출하면 팀 전체 제출로 처리됩니다. 피드백도 팀 전체에 동일하게 적용됩니다.</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">제출 형식</label>
+      <div class="static-note">학생은 .py / .ipynb 등 파일 업로드로 제출합니다 (업로드 시 자동 미리보기 제공). 이 화면에서 별도로 설정할 항목은 아닙니다.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modalCancelBtn" type="button">취소</button>
+      <button class="btn btn-primary" id="saveBtn" type="button">과제 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- Generic confirm modal (destructive / irreversible actions) ---------- -->
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal-card" style="max-width:400px;" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-head">
+      <div class="modal-title" id="confirmTitle">확인이 필요해요</div>
+    </div>
+    <div class="static-note" id="confirmMessage" style="margin-bottom:20px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="confirmCancelBtn" type="button">취소</button>
+      <button class="btn btn-primary" id="confirmOkBtn" type="button">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <span id="toastText"></span>
+  <button class="toast-undo" id="toastUndo" style="display:none;" type="button">실행취소</button>
+</div>
+
+<script>
+(function () {
+  // ========================================================================
+  // Shared helpers
+  // ========================================================================
+  var WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function formatDue(d) {
+    return d.getFullYear() + "." + pad(d.getMonth() + 1) + "." + pad(d.getDate()) + " (" + WEEKDAYS[d.getDay()] + ") " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function formatTimestamp(d) {
+    return d.getFullYear() + "." + pad(d.getMonth() + 1) + "." + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function toLocalInputValue(d) {
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function ddayLabel(due) {
+    var now = new Date();
+    var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var startOfDue = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    var diffDays = Math.round((startOfDue - startOfToday) / 86400000);
+    if (now.getTime() > due.getTime()) return "마감 지남";
+    if (diffDays === 0) return "오늘 마감";
+    return "마감 D-" + diffDays;
+  }
+  function isPast(due) { return new Date().getTime() > due.getTime(); }
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // ---------- Python / notebook preview (reused as-is from the student submission mockup) ----------
+  var KEYWORDS = ["if","elif","else","for","while","def","return","import","from","as","in","is","not","and","or","class","try","except","finally","with","lambda","pass","break","continue","global","nonlocal","yield","del","assert","raise"];
+  var CONSTS = ["True","False","None"];
+  var BUILTINS = ["int","str","float","bool","input","print","len","range","type","list","dict","set","tuple","open","sum","min","max","abs","sorted","enumerate","zip","map","filter","round"];
+  var KEYWORD_SET = {}; KEYWORDS.forEach(function(k){ KEYWORD_SET[k] = true; });
+  var CONST_SET = {}; CONSTS.forEach(function(k){ CONST_SET[k] = true; });
+  var BUILTIN_SET = {}; BUILTINS.forEach(function(k){ BUILTIN_SET[k] = true; });
+
+  function isIdentStart(ch) { return /[A-Za-z_]/.test(ch); }
+  function isIdentPart(ch) { return /[A-Za-z0-9_]/.test(ch); }
+  function isDigit(ch) { return /[0-9]/.test(ch); }
+
+  function highlightFString(raw) {
+    var out = "";
+    var i = 0, n = raw.length;
+    while (i < n) {
+      if (raw[i] === "{" && raw[i + 1] !== "{") {
+        var j = i + 1, depth = 1;
+        while (j < n && depth > 0) {
+          if (raw[j] === "{") depth++;
+          else if (raw[j] === "}") depth--;
+          j++;
+        }
+        var inner = raw.slice(i + 1, Math.max(i + 1, j - 1));
+        out += "{<span class=\"tok-interp\">" + escapeHtml(inner) + "</span>}";
+        i = j;
+        continue;
+      }
+      out += escapeHtml(raw[i]);
+      i++;
+    }
+    return out;
+  }
+
+  function highlightPythonLine(line) {
+    var out = "";
+    var i = 0, n = line.length;
+    while (i < n) {
+      var ch = line[i];
+      if (ch === "#") {
+        out += "<span class=\"tok-comment\">" + escapeHtml(line.slice(i)) + "</span>";
+        break;
+      }
+      if ((ch === "f" || ch === "F") && (line[i + 1] === "\"" || line[i + 1] === "'")) {
+        var quote = line[i + 1];
+        var j2 = i + 2;
+        while (j2 < n && line[j2] !== quote) { if (line[j2] === "\\") j2++; j2++; }
+        j2 = Math.min(j2 + 1, n);
+        out += "<span class=\"tok-string\">" + highlightFString(line.slice(i, j2)) + "</span>";
+        i = j2;
+        continue;
+      }
+      if (ch === "\"" || ch === "'") {
+        var j = i + 1;
+        while (j < n && line[j] !== ch) { if (line[j] === "\\") j++; j++; }
+        j = Math.min(j + 1, n);
+        out += "<span class=\"tok-string\">" + escapeHtml(line.slice(i, j)) + "</span>";
+        i = j;
+        continue;
+      }
+      if (isIdentStart(ch)) {
+        var k = i + 1;
+        while (k < n && isIdentPart(line[k])) k++;
+        var word = line.slice(i, k);
+        if (KEYWORD_SET[word]) out += "<span class=\"tok-keyword\">" + word + "</span>";
+        else if (CONST_SET[word]) out += "<span class=\"tok-const\">" + word + "</span>";
+        else if (BUILTIN_SET[word]) out += "<span class=\"tok-builtin\">" + word + "</span>";
+        else out += escapeHtml(word);
+        i = k;
+        continue;
+      }
+      if (isDigit(ch)) {
+        var m = i + 1;
+        while (m < n && /[0-9.]/.test(line[m])) m++;
+        out += "<span class=\"tok-number\">" + line.slice(i, m) + "</span>";
+        i = m;
+        continue;
+      }
+      out += escapeHtml(ch);
+      i++;
+    }
+    return out;
+  }
+
+  function buildCodeBlock(code) {
+    var lines = String(code).replace(/\r\n/g, "\n").split("\n");
+    if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+    var rows = lines.map(function (line, idx) {
+      var highlighted = highlightPythonLine(line);
+      return '<div class="code-row"><span class="ln">' + (idx + 1) + '</span><span class="code-line">' + (highlighted || "&nbsp;") + "</span></div>";
+    }).join("");
+    return '<div class="code-block">' + rows + "</div>";
+  }
+
+  function simpleMarkdown(src) {
+    var s = escapeHtml(src);
+    s = s.replace(/^#### (.*)$/gm, "<h4>$1</h4>")
+         .replace(/^### (.*)$/gm, "<h4>$1</h4>")
+         .replace(/^## (.*)$/gm, "<h3>$1</h3>")
+         .replace(/^# (.*)$/gm, "<h2>$1</h2>")
+         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+         .replace(/`([^`]+)`/g, "<code>$1</code>")
+         .replace(/\n/g, "<br>");
+    return s;
+  }
+
+  function renderNotebook(nb) {
+    var cells = nb.cells || [];
+    if (!cells.length) return '<div class="preview-fallback"><div class="pf-icon">📓</div><div>셀이 없는 노트북입니다.</div></div>';
+    var html = '<div class="nb-view">';
+    cells.forEach(function (cell) {
+      var src = Array.isArray(cell.source) ? cell.source.join("") : (cell.source || "");
+      if (cell.cell_type === "code") {
+        var execCount = (cell.execution_count === null || cell.execution_count === undefined) ? " " : cell.execution_count;
+        html += '<div class="nb-cell nb-code">'
+          + '<div class="nb-cell-label">In [' + execCount + ']:</div>'
+          + buildCodeBlock(src)
+          + ((cell.outputs && cell.outputs.length) ? '<div class="nb-out-note">▸ 실행 결과 ' + cell.outputs.length + '개 (미리보기 생략)</div>' : "")
+          + "</div>";
+      } else if (cell.cell_type === "markdown") {
+        html += '<div class="nb-cell nb-markdown"><div class="nb-cell-label">Markdown</div><div class="nb-md-body">' + simpleMarkdown(src) + "</div></div>";
+      }
+    });
+    html += "</div>";
+    return html;
+  }
+
+  var ICONS = { py: "🐍", ipynb: "📓", pdf: "📕", zip: "🗜️", txt: "📄", docx: "📘", hwp: "📗", pptx: "📙" };
+  function iconFor(ext) { return ICONS[ext] || "📎"; }
+
+  function renderPreviewHtml(ext, content) {
+    if (ext === "py") return buildCodeBlock(content);
+    if (ext === "ipynb") {
+      try { return renderNotebook(JSON.parse(content)); }
+      catch (e) { return '<div class="preview-fallback"><div class="pf-icon">⚠️</div><div>노트북 파일 형식을 해석하지 못했습니다.<br>파일이 손상되었거나 올바른 .ipynb 형식이 아닐 수 있어요.</div></div>'; }
+    }
+    return '<div class="preview-fallback"><div class="pf-icon">' + iconFor(ext) + '</div><div>이 파일 형식은 미리보기를 지원하지 않아요. <b>' + escapeHtml("파일명과 크기만 표시됩니다.") + '</b></div></div>';
+  }
+
+  // ========================================================================
+  // Seed data
+  // ========================================================================
+  var ALL_STUDENTS = ["김도윤","이서연","박준서","최지우","정하은","강민준","조서윤","윤지호","장하윤","임도현","한서준","오유진","신지훈","권나윤","황준혁","안수아","송민재","전예은","홍시우","고은우","문채원","배주원","류승민"];
+  var TEAM_DEFS = [
+    { name: "1팀", idx: [0,1,2,3] },
+    { name: "2팀", idx: [4,5,6,7] },
+    { name: "3팀", idx: [8,9,10,11] },
+    { name: "4팀", idx: [12,13,14,15] },
+    { name: "5팀", idx: [16,17,18,19] },
+    { name: "6팀", idx: [20,21,22] }
+  ];
+  function teamMembers(def) { return def.idx.map(function (i) { return ALL_STUDENTS[i]; }); }
+
+  var PY_SAMPLE_1 =
+"def discount_rate(amount):\n" +
+"    if amount >= 100000:\n" +
+"        return 0.2\n" +
+"    elif amount >= 50000:\n" +
+"        return 0.1\n" +
+"    elif amount >= 10000:\n" +
+"        return 0.05\n" +
+"    else:\n" +
+"        return 0.0\n" +
+"\n" +
+"def main():\n" +
+"    amount = int(input(\"상품 금액을 입력하세요: \"))\n" +
+"    if amount < 0:\n" +
+"        print(\"금액은 0 이상이어야 합니다.\")\n" +
+"        return\n" +
+"    rate = discount_rate(amount)\n" +
+"    discounted = amount * (1 - rate)\n" +
+"    print(f\"할인율: {rate*100:.0f}% / 최종 결제 금액: {discounted:.0f}원\")\n" +
+"\n" +
+"main()\n";
+
+  var PY_SAMPLE_2 =
+"# 예외 처리를 추가한 버전\n" +
+"def discount_rate(amount):\n" +
+"    if amount >= 100000:\n" +
+"        return 0.2\n" +
+"    elif amount >= 50000:\n" +
+"        return 0.1\n" +
+"    else:\n" +
+"        return 0.0\n" +
+"\n" +
+"try:\n" +
+"    amount = int(input(\"상품 금액을 입력하세요: \"))\n" +
+"    rate = discount_rate(amount)\n" +
+"    print(f\"할인율: {rate*100:.0f}%\")\n" +
+"except ValueError:\n" +
+"    print(\"숫자만 입력해주세요.\")\n";
+
+  var assignments = [
+    { id: "a1", title: "1차 프로젝트 기획서 제출", desc: "이번 프로젝트의 목표와 추진 계획을 정리한 기획서를 제출하세요. 문제 정의, 목표, 일정 계획이 포함되어야 합니다.", due: new Date(2026, 7, 10, 23, 59), required: true, late: false, team: false, stats: "23/23 제출 완료" },
+    { id: "a2", title: "2차 프로젝트 중간 발표 자료 제출", desc: "중간 발표에 사용할 슬라이드를 제출하세요. 진행 상황, 어려웠던 점, 향후 계획을 포함해주세요.", due: new Date(2026, 7, 20, 18, 0), required: true, late: true, team: true, stats: "5/6팀 제출" },
+    { id: "a3", title: "3차 프로젝트 실습 코드 제출", desc: "조건문을 활용해 상품 금액에 따라 할인율을 안내하는 프로그램을 작성하세요. 입력값 검증, 예외 케이스 처리 여부도 함께 평가합니다.", due: new Date(2026, 7, 27, 18, 0), required: true, late: true, team: false, stats: "3/23 제출" },
+    { id: "a4", title: "4차 프로젝트 최종 발표", desc: "최종 결과물과 발표 자료를 함께 제출하세요. 팀별로 한 명이 대표 제출하면 됩니다.", due: new Date(2026, 8, 3, 18, 0), required: false, late: true, team: true, stats: "0/6팀 제출" }
+  ];
+  var nextId = 5;
+  var editingId = null;
+
+  // ---------- Rosters (per-assignment submission + feedback state) ----------
+  var ROSTERS = {};
+
+  ROSTERS.a1 = ALL_STUDENTS.map(function (name, i) {
+    return {
+      id: "a1-s" + i, name: name, status: "submitted",
+      submittedAt: new Date(2026, 7, 9, 10, (i * 11) % 60),
+      fileName: name + "_1차_기획서.pdf", ext: "pdf", content: "",
+      desc: "문제 정의와 목표, 추진 일정을 정리해 제출했습니다.",
+      feedback: i === 0 ? "기획서 잘 작성했습니다. 다음 단계 일정도 조금 더 구체적으로 잡아주세요." : null,
+      tutorScore: i === 0 ? 94 : null,
+      aiFeedback: i === 0 ? { score: 90, text: "목표와 추진 일정이 명확하게 정리되어 있습니다. 리스크 관리 계획까지 포함하면 더 완성도 높은 기획서가 될 것 같습니다." } : null
+    };
+  });
+
+  ROSTERS.a2 = TEAM_DEFS.map(function (def, i) {
+    var submitted = i < 5;
+    var late = i === 2;
+    return {
+      id: "a2-t" + i, teamName: def.name, members: teamMembers(def),
+      status: submitted ? (late ? "late" : "submitted") : "none",
+      submittedAt: submitted ? (late ? new Date(2026, 7, 21, 9, 15) : new Date(2026, 7, 19, 14, 30 + i * 5)) : null,
+      submittedBy: submitted ? teamMembers(def)[0] : null,
+      fileName: submitted ? def.name + "_2차_발표자료.pdf" : null, ext: "pdf", content: "",
+      desc: submitted ? "중간까지 진행 상황과 다음 스프린트 계획을 담았습니다." : "",
+      feedback: i === 0 ? "발표자료 깔끔하게 정리됐네요. 다음 발표 때는 리스크 요인도 함께 다뤄주세요." : null,
+      tutorScore: i === 0 ? 90 : null,
+      aiFeedback: i === 0 ? { score: 95, text: "발표 자료의 구성이 체계적이며 핵심 진행 상황이 잘 드러납니다. 다만 리스크 요인에 대한 언급이 부족해 보완이 필요합니다." } : null
+    };
+  });
+
+  ROSTERS.a3 = ALL_STUDENTS.map(function (name, i) {
+    if (i === 0) return { id: "a3-s0", name: name, status: "submitted", submittedAt: new Date(2026, 7, 26, 14, 0), fileName: "3차_실습코드.py", ext: "py", content: PY_SAMPLE_1, desc: "if-elif로 구간별 할인율을 계산하도록 구현했습니다.", feedback: null, tutorScore: null, aiFeedback: null };
+    if (i === 1) return { id: "a3-s1", name: name, status: "late", submittedAt: new Date(2026, 7, 28, 10, 0), fileName: "3차_실습코드_최종.py", ext: "py", content: PY_SAMPLE_1, desc: "마감을 넘겨 늦게 제출합니다. 죄송합니다.", feedback: null, tutorScore: null, aiFeedback: null };
+    if (i === 2) return { id: "a3-s2", name: name, status: "submitted", submittedAt: new Date(2026, 7, 27, 9, 0), fileName: "discount_final.py", ext: "py", content: PY_SAMPLE_2, desc: "숫자가 아닌 값이 입력될 경우를 대비해 예외 처리를 추가했습니다.", feedback: "예외 처리 로직이 꼼꼼하네요. 입력값이 음수일 때 처리도 한 번 더 고려해보세요.", tutorScore: 93, aiFeedback: { score: 88, text: "예외 처리가 포함되어 있어 안정성이 높습니다. 다만 음수 입력에 대한 처리가 빠져있어 보완이 필요합니다." } };
+    return { id: "a3-s" + i, name: name, status: "none", submittedAt: null, fileName: null, ext: null, content: "", desc: "", feedback: null, tutorScore: null, aiFeedback: null };
+  });
+
+  ROSTERS.a4 = TEAM_DEFS.map(function (def, i) {
+    return { id: "a4-t" + i, teamName: def.name, members: teamMembers(def), status: "none", submittedAt: null, submittedBy: null, fileName: null, ext: null, content: "", desc: "", feedback: null, tutorScore: null, aiFeedback: null };
+  });
+
+  function getRoster(a) {
+    if (ROSTERS[a.id]) return ROSTERS[a.id];
+    var fresh;
+    if (a.team) {
+      fresh = TEAM_DEFS.map(function (def, i) {
+        return { id: a.id + "-t" + i, teamName: def.name, members: teamMembers(def), status: "none", submittedAt: null, submittedBy: null, fileName: null, ext: null, content: "", desc: "", feedback: null, tutorScore: null, aiFeedback: null };
+      });
+    } else {
+      fresh = ALL_STUDENTS.map(function (name, i) {
+        return { id: a.id + "-s" + i, name: name, status: "none", submittedAt: null, fileName: null, ext: null, content: "", desc: "", feedback: null, tutorScore: null, aiFeedback: null };
+      });
+    }
+    ROSTERS[a.id] = fresh;
+    return fresh;
+  }
+
+  function findAssignment(id) { return assignments.filter(function (x) { return x.id === id; })[0]; }
+
+  // ---------- Simulated AI (Gemini) first-pass evaluation ----------
+  // NOTE: this mockup does not call a real Gemini API. It generates a plausible
+  // score + comment locally so the review flow can be demoed end-to-end without
+  // an API key or backend. Swapping this for a real call is a backend concern.
+  //
+  // BUSINESS RULE (confirmed 2026-08-26): AI evaluation is generated at most once
+  // PER SUBMISSION, not once per student for the assignment's lifetime. Because
+  // resubmission is still allowed until the tutor's own feedback is saved (FR-006),
+  // a resubmission that happens after "AI 생성" was clicked but before "피드백 저장"
+  // must reset entry.aiFeedback back to null so the (now stale) AI score/comment
+  // is cleared and the tutor can generate exactly one new AI evaluation against the
+  // new file. This mockup has no live resubmission trigger wired into this screen
+  // (resubmission happens in the separate student-facing mockup, a different
+  // in-memory dataset), so this reset can't be demoed here — but it must be
+  // implemented in the real resubmission handler.
+  var PY_AI_COMMENTS = [
+    "조건문을 활용한 분기 처리가 요구사항에 맞게 잘 구현되어 있습니다. 예외 상황(음수, 문자 입력 등)에 대한 처리를 추가하면 더 견고한 코드가 될 것 같습니다.",
+    "핵심 로직이 간결하게 작성되어 가독성이 좋습니다. 변수명을 조금 더 구체적으로 지으면 유지보수에 도움이 될 것 같습니다.",
+    "요구사항을 충실히 반영했습니다. 입력값 검증 로직을 별도 함수로 분리하면 재사용성이 높아질 것 같습니다."
+  ];
+  var NB_AI_COMMENTS = [
+    "셀 구성이 논리적인 순서로 잘 정리되어 있습니다. 마크다운 셀에 각 단계의 목적을 조금 더 설명하면 이해하기 쉬울 것 같습니다.",
+    "코드와 설명이 균형 있게 구성되어 있습니다. 실행 결과에 대한 해석을 덧붙이면 더 완성도가 높아질 것 같습니다."
+  ];
+  var DOC_AI_COMMENTS = [
+    "목표와 추진 일정이 명확하게 정리되어 있습니다. 리스크 관리 계획까지 포함하면 더 완성도 높은 문서가 될 것 같습니다.",
+    "핵심 진행 상황이 잘 드러납니다. 다만 구체적인 근거 자료를 조금 더 보강하면 좋을 것 같습니다.",
+    "전반적인 구성이 체계적입니다. 다음 단계 계획을 조금 더 구체적으로 서술하면 좋겠습니다."
+  ];
+  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function generateAIFeedback(entry) {
+    var base = 78 + Math.floor(Math.random() * 18); // 78~95
+    if (entry.status === "late") base -= 4;
+    base = Math.max(60, Math.min(99, base));
+    var pool = entry.ext === "py" ? PY_AI_COMMENTS : (entry.ext === "ipynb" ? NB_AI_COMMENTS : DOC_AI_COMMENTS);
+    return { score: base, text: pickRandom(pool) };
+  }
+
+  // ========================================================================
+  // Screen switching
+  // ========================================================================
+  var screens = {
+    list: document.getElementById("listScreen"),
+    roster: document.getElementById("rosterScreen"),
+    review: document.getElementById("reviewScreen")
+  };
+  function showScreen(name) {
+    Object.keys(screens).forEach(function (k) { screens[k].classList.toggle("active", k === name); });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ========================================================================
+  // SCREEN A: 과제 목록 + 생성/수정 모달
+  // ========================================================================
+  var modalOverlay = document.getElementById("modalOverlay");
+  var modalTitle = document.getElementById("modalTitle");
+  var openCreateBtn = document.getElementById("openCreateBtn");
+  var modalCloseBtn = document.getElementById("modalCloseBtn");
+  var modalCancelBtn = document.getElementById("modalCancelBtn");
+  var fTitle = document.getElementById("fTitle");
+  var fDesc = document.getElementById("fDesc");
+  var fDue = document.getElementById("fDue");
+  var segType = document.getElementById("segType");
+  var segLate = document.getElementById("segLate");
+  var segUnit = document.getElementById("segUnit");
+  var teamNote = document.getElementById("teamNote");
+  var saveBtn = document.getElementById("saveBtn");
+
+  var state = { required: "required", late: "allow", team: "individual" };
+
+  function wireSeg(group, key) {
+    group.querySelectorAll(".seg-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        group.querySelectorAll(".seg-btn").forEach(function (b) { b.classList.toggle("active", b === btn); });
+        state[key] = btn.getAttribute("data-value");
+        teamNote.classList.toggle("show", state.team === "team");
+      });
+    });
+  }
+  wireSeg(segType, "required");
+  wireSeg(segLate, "late");
+  wireSeg(segUnit, "team");
+
+  function getFormState() {
+    return { required: state.required === "required", late: state.late === "allow", team: state.team === "team" };
+  }
+  function setSegActive(group, value) {
+    group.querySelectorAll(".seg-btn").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-value") === value); });
+  }
+  function resetForm() {
+    fTitle.value = ""; fDesc.value = ""; fDue.value = "";
+    state = { required: "required", late: "allow", team: "individual" };
+    setSegActive(segType, "required"); setSegActive(segLate, "allow"); setSegActive(segUnit, "individual");
+    teamNote.classList.remove("show");
+    clearErrors();
+  }
+
+  function openModal(mode, id) {
+    if (mode === "edit") {
+      var a = findAssignment(id);
+      if (!a) return;
+      editingId = id;
+      fTitle.value = a.title; fDesc.value = a.desc; fDue.value = toLocalInputValue(a.due);
+      state.required = a.required ? "required" : "optional";
+      state.late = a.late ? "allow" : "deny";
+      state.team = a.team ? "team" : "individual";
+      setSegActive(segType, state.required); setSegActive(segLate, state.late); setSegActive(segUnit, state.team);
+      teamNote.classList.toggle("show", state.team === "team");
+      clearErrors();
+      modalTitle.innerHTML = '<span class="flag required">!</span> 과제 수정';
+      saveBtn.textContent = "과제 수정";
+    } else {
+      editingId = null;
+      resetForm();
+      modalTitle.innerHTML = '<span class="flag required">!</span> 새 과제 등록';
+      saveBtn.textContent = "과제 등록";
+    }
+    modalOverlay.classList.add("show");
+    document.body.classList.add("modal-open");
+    setTimeout(function () { fTitle.focus(); }, 50);
+  }
+  function closeModal() {
+    modalOverlay.classList.remove("show");
+    document.body.classList.remove("modal-open");
+    editingId = null;
+  }
+  openCreateBtn.addEventListener("click", function () { openModal("create"); });
+  modalCloseBtn.addEventListener("click", closeModal);
+  modalCancelBtn.addEventListener("click", closeModal);
+  modalOverlay.addEventListener("click", function (e) { if (e.target === modalOverlay) closeModal(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (confirmOverlay.classList.contains("show")) { closeConfirm(); return; }
+    if (modalOverlay.classList.contains("show")) closeModal();
+  });
+
+  // ---------- Generic confirm modal (used for: deleting an assignment that already
+  // has submissions, and generating an AI evaluation, which cannot be undone) ----------
+  var confirmOverlay = document.getElementById("confirmOverlay");
+  var confirmTitle = document.getElementById("confirmTitle");
+  var confirmMessage = document.getElementById("confirmMessage");
+  var confirmOkBtn = document.getElementById("confirmOkBtn");
+  var confirmCancelBtn = document.getElementById("confirmCancelBtn");
+  var confirmCallback = null;
+
+  function showConfirm(opts) {
+    confirmTitle.textContent = opts.title || "확인이 필요해요";
+    confirmMessage.textContent = opts.message || "";
+    confirmOkBtn.textContent = opts.okText || "확인";
+    confirmOkBtn.classList.toggle("btn-danger", !!opts.danger);
+    confirmOkBtn.classList.toggle("btn-primary", !opts.danger);
+    confirmCallback = opts.onConfirm;
+    confirmOverlay.classList.add("show");
+    document.body.classList.add("modal-open");
+    setTimeout(function () { confirmOkBtn.focus(); }, 50);
+  }
+  function closeConfirm() {
+    confirmOverlay.classList.remove("show");
+    document.body.classList.remove("modal-open");
+    confirmCallback = null;
+  }
+  confirmOkBtn.addEventListener("click", function () {
+    var cb = confirmCallback;
+    closeConfirm();
+    if (cb) cb();
+  });
+  confirmCancelBtn.addEventListener("click", closeConfirm);
+  confirmOverlay.addEventListener("click", function (e) { if (e.target === confirmOverlay) closeConfirm(); });
+
+  var toast = document.getElementById("toast");
+  var toastText = document.getElementById("toastText");
+  var toastUndo = document.getElementById("toastUndo");
+  var toastTimer = null;
+  function showToast(msg, onUndo) {
+    toastText.textContent = msg;
+    toastUndo.style.display = onUndo ? "inline" : "none";
+    toastUndo.onclick = onUndo ? function () { onUndo(); hideToast(); } : null;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, onUndo ? 4500 : 2200);
+  }
+  function hideToast() { toast.classList.remove("show"); }
+
+  function assignBadgesHtml(a) {
+    var typeCls = a.required ? "type" : "type optional";
+    var unitCls = a.team ? "unit team" : "unit";
+    var ddayCls = "dday" + (isPast(a.due) ? "" : " later");
+    return '<span class="badge ' + typeCls + '">' + (a.required ? "필수" : "선택") + '</span>'
+      + '<span class="badge ' + unitCls + '">' + (a.team ? "팀 과제" : "개인 과제") + '</span>'
+      + '<span class="badge ' + ddayCls + '">' + ddayLabel(a.due) + (a.late ? "" : " · 지각 불가") + '</span>';
+  }
+
+  function renderAssignList() {
+    var list = document.getElementById("assignList");
+    document.getElementById("listCount").textContent = assignments.length + "개";
+    list.innerHTML = "";
+    if (!assignments.length) {
+      list.innerHTML = '<div class="list-empty">등록된 과제가 없습니다.<br>위의 "+ 새 과제 등록" 버튼을 눌러 시작해보세요.</div>';
+      return;
+    }
+    var sorted = assignments.slice().sort(function (a, b) { return a.due - b.due; });
+    sorted.forEach(function (a) {
+      var row = document.createElement("div");
+      row.className = "assign-row" + (isPast(a.due) ? " past" : "");
+      row.setAttribute("data-id", a.id);
+      row.innerHTML =
+        '<div class="ar-main">' +
+          '<div class="ar-title">' + escapeHtml(a.title) + '</div>' +
+          '<div class="ar-badges">' + assignBadgesHtml(a) + '<span class="ar-due">' + formatDue(a.due) + '</span></div>' +
+        '</div>' +
+        '<div class="ar-stats">' + escapeHtml(a.stats) + '</div>' +
+        '<div class="ar-actions">' +
+          '<button class="icon-btn" data-action="edit" data-id="' + a.id + '" title="수정" type="button">✎</button>' +
+          '<button class="icon-btn danger" data-action="delete" data-id="' + a.id + '" title="삭제" type="button">🗑</button>' +
+        '</div>' +
+        '<div class="ar-chevron">›</div>';
+      list.appendChild(row);
+    });
+  }
+
+  document.getElementById("assignList").addEventListener("click", function (e) {
+    var btn = e.target.closest(".icon-btn");
+    if (btn) {
+      var id = btn.getAttribute("data-id");
+      var action = btn.getAttribute("data-action");
+      if (action === "edit") openModal("edit", id);
+      if (action === "delete") deleteAssignment(id);
+      return;
+    }
+    var row = e.target.closest(".assign-row");
+    if (row) openRoster(row.getAttribute("data-id"));
+  });
+
+  function deleteAssignment(id) {
+    var target = findAssignment(id);
+    if (!target) return;
+    var roster = getRoster(target);
+    var submittedCount = roster.filter(function (r) { return r.status === "submitted" || r.status === "late"; }).length;
+    if (submittedCount > 0) {
+      var unit = target.team ? "팀" : "명";
+      showConfirm({
+        title: "과제를 삭제할까요?",
+        message: '"' + target.title + '"에는 이미 제출물이 ' + submittedCount + unit + '분 있습니다. 삭제해도 실행취소는 가능하지만, 신중하게 진행해주세요.',
+        okText: "삭제",
+        danger: true,
+        onConfirm: function () { performDeleteAssignment(id); }
+      });
+    } else {
+      performDeleteAssignment(id);
+    }
+  }
+
+  function performDeleteAssignment(id) {
+    var idx = assignments.findIndex(function (x) { return x.id === id; });
+    if (idx === -1) return;
+    var removed = assignments[idx];
+    assignments.splice(idx, 1);
+    if (editingId === id) closeModal();
+    renderAssignList();
+    showToast('"' + removed.title + '" 삭제됨', function () {
+      assignments.splice(idx, 0, removed);
+      renderAssignList();
+    });
+  }
+
+  function clearErrors() { document.querySelectorAll(".field").forEach(function (f) { f.classList.remove("invalid"); }); }
+  function validate() {
+    clearErrors();
+    var ok = true;
+    if (!fTitle.value.trim()) { fTitle.closest(".field").classList.add("invalid"); ok = false; }
+    if (!fDesc.value.trim()) { fDesc.closest(".field").classList.add("invalid"); ok = false; }
+    if (!fDue.value) { fDue.closest(".field").classList.add("invalid"); ok = false; }
+    return ok;
+  }
+
+  saveBtn.addEventListener("click", function () {
+    if (!validate()) return;
+    var s = getFormState();
+    var data = { title: fTitle.value.trim(), desc: fDesc.value.trim(), due: new Date(fDue.value), required: s.required, late: s.late, team: s.team };
+    if (editingId) {
+      var idx = assignments.findIndex(function (x) { return x.id === editingId; });
+      if (idx !== -1) assignments[idx] = Object.assign({}, assignments[idx], data);
+      closeModal(); renderAssignList();
+      showToast("과제가 수정되었습니다");
+    } else {
+      data.id = "a" + (nextId++);
+      data.stats = s.team ? "0/6팀 제출" : "0/23 제출";
+      assignments.unshift(data);
+      closeModal(); renderAssignList();
+      showToast("과제가 등록되었습니다");
+    }
+  });
+
+  // ========================================================================
+  // SCREEN B: 학생 관리(명단)
+  // ========================================================================
+  var currentAssignmentId = null;
+  var rosterSearchTerm = "";
+  var rosterStatusFilter = "all";
+  var rosterSortMode = "name";
+  var reviewQueue = [];
+  var reviewIndex = 0;
+
+  var rosterSearchEl = document.getElementById("rosterSearch");
+  var rosterStatusFilterEl = document.getElementById("rosterStatusFilter");
+  var rosterSortEl = document.getElementById("rosterSort");
+
+  function openRoster(id) {
+    currentAssignmentId = id;
+    rosterSearchTerm = ""; rosterStatusFilter = "all"; rosterSortMode = "name";
+    rosterSearchEl.value = ""; rosterStatusFilterEl.value = "all"; rosterSortEl.value = "name";
+    renderRosterHeader();
+    renderRosterList();
+    showScreen("roster");
+  }
+  document.getElementById("rosterBackBtn").addEventListener("click", function () {
+    renderAssignList();
+    showScreen("list");
+  });
+
+  function renderRosterHeader() {
+    var a = findAssignment(currentAssignmentId);
+    if (!a) return;
+    document.getElementById("rosterBreadcrumb").textContent = "AX 3차 프로젝트 평가 · " + (a.team ? "팀 과제" : "개인 과제") + " 제출 관리";
+    document.getElementById("rosterTitle").textContent = a.title;
+    var typeBadge = document.getElementById("rosterTypeBadge");
+    typeBadge.textContent = a.required ? "필수" : "선택";
+    typeBadge.className = "badge type" + (a.required ? "" : " optional");
+    var unitBadge = document.getElementById("rosterUnitBadge");
+    unitBadge.textContent = a.team ? "팀 과제" : "개인 과제";
+    unitBadge.className = "badge unit" + (a.team ? " team" : "");
+    var ddayBadge = document.getElementById("rosterDdayBadge");
+    ddayBadge.textContent = ddayLabel(a.due);
+    ddayBadge.className = "badge dday" + (isPast(a.due) ? "" : " later");
+    document.getElementById("rosterDueText").textContent = "제출 마감: " + formatDue(a.due) + (a.late ? " (지각 제출 허용)" : " (마감 후 제출 불가)");
+  }
+
+  function rosterUnitCount(a) { return a.team ? TEAM_DEFS.length : ALL_STUDENTS.length; }
+
+  function updateRosterStats() {
+    var a = findAssignment(currentAssignmentId);
+    var roster = getRoster(a);
+    var total = roster.length;
+    var submittedCount = roster.filter(function (r) { return r.status === "submitted" || r.status === "late"; }).length;
+    var fbCount = roster.filter(function (r) { return !!r.feedback; }).length;
+    document.getElementById("rosterStatNum").textContent = submittedCount + "/" + total + (a.team ? "팀" : "명");
+    document.getElementById("rosterProgressFill").style.width = (total ? (submittedCount / total * 100) : 0) + "%";
+    document.getElementById("rosterFbStat").textContent = "피드백 " + fbCount + "건 / 제출 " + submittedCount + "건";
+  }
+
+  function matchesSearch(entry, term, isTeam) {
+    if (!term) return true;
+    term = term.toLowerCase();
+    if (isTeam) {
+      if (entry.teamName.toLowerCase().indexOf(term) !== -1) return true;
+      return entry.members.some(function (m) { return m.toLowerCase().indexOf(term) !== -1; });
+    }
+    return entry.name.toLowerCase().indexOf(term) !== -1;
+  }
+
+  function matchesStatusFilter(entry, filter) {
+    if (filter === "all") return true;
+    if (filter === "submitted") return entry.status === "submitted" || entry.status === "late";
+    if (filter === "late") return entry.status === "late";
+    if (filter === "none") return entry.status === "none";
+    if (filter === "fb_pending") return (entry.status === "submitted" || entry.status === "late") && !entry.feedback;
+    if (filter === "fb_done") return !!entry.feedback;
+    return true;
+  }
+
+  function statusBadgeHtml(entry) {
+    if (entry.status === "submitted") return '<span class="badge status-submitted">제출 완료</span>';
+    if (entry.status === "late") return '<span class="badge status-late">지각 제출</span>';
+    return '<span class="badge status-none">미제출</span>';
+  }
+  function fbBadgeHtml(entry) {
+    if (!(entry.status === "submitted" || entry.status === "late")) return "";
+    if (entry.feedback) {
+      var finalScore = computeFinalScore(entry.tutorScore, entry.aiFeedback ? entry.aiFeedback.score : null);
+      var scoreText = (entry.tutorScore !== null && entry.tutorScore !== undefined) ? (" · " + formatScore(finalScore) + "점") : "";
+      return '<span class="badge fb-done">피드백 완료' + scoreText + '</span>';
+    }
+    return '<span class="badge fb-pending">피드백 대기</span>';
+  }
+
+  function renderRosterList() {
+    var a = findAssignment(currentAssignmentId);
+    if (!a) return;
+    updateRosterStats();
+    var roster = getRoster(a);
+    var isTeam = a.team;
+
+    var filtered = roster.filter(function (r) {
+      return matchesSearch(r, rosterSearchTerm, isTeam) && matchesStatusFilter(r, rosterStatusFilter);
+    });
+
+    filtered.sort(function (x, y) {
+      if (rosterSortMode === "name") {
+        var nx = isTeam ? x.teamName : x.name, ny = isTeam ? y.teamName : y.name;
+        return nx.localeCompare(ny, "ko");
+      }
+      if (rosterSortMode === "recent") {
+        var tx = x.submittedAt ? x.submittedAt.getTime() : -1;
+        var ty = y.submittedAt ? y.submittedAt.getTime() : -1;
+        return ty - tx;
+      }
+      if (rosterSortMode === "unsubmitted_first") {
+        var rx = x.status === "none" ? 0 : 1, ry = y.status === "none" ? 0 : 1;
+        return rx - ry;
+      }
+      return 0;
+    });
+
+    // reviewable ids in the exact order shown, for prev/next navigation
+    reviewQueue = filtered.filter(function (r) { return r.status === "submitted" || r.status === "late"; }).map(function (r) { return r.id; });
+
+    var list = document.getElementById("rosterList");
+    list.innerHTML = "";
+    if (!filtered.length) {
+      list.innerHTML = '<div class="roster-empty">조건에 맞는 학생(팀)이 없습니다.</div>';
+      return;
+    }
+
+    filtered.forEach(function (entry) {
+      var row = document.createElement("div");
+      row.className = "roster-row";
+      row.setAttribute("data-id", entry.id);
+      var canReview = entry.status === "submitted" || entry.status === "late";
+      var displayName = isTeam ? entry.teamName : entry.name;
+      var metaText = "";
+      if (isTeam) {
+        metaText = canReview ? ("제출자: " + entry.submittedBy + " · " + formatDue(entry.submittedAt)) : (entry.members.length + "명");
+      } else {
+        metaText = canReview ? formatDue(entry.submittedAt) : "-";
+      }
+
+      var mainHtml =
+        (isTeam ? '<button class="expand-toggle" data-action="expand" type="button">▸</button>' : "") +
+        '<div class="roster-name-wrap">' +
+          '<span class="roster-name">' + escapeHtml(displayName) + '</span>' +
+          statusBadgeHtml(entry) + fbBadgeHtml(entry) +
+          '<span class="roster-meta">' + escapeHtml(metaText) + '</span>' +
+        '</div>' +
+        '<div class="roster-actions">' +
+          (canReview
+            ? '<button class="btn btn-primary btn-sm" data-action="review" data-id="' + entry.id + '" type="button">제출확인하기</button>'
+            : '<span class="not-submitted-label">미제출</span>') +
+        '</div>';
+
+      row.innerHTML = '<div class="roster-row-main">' + mainHtml + '</div>' +
+        (isTeam ? '<div class="team-members">' + entry.members.map(function (m) {
+          return '<span class="member-chip' + (m === entry.submittedBy ? ' rep' : '') + '">' + escapeHtml(m) + (m === entry.submittedBy ? ' (대표)' : '') + '</span>';
+        }).join("") + '</div>' : "");
+
+      list.appendChild(row);
+    });
+  }
+
+  document.getElementById("rosterList").addEventListener("click", function (e) {
+    var reviewBtn = e.target.closest('[data-action="review"]');
+    if (reviewBtn) { openReview(reviewBtn.getAttribute("data-id")); return; }
+    var expandBtn = e.target.closest('[data-action="expand"]');
+    if (expandBtn) { expandBtn.closest(".roster-row").classList.toggle("expanded"); return; }
+  });
+
+  rosterSearchEl.addEventListener("input", function () { rosterSearchTerm = rosterSearchEl.value.trim(); renderRosterList(); });
+  rosterStatusFilterEl.addEventListener("change", function () { rosterStatusFilter = rosterStatusFilterEl.value; renderRosterList(); });
+  rosterSortEl.addEventListener("change", function () { rosterSortMode = rosterSortEl.value; renderRosterList(); });
+
+  // ========================================================================
+  // SCREEN C: 제출물 검토 + 피드백
+  // ========================================================================
+  function openReview(entryId) {
+    reviewIndex = reviewQueue.indexOf(entryId);
+    if (reviewIndex === -1) reviewIndex = 0;
+    renderReview();
+    showScreen("review");
+  }
+
+  document.getElementById("reviewBackBtn").addEventListener("click", function () {
+    renderRosterList();
+    showScreen("roster");
+  });
+  document.getElementById("reviewPrevBtn").addEventListener("click", function () { if (reviewIndex > 0) { reviewIndex--; renderReview(); } });
+  document.getElementById("reviewNextBtn").addEventListener("click", function () { if (reviewIndex < reviewQueue.length - 1) { reviewIndex++; renderReview(); } });
+
+  function currentReviewEntry() {
+    var a = findAssignment(currentAssignmentId);
+    var roster = getRoster(a);
+    var id = reviewQueue[reviewIndex];
+    return roster.filter(function (r) { return r.id === id; })[0];
+  }
+
+  function renderReview() {
+    var a = findAssignment(currentAssignmentId);
+    var entry = currentReviewEntry();
+    if (!a || !entry) return;
+    var isTeam = a.team;
+
+    document.getElementById("reviewPos").textContent = (reviewQueue.length ? (reviewIndex + 1) : 0) + " / " + reviewQueue.length;
+    document.getElementById("reviewPrevBtn").disabled = reviewIndex <= 0;
+    document.getElementById("reviewNextBtn").disabled = reviewIndex >= reviewQueue.length - 1;
+
+    document.getElementById("reviewName").textContent = isTeam ? entry.teamName : entry.name;
+    var statusBadge = document.getElementById("reviewStatusBadge");
+    statusBadge.className = "badge " + (entry.status === "late" ? "status-late" : "status-submitted");
+    statusBadge.textContent = entry.status === "late" ? "지각 제출" : "제출 완료";
+    document.getElementById("reviewSub").textContent = a.title + " · 제출 시각 " + formatTimestamp(entry.submittedAt) + (isTeam ? (" · 제출자: " + entry.submittedBy) : "");
+
+    var membersEl = document.getElementById("reviewMembers");
+    if (isTeam) {
+      membersEl.innerHTML = entry.members.map(function (m) {
+        return '<span class="member-chip' + (m === entry.submittedBy ? ' rep' : '') + '">' + escapeHtml(m) + (m === entry.submittedBy ? ' (대표)' : '') + '</span>';
+      }).join("");
+      membersEl.style.display = "flex";
+    } else {
+      membersEl.innerHTML = "";
+      membersEl.style.display = "none";
+    }
+
+    document.getElementById("reviewPreviewArea").innerHTML = renderPreviewHtml(entry.ext, entry.content || "");
+
+    var descArea = document.getElementById("reviewDescArea");
+    if (entry.desc && entry.desc.trim()) { descArea.textContent = entry.desc; descArea.classList.remove("empty"); }
+    else { descArea.textContent = "작성된 설명이 없습니다."; descArea.classList.add("empty"); }
+
+    renderAiSection(entry);
+    renderFeedbackArea(entry, isTeam);
+  }
+
+  // ---------- AI evaluation section ----------
+  var aiGenBtn = document.getElementById("aiGenBtn");
+  var aiFeedbackCard = document.getElementById("aiFeedbackCard");
+  var aiScoreBadge = document.getElementById("aiScoreBadge");
+  var aiFeedbackText = document.getElementById("aiFeedbackText");
+
+  // AI 평가와 튜터 점수를 8:2(튜터:AI) 비율로 합산한 최종 점수. AI 점수가 없으면 튜터 100%.
+  function computeFinalScore(tutorScore, aiScore) {
+    if (aiScore === null || aiScore === undefined) return tutorScore;
+    return tutorScore * 0.8 + aiScore * 0.2;
+  }
+  function formatScore(n) {
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    var rounded = Math.round(n * 10) / 10;
+    return (rounded % 1 === 0) ? String(rounded) : String(rounded.toFixed(1));
+  }
+
+  function renderAiSection(entry) {
+    // AI 평가는 제출물당 1회만 생성 가능 — 생성 후에는 버튼을 숨기고 재생성을 막는다.
+    if (entry.aiFeedback) {
+      aiGenBtn.style.display = "none";
+      aiFeedbackCard.style.display = "block";
+      aiScoreBadge.textContent = entry.aiFeedback.score + "/100";
+      aiFeedbackText.textContent = entry.aiFeedback.text;
+    } else {
+      aiGenBtn.style.display = "inline-block";
+      aiFeedbackCard.style.display = "none";
+    }
+  }
+
+  aiGenBtn.addEventListener("click", function () {
+    var entry = currentReviewEntry();
+    if (!entry) return;
+    showConfirm({
+      title: "AI 평가를 생성할까요?",
+      message: "이 제출물에 대해 AI 평가는 1회만 생성할 수 있고, 이후에는 재생성할 수 없습니다. 계속할까요?",
+      okText: "생성",
+      danger: false,
+      onConfirm: function () {
+        entry.aiFeedback = generateAIFeedback(entry);
+        renderAiSection(entry);
+        updateFinalScorePreview(entry);
+        showToast("AI 평가가 생성되었습니다");
+      }
+    });
+  });
+
+  function renderFeedbackArea(entry, isTeam) {
+    var wrap = document.getElementById("reviewFeedbackArea");
+    var lockNote = isTeam
+      ? "이 팀은 피드백이 등록되어 있어 재제출이 제한됩니다. 팀원 전체에게 동일한 점수·피드백이 적용됩니다."
+      : "피드백이 등록되어 있어 학생은 이 제출물을 재제출할 수 없습니다.";
+
+    if (entry.feedback) {
+      var aiScoreForLine = entry.aiFeedback ? entry.aiFeedback.score : null;
+      var finalScoreForLine = computeFinalScore(entry.tutorScore, aiScoreForLine);
+      var scoreLine = (aiScoreForLine !== null)
+        ? ("최종 점수: " + formatScore(finalScoreForLine) + " / 100 (튜터 " + entry.tutorScore + " · AI " + aiScoreForLine + " 반영, 8:2)")
+        : ("최종 점수: " + formatScore(finalScoreForLine) + " / 100 (AI 미평가 · 튜터 100% 반영)");
+      wrap.innerHTML =
+        '<div class="alert-banner locked">' +
+          '<div class="ab-icon">🔒</div>' +
+          '<div><div class="ab-title">피드백 완료 · 제출물 잠김</div><div class="ab-sub">' + escapeHtml(lockNote) + '</div></div>' +
+        '</div>' +
+        '<div class="feedback-text-display">' +
+          '<div class="fb-score-line">' + scoreLine + '</div>' +
+          escapeHtml(entry.feedback) +
+        '</div>' +
+        '<div class="feedback-actions"><button class="btn btn-ghost btn-sm" id="fbEditBtn" type="button">피드백 수정</button></div>';
+      document.getElementById("fbEditBtn").addEventListener("click", function () { showFeedbackForm(entry, entry.feedback, entry.tutorScore); });
+    } else {
+      showFeedbackForm(entry, "", null);
+    }
+  }
+
+  function showFeedbackForm(entry, prefillText, prefillScore) {
+    var wrap = document.getElementById("reviewFeedbackArea");
+    wrap.innerHTML =
+      '<div class="score-field" id="scoreField">' +
+        '<label>튜터 점수</label>' +
+        '<input type="number" id="tutorScoreInput" min="0" max="100" placeholder="0-100">' +
+        '<span class="suffix">/ 100</span>' +
+      '</div>' +
+      '<div class="score-field-error">0~100 사이의 점수를 입력해주세요.</div>' +
+      '<div class="final-score-preview" id="finalScorePreview">최종 점수: 튜터 점수를 입력하면 표시됩니다.</div>' +
+      '<textarea id="feedbackInput" maxlength="500" placeholder="텍스트로 피드백을 남겨주세요."></textarea>' +
+      '<div class="feedback-actions"><button class="btn btn-primary btn-sm" id="fbSaveBtn" type="button">피드백 저장</button></div>';
+    var input = document.getElementById("feedbackInput");
+    var scoreInput = document.getElementById("tutorScoreInput");
+    var scoreField = document.getElementById("scoreField");
+    input.value = prefillText || "";
+    scoreInput.value = (prefillScore === null || prefillScore === undefined) ? "" : prefillScore;
+    scoreInput.addEventListener("input", function () { updateFinalScorePreview(entry); });
+    updateFinalScorePreview(entry);
+    document.getElementById("fbSaveBtn").addEventListener("click", function () {
+      var val = input.value.trim();
+      var scoreVal = scoreInput.value.trim();
+      var scoreNum = Number(scoreVal);
+      var scoreOk = scoreVal !== "" && !isNaN(scoreNum) && scoreNum >= 0 && scoreNum <= 100;
+      scoreField.classList.toggle("invalid", !scoreOk);
+      if (!scoreOk) { scoreInput.focus(); return; }
+      if (!val) { input.focus(); return; }
+      entry.feedback = val;
+      entry.tutorScore = Math.round(scoreNum);
+      renderFeedbackArea(entry, findAssignment(currentAssignmentId).team);
+      showToast("피드백이 저장되었습니다");
+    });
+  }
+
+  // 튜터 점수 입력창 옆에 튜터:AI = 8:2로 합산될 최종 점수를 실시간으로 미리 보여준다.
+  function updateFinalScorePreview(entry) {
+    var el = document.getElementById("finalScorePreview");
+    if (!el) return;
+    var scoreInput = document.getElementById("tutorScoreInput");
+    var val = scoreInput ? scoreInput.value.trim() : "";
+    var num = Number(val);
+    if (val === "" || isNaN(num)) {
+      el.textContent = "최종 점수: 튜터 점수를 입력하면 표시됩니다.";
+      return;
+    }
+    var aiScore = entry.aiFeedback ? entry.aiFeedback.score : null;
+    var final = computeFinalScore(num, aiScore);
+    if (aiScore === null) {
+      el.textContent = "최종 점수: " + formatScore(final) + "점 (AI 미평가 · 튜터 100% 반영)";
+    } else {
+      el.textContent = "최종 점수: " + formatScore(final) + "점 (튜터 " + num + " · AI " + aiScore + " 반영, 8:2)";
+    }
+  }
+
+  // ========================================================================
+  // Init
+  // ========================================================================
+  renderAssignList();
+})();
+</script>
