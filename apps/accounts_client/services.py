@@ -113,14 +113,16 @@ def is_team_member(user_id, team_id):
 
 
 def is_tutor(user_id):
+    # 개발 모드에서는 역할 게이트를 열어 둔다: DEV_ROLE 과 무관하게 튜터/학생 화면을
+    # 모두 볼 수 있게 한다 (화면 확인용). 사이드바 메뉴만 DEV_ROLE 로 갈린다.
     if _dev():
-        return settings.DEV_ROLE == "TUTOR"
+        return True
     u = get_user(user_id)
     return bool(u and u.role == "TUTOR")
 
 
 def is_student(user_id):
     if _dev():
-        return settings.DEV_ROLE == "STUDENT"
+        return True
     u = get_user(user_id)
     return bool(u and u.role == "STUDENT")
