@@ -12,9 +12,14 @@ apps/student/urls.py
 """
 from django.urls import path
 
+from . import views_dashboard
+
 app_name = "student"
 
 urlpatterns: list[path] = [
-    # 예)
-    # path("assignments/", views_submit.AssignmentListView.as_view(), name="assignment-list"),
+    # 학생 메인 대시보드 (PRD 7장) — 학생 A/B 담당과 별개
+    path("", views_dashboard.dashboard, name="dashboard"),
+    path("todos/add/", views_dashboard.todo_add, name="todo-add"),
+    path("todos/<int:pk>/toggle/", views_dashboard.todo_toggle, name="todo-toggle"),
+    path("todos/<int:pk>/delete/", views_dashboard.todo_delete, name="todo-delete"),
 ]
