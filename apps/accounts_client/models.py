@@ -11,8 +11,7 @@
 #     - id, name, ...
 # - TeamsTeamMembership (Meta: managed=False, db_table="teams_team_membership") — 팀-학생 매핑
 #     - team_id, user_id
-#     - is_representative(팀장 여부 — AX Evaluator에 필드 추가 요청중, 팀당 true 1명. PRD 9장 / 논의정리 §3)
-#       → 승인 전제로 v6 작성. 거절 시 우리 쪽 TEAM_REPRESENTATIVE 테이블(v4)로 폴백
+#     - 팀 과제 제출 자격(= 그 팀 소속인지) 확인용. 팀장/대표자 개념 없음 (2026-08-27 폐기).
 #     - 실제 컬럼은 AX Evaluator 스키마 확인 후 확정
 #
 # 주의:

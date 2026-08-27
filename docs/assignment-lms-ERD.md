@@ -3,6 +3,11 @@
 **기준 문서:** PRD v0.3 (2026-08-26) + 설계 논의 정리 (`과제시스템-설계논의-정리`)
 **개정:** 2026-08-27
 
+> **2026-08-27 추가 결정 (목업 검토 후)**
+> - **팀장(대표자) 개념 폐기** — `teams_team_membership.is_representative` 요청 취소. 팀 과제는 팀원 누구나 팀을 대신해 제출(1행 덮어쓰기).
+> - **최종 점수(`final_score`) 집계 방식은 오픈 퀘스천** — 현재는 `EVALUATION.score` 를 그대로 복사(§4). 목업의 "튜터 8 : AI 2" 가중 합산은 **폐기된 안**.
+> - **AI 평가는 재생성 가능** (재생성 시 `AI_EVALUATION` 덮어씀, 이력 없음).
+
 v5 → v6 변경 요약
 - `AI_EVALUATION` / `EVALUATION` 테이블 분리 (AI 1차 평가 vs 튜터 공식 평가)
 - `SUBMISSION.final_score` 캐시 컬럼 추가 (+ 동기화 규칙)
@@ -47,7 +52,7 @@ erDiagram
     LECTURE        ||--o{ ASSIGNMENT     : "포함"
     ASSIGNMENT     ||--o{ SUBMISSION     : "제출 대상"
     ACCOUNTS_USER  ||--o{ SUBMISSION     : "제출(개인 과제)"
-    TEAMS_TEAM     ||--o{ SUBMISSION     : "제출(팀 과제, 팀장이)"
+    TEAMS_TEAM     ||--o{ SUBMISSION     : "제출(팀 과제)"
     SUBMISSION     ||--o{ SUBMISSION_FILE : "첨부파일"
     SUBMISSION     ||--o| AI_EVALUATION  : "AI 1차 평가"
     SUBMISSION     ||--o| EVALUATION     : "튜터 공식 평가"
@@ -73,7 +78,6 @@ erDiagram
         bigint   id PK
         bigint   team_id FK
         bigint   user_id FK
-        boolean  is_representative "팀장 여부. AX Evaluator에 필드 추가 요청중 — 팀당 true 1명 (PRD 9장, 논의정리 §3)"
     }
 
     LECTURE {
@@ -127,7 +131,7 @@ erDiagram
         bigint   id PK
         bigint   assignment_id FK
         bigint   student_id               "accounts_user.id — 개인 과제일 때만 (NULL 허용)"
-        bigint   team_id                  "teams_team.id — 팀 과제일 때만 (NULL 허용). 팀장이 제출"
+        bigint   team_id                  "teams_team.id — 팀 과제일 때만 (NULL 허용). 팀원 누구나 제출"
         text     description              "제출 설명 텍스트 (FR-004)"
         boolean  is_late                  "제출 시점 마감 초과 여부. 튜터 화면 '지각 제출' 배지용 (BR-004)"
         boolean  is_locked                "튜터 공식 평가가 저장되면 true → 재제출 차단 (BR-006)"
@@ -191,7 +195,7 @@ erDiagram
 |---|---|---|
 | `AccountsUser` | `accounts_user` | 학생·튜터 계정. 역할 `STUDENT` / `TUTOR` 둘 뿐 (조교 없음) |
 | `TeamsTeam` | `teams_team` | 팀. 명단은 AX Evaluator 가 관리, 본 시스템은 참조만 |
-| `TeamsTeamMembership` | `teams_team_membership` | 팀-학생 매핑. `is_representative`(팀장) 필드 추가 요청 상태 — §5 참고 |
+| `TeamsTeamMembership` | `teams_team_membership` | 팀-학생 매핑. 팀 과제 제출 자격(팀원 여부) 확인용 — §5 |
 
 ### 3.2 본 프로젝트 (`default` DB · `managed=True` · `apps/core/`)
 
@@ -216,30 +220,27 @@ erDiagram
 2. 버튼이 Gemini API 를 트리거 → 점수(0~100)+코멘트 생성 → `AI_EVALUATION` 저장 (재생성 시 이 행 덮어씀).
    *현재 프로토타입은 실제 호출 없이 `is_simulated=true` 로 시뮬레이션.*
 3. 튜터가 AI 결과를 참고해 직접 점수+피드백 작성 → `EVALUATION` 저장.
-4. **`EVALUATION` 저장/수정 시 `SUBMISSION.final_score = EVALUATION.score`, `SUBMISSION.is_locked = true` 로 자동 동기화** (모델 `save()` 오버라이드 또는 signal — 사람이 두 곳에 입력하지 않음).
+4. **`EVALUATION` 저장/수정 시 `SUBMISSION.final_score`, `SUBMISSION.is_locked = true` 로 자동 동기화** (`apps/core/signals.py` 의 post_save — 사람이 두 곳에 입력하지 않음).
 
 ### 4.2 `final_score` 를 따로 두는 이유
 - `EVALUATION` 존재 자체가 "공식 평가 완료"이지만, `final_score` 는 별도 목적의 **캐시**:
   - **외부 점수 산출 시스템 연동**: `SUBMISSION` 만 조회해도 점수를 바로 가져갈 수 있어야 함 (`EVALUATION` 조인 불필요).
   - **대시보드 조회 성능**: 제출 현황 목록에서 점수를 조인 없이 표시.
-- **source of truth 는 `EVALUATION.score`**, `final_score` 는 저장/수정 시마다 동기화되는 복사본.
-- `final_score IS NULL` → "피드백 대기", 값 있음 → "피드백 완료" (목업 화면 기준).
+- `final_score IS NULL` → "피드백 대기", 값 있음 → "피드백 완료".
 
-### 4.3 채택하지 않은 방식
-- "AI 점수 + 튜터 점수 평균": 계산 로직이 늘고 실점수 반영 시 원인 추적이 어려워 제외. 향후 AI 신뢰도가 검증되면 참고 옵션으로만 재검토.
+### 4.3 `final_score` 집계 방식 — 오픈 퀘스천 (2026-08-27)
+- **현재 구현**: `final_score = EVALUATION.score` (튜터 점수 그대로 복사). source of truth 는 `EVALUATION.score`.
+- **폐기된 안**: 목업에 있던 "튜터 8 : AI 2" 가중 합산 (`tutor*0.8 + ai*0.2`) — 채택 안 함.
+- 최종 집계 방식(가중치/rubric 반영 등)은 팀 논의 대기. 정해지면 `signals.py` 의 계산부만 수정하면 됨 (스키마 변경 없음).
 
 ---
 
-## 5. 팀장(대표자) 처리 — 진행 중 (논의정리 §3)
+## 5. 팀 과제 제출 자격 (2026-08-27 결정)
 
-**문제**: 팀 과제는 팀장만 제출 가능해야 하는데 `teams_team_membership` 에 팀장 개념이 없음.
-
-| 대안 | 상태 |
-|---|---|
-| ① 우리 쪽 `TEAM_REPRESENTATIVE` 테이블로 직접 관리 (구 v4) | 폴백안 |
-| ② **AX Evaluator 에 `teams_team_membership.is_representative` 추가 요청** (팀당 true 1명) | **현재 진행 방향. v6 는 이 승인을 전제** |
-
-②가 거절되면 v6 → ①(별도 테이블) 구조로 되돌린다.
+- **팀장(대표자) 개념 폐기.** `teams_team_membership.is_representative` 추가 요청 취소, `TEAM_REPRESENTATIVE` 별도 테이블 안(구 v4)도 폐기.
+- 팀 과제는 **해당 팀의 팀원이면 누구나** 팀을 대신해 제출할 수 있다. 제출은 `(assignment, team)` 당 1행이며 재제출은 덮어쓰기(FR-006).
+- 제출 시점 검증: "요청 사용자가 `teams_team_membership` 상 해당 팀 소속인지"만 확인 (BR-005).
+- 누가 제출했는지는 `SUBMISSION` 에 저장하지 않는다. 필요해지면 `submitted_by_id` 컬럼 추가.
 
 ---
 
@@ -267,15 +268,18 @@ erDiagram
   - 개인 과제: `UNIQUE(assignment_id, student_id)`
   - 팀 과제: `UNIQUE(assignment_id, team_id)`
   - (Django 조건부 `UniqueConstraint` 2개)
-- **팀 과제 제출자 검증**: 제출 시점에 "요청 사용자가 해당 팀의 `is_representative`" 인지 확인 (BR-005). 누가 제출했는지는 행에 저장하지 않음 — 필요해지면 `submitted_by_id` 컬럼 추가.
-- **점수 범위** (BR-007): `AI_EVALUATION.score`, `EVALUATION.score`, `SUBMISSION.final_score` 모두 `0 ≤ score ≤ 100` `CHECK`.
+- **팀 과제 제출 자격**: 제출 시점에 "요청 사용자가 해당 팀 소속(`teams_team_membership`)인지"만 확인 (BR-005, §5). 누가 제출했는지는 행에 저장 안 함.
+- **점수 범위** (BR-007): `AI_EVALUATION.score`, `EVALUATION.score`, `SUBMISSION.final_score` 모두 `0 ≤ score ≤ 100` 권장 — *현재 모델 초안에는 미적용* (§8).
 - **지각 배지** (BR-004): `is_late` 는 학생 화면 비노출, 튜터 화면만 "지각 제출" 배지.
 
 ---
 
 ## 8. 아직 안 정해진 것
 
+- **`final_score` 집계 방식** → 현재는 튜터 점수 그대로 복사. 가중치/rubric 반영 여부 미정 (§4.3).
+- **점수 0~100 범위 강제** → `CHECK`/validator 를 넣을지 미정. 현재 `apps/core/models.py` 초안엔 `help_text` 만.
 - **채점 기준(rubric)** 세부 항목 → 정해지면 `EVALUATION` / `AI_EVALUATION` 에 항목별 컬럼 추가 여부 논의.
+- **`ASSIGNMENT.weight_tier`** (HIGH/MID/LOW) → 필드만 존재. 실제 가중치 숫자 매핑·`GRADING_POLICY` 는 미정.
 - **인증 방식** (PRD 9장) → `ACCOUNTS_USER` 를 Django 인증 사용자로 쓸지, 세션 매핑을 둘지.
 - **과제 삭제 시 하위 데이터** → 현재 `ASSIGNMENT.deleted_at` 소프트 삭제만. `SUBMISSION`/`EVALUATION` 동반 처리 정책 필요.
 - **AI 평가 자동 실행 / 공개 시점 분리** → 필요 시 `AI_EVALUATION` 에 `published_at` 등 추가.

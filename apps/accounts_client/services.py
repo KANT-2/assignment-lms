@@ -6,8 +6,7 @@
 # - get_users(user_ids)          : 여러 사용자 한 번에 조회 → {id: user}
 # - get_team_members(team_id)    : 팀 소속 멤버 목록
 # - get_user_team(user_id)       : 사용자가 속한 팀
-# - get_team_representative(team_id) : 팀장 (teams_team_membership.is_representative)
-# - is_team_representative(user_id, team_id) : 팀 과제 제출 권한 확인 (BR-005)
+# - is_team_member(user_id, team_id) : 팀 과제 제출 자격 확인 (그 팀 소속인지, BR-005)
 # - is_tutor(user_id) / is_student(user_id) : 역할 확인
 #
 # 조회 결과 캐싱 고려 (요청 단위)

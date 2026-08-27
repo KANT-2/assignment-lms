@@ -20,6 +20,7 @@
 | [docs/assignment-lms-ERD.md](docs/assignment-lms-ERD.md) | 데이터 모델, v6 |
 | [docs/DESIGN.md](docs/DESIGN.md) | 디자인 시스템 (색·타이포·컴포넌트, Bootstrap 5.3 기반) |
 | [docs/LAYOUT.md](docs/LAYOUT.md) | 전역 레이아웃 (사이드바 + 탑바 + 메인, 반응형 규칙) |
+| [docs/mockups/](docs/mockups/README.md) | 프로토타입 목업 HTML + 실제 명세와 다른 부분 정리 |
 
 UI 작업 전 DESIGN.md / LAYOUT.md 를 먼저 확인. shell(사이드바·탑바)은 `apps/common/templates/` 에서만 관리하고 각 페이지는 `{% extends "base.html" %}`.
 
