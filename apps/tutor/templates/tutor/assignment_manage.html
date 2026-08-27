@@ -1,3 +1,346 @@
 {# apps/tutor/templates/tutor/assignment_manage.html #}
-{# 튜터A — FR-001 과제 생성 / FR-002 수정·삭제·공개설정 #}
-{# base.html 상속. 과제 목록 + 생성/편집 폼 #}
+{# 튜터A — FR-001 과제 등록 / FR-002 수정·삭제·실행취소 #}
+{# 목업(AX 프로젝트 과제 관리) Screen A + 등록/수정 모달을 Django 서버렌더링으로 옮긴 것. #}
+{# base.html 상속. shell(사이드바·탑바)은 공통 담당 apps/common/templates/base.html. #}
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}과제 관리{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* 목업 디자인 토큰 — 공통 common/css/tokens.css 가 준비되면 그쪽 변수로 대체 */
+  .tt-scope {
+    --bg:#eef1f8; --surface:#fff; --surface-muted:#f4f6fb; --surface-sunken:#eef1f8;
+    --text:#1c2130; --text-muted:#6b7280; --text-faint:#9aa1b1;
+    --border:#e4e8f1; --border-strong:#d5dbe8;
+    --accent:#4f6df5; --accent-soft:#eaefff; --accent-text:#3a56d4;
+    --green:#1fa971; --green-soft:#e5f7ee; --red:#ef4b4b; --red-soft:#fdecec;
+    --amber:#c98a1a; --amber-soft:#fbf0dd; --purple:#7c4fd6; --purple-soft:#f1e9ff;
+    --radius-lg:16px; --radius-md:12px; --radius-sm:8px;
+    --shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
+    color:var(--text);
+  }
+  .tt-scope .breadcrumb{font-size:12.5px;color:var(--text-faint);font-weight:600;}
+  .tt-scope h1.page-title{font-size:21px;font-weight:800;margin:.15rem 0;letter-spacing:-.01em;}
+  .tt-scope .page-sub{font-size:12.5px;color:var(--text-muted);}
+  .tt-scope .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:20px 22px 22px;}
+  .tt-scope .card-title{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px;}
+
+  .tt-scope .list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .tt-scope .list-head-left{display:flex;align-items:baseline;gap:9px;}
+  .tt-scope .list-count{font-size:12px;color:var(--text-muted);font-weight:600;}
+
+  .tt-scope .btn{border:none;border-radius:var(--radius-sm);padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+  .tt-scope .btn-primary{background:var(--accent);color:#fff;}
+  .tt-scope .btn-primary:hover{filter:brightness(1.06);}
+  .tt-scope .btn-danger{background:var(--red);color:#fff;}
+  .tt-scope .btn-ghost{background:var(--surface);color:var(--text-muted);border:1px solid var(--border-strong);}
+  .tt-scope .btn-ghost:hover{background:var(--surface-muted);}
+  .tt-scope .btn-sm{padding:8px 14px;font-size:12.5px;}
+
+  .tt-scope .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .tt-scope .badge.type{background:var(--accent-soft);color:var(--accent-text);}
+  .tt-scope .badge.type.optional{background:var(--surface-sunken);color:var(--text-muted);}
+  .tt-scope .badge.unit{background:var(--surface-sunken);color:var(--text-muted);}
+  .tt-scope .badge.unit.team{background:var(--purple-soft);color:var(--purple);}
+  .tt-scope .badge.dday{background:var(--red-soft);color:var(--red);}
+  .tt-scope .badge.dday.later{background:var(--surface-sunken);color:var(--text-muted);}
+
+  .tt-scope .assign-list{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+  .tt-scope .assign-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);transition:border-color .15s,box-shadow .15s;}
+  .tt-scope .assign-row:hover{border-color:var(--border-strong);box-shadow:0 2px 10px rgba(24,30,51,.06);}
+  .tt-scope .assign-row.past{background:var(--surface-muted);}
+  .tt-scope .assign-row .ar-main{flex:1;min-width:0;}
+  .tt-scope .assign-row .ar-title{font-size:13.5px;font-weight:700;margin-bottom:5px;color:inherit;text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tt-scope .assign-row .ar-title:hover{color:var(--accent-text);}
+  .tt-scope .assign-row .ar-badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .tt-scope .assign-row .ar-due{font-size:11.5px;color:var(--text-faint);}
+  .tt-scope .assign-row .ar-stats{flex-shrink:0;font-size:11.5px;font-weight:700;color:var(--text-muted);background:var(--surface-sunken);padding:5px 10px;border-radius:20px;white-space:nowrap;}
+  .tt-scope .assign-row .ar-actions{display:flex;gap:4px;flex-shrink:0;}
+  .tt-scope .icon-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text-muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;}
+  .tt-scope .icon-btn:hover{background:var(--surface-muted);color:var(--text);}
+  .tt-scope .icon-btn.danger:hover{background:var(--red-soft);color:var(--red);border-color:#f6c9c9;}
+  .tt-scope .list-empty{text-align:center;color:var(--text-faint);font-size:12.5px;padding:40px 0;}
+  .tt-scope .deleted-box{margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;}
+  .tt-scope .deleted-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--text-faint);padding:6px 0;}
+
+  /* flags */
+  .tt-scope .flag{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;flex-shrink:0;border:1.5px solid currentColor;cursor:default;}
+  .tt-scope .flag.required{color:var(--red);}
+  .tt-scope .flag.help{color:var(--accent);font-size:10px;}
+
+  /* modal */
+  .tt-modal{position:fixed;inset:0;background:rgba(17,22,38,.46);display:flex;align-items:flex-start;justify-content:center;padding:40px 18px;overflow-y:auto;z-index:1080;opacity:0;pointer-events:none;transition:opacity .16s;}
+  .tt-modal.show{opacity:1;pointer-events:auto;}
+  .tt-modal-card{background:var(--surface);border-radius:var(--radius-lg);box-shadow:0 24px 64px rgba(15,20,40,.28);width:100%;max-width:520px;padding:22px 24px 24px;transform:translateY(10px) scale(.98);transition:transform .16s cubic-bezier(.2,.8,.2,1);}
+  .tt-modal.show .tt-modal-card{transform:none;}
+  .tt-modal-card.sm{max-width:400px;}
+  .tt-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .tt-modal-title{font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;}
+  .tt-modal-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text-muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+  .tt-scope .field{display:flex;flex-direction:column;gap:6px;margin-bottom:15px;}
+  .tt-scope .field-label{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;}
+  .tt-scope .field input[type=text],.tt-scope .field input[type=datetime-local],.tt-scope .field textarea{width:100%;border:1px solid var(--border-strong);background:var(--surface-sunken);border-radius:var(--radius-sm);padding:10px 12px;font-size:13.5px;color:var(--text);font-family:inherit;line-height:1.5;}
+  .tt-scope .field textarea{min-height:78px;resize:vertical;}
+  .tt-scope .field input:focus,.tt-scope .field textarea:focus{outline:none;border-color:var(--accent);background:var(--surface);}
+  .tt-scope .field .errorlist{list-style:none;margin:0;padding:0;font-size:11.5px;color:var(--red);}
+  .tt-scope .static-note{font-size:12px;color:var(--text-muted);background:var(--surface-sunken);border-radius:var(--radius-sm);padding:9px 12px;line-height:1.5;}
+  .tt-scope .seg-group{display:inline-flex;border:1px solid var(--border-strong);border-radius:999px;padding:3px;background:var(--surface-sunken);width:fit-content;}
+  .tt-scope .seg-btn{padding:7px 16px;border-radius:999px;font-size:12.5px;font-weight:700;border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit;}
+  .tt-scope .seg-btn.active{background:var(--accent);color:#fff;}
+  .tt-scope .seg-group.semantic .seg-btn[data-value="1"].active{background:var(--green);}
+  .tt-scope .seg-group.semantic .seg-btn[data-value="0"].active{background:var(--red);}
+  .tt-scope .seg-group.locked{pointer-events:none;opacity:.5;}
+  .tt-scope .team-note{font-size:11.5px;color:var(--purple);margin-top:2px;display:none;}
+  .tt-scope .team-note.show{display:block;}
+  .tt-scope .unit-lock-note{font-size:11.5px;color:var(--red);margin-top:4px;display:none;}
+  .tt-scope .unit-lock-note.show{display:block;}
+  .tt-scope .modal-actions{display:flex;gap:10px;margin-top:20px;}
+  .tt-scope .modal-actions .btn{flex:1;justify-content:center;}
+
+  /* toast (Django messages) */
+  .tt-toast-wrap{position:fixed;right:22px;bottom:22px;display:flex;flex-direction:column;gap:8px;z-index:1090;}
+  .tt-toast{background:var(--text);color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,.25);max-width:340px;}
+  .tt-toast form{display:inline;}
+  .tt-toast .tt-toast-undo{color:#9db4ff;font-weight:700;background:none;border:none;font-family:inherit;font-size:13px;padding:0;cursor:pointer;}
+
+  @media (prefers-reduced-motion:reduce){.tt-modal,.tt-modal-card{transition:none;}}
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="tt-scope">
+  <div class="breadcrumb">AX 프로젝트 평가 · 과제 관리 (튜터)</div>
+  <h1 class="page-title">과제 관리</h1>
+  <div class="page-sub">과제를 클릭하면 학생·팀별 제출 현황을 확인할 수 있습니다.</div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="tt-scope">
+  <div class="card">
+    <div class="list-head">
+      <div class="list-head-left">
+        <div class="card-title" style="margin:0;">📋 등록된 과제</div>
+        <div class="list-count">{{ assignments|length }}개</div>
+      </div>
+      <button type="button" class="btn btn-primary" data-tt-open="assignmentModal">+ 새 과제 등록</button>
+    </div>
+
+    <div class="assign-list">
+      {% for a in assignments %}
+        <div class="assign-row {% if a.is_past %}past{% endif %}">
+          <div class="ar-main">
+            <a class="ar-title" href="{% url 'tutor:submission-dashboard' a.pk %}">{{ a.title }}</a>
+            <div class="ar-badges">
+              <span class="badge type {% if not a.is_required %}optional{% endif %}">{% if a.is_required %}필수{% else %}선택{% endif %}</span>
+              <span class="badge unit {% if a.is_team %}team{% endif %}">{% if a.is_team %}팀 과제{% else %}개인 과제{% endif %}</span>
+              <span class="badge dday {% if not a.is_past %}later{% endif %}">
+                {% if a.is_past %}마감 지남{% else %}마감 {{ a.due_at|date:"Y.m.d (D) H:i" }}{% endif %}{% if not a.allow_late %} · 지각 불가{% endif %}
+              </span>
+            </div>
+          </div>
+          <div class="ar-stats">
+            {{ a.submission_count }}/{{ a.unit_total }}{% if a.is_team %}팀{% else %}명{% endif %} 제출
+          </div>
+          <div class="ar-actions">
+            <a class="icon-btn" href="{% url 'tutor:assignment-edit' a.pk %}" title="수정">✎</a>
+            {% if a.submission_count %}
+              <button type="button" class="icon-btn danger" title="삭제"
+                      data-tt-confirm-delete
+                      data-title="{{ a.title }}"
+                      data-count="{{ a.submission_count }}"
+                      data-unit="{% if a.is_team %}팀{% else %}명{% endif %}"
+                      data-action="{% url 'tutor:assignment-delete' a.pk %}">🗑</button>
+            {% else %}
+              <form method="post" action="{% url 'tutor:assignment-delete' a.pk %}"
+                    onsubmit="return confirm('이 과제를 삭제할까요? 실행취소로 되돌릴 수 있습니다.');">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn danger" title="삭제">🗑</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <div class="list-empty">등록된 과제가 없습니다.<br>위의 “+ 새 과제 등록” 버튼을 눌러 시작해보세요.</div>
+      {% endfor %}
+    </div>
+
+    {% if deleted_assignments %}
+      <div class="deleted-box">
+        <div class="card-title" style="font-size:12.5px;color:var(--text-muted);">삭제된 과제 · 실행취소로 되살릴 수 있습니다</div>
+        {% for a in deleted_assignments %}
+          <div class="deleted-row">
+            <span>{{ a.title }} <small>({{ a.deleted_at|date:"Y.m.d H:i" }} 삭제)</small></span>
+            <form method="post" action="{% url 'tutor:assignment-restore' a.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost btn-sm">실행취소</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── 등록/수정 모달 ───────────────────────────────────────────── #}
+<div class="tt-modal {% if form_mode == 'edit' or form.errors %}show{% endif %}" id="assignmentModal">
+  <div class="tt-scope"><div class="tt-modal-card">
+    <div class="tt-modal-head">
+      <div class="tt-modal-title"><span class="flag required">!</span>
+        {% if form_mode == 'edit' %}과제 수정{% else %}새 과제 등록{% endif %}
+      </div>
+      <button type="button" class="tt-modal-close" data-tt-close>✕</button>
+    </div>
+
+    <form method="post"
+          action="{% if form_mode == 'edit' %}{% url 'tutor:assignment-edit' editing.pk %}{% else %}{% url 'tutor:assignment-list' %}{% endif %}"
+          novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="static-note" style="color:var(--red);">{{ form.non_field_errors }}</div>{% endif %}
+
+      <div class="field">
+        <label class="field-label" for="{{ form.title.id_for_label }}"><span class="flag required">!</span> 과제명</label>
+        {% render_field form.title %}
+        {{ form.title.errors }}
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="{{ form.description.id_for_label }}"><span class="flag required">!</span> 과제 설명 (학생에게 표시됩니다)</label>
+        {% render_field form.description %}
+        {{ form.description.errors }}
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="{{ form.due_at.id_for_label }}"><span class="flag required">!</span> 제출 마감일시</label>
+        {% render_field form.due_at %}
+        {{ form.due_at.errors }}
+      </div>
+
+      {# 필수/선택 — is_required (bool) #}
+      <div class="field">
+        <label class="field-label"><span class="flag help" title="라벨만 다르고 마감·제출방식·집계 방식은 동일합니다">?</span> 필수 여부</label>
+        <div class="seg-group" data-tt-seg="{{ form.is_required.html_name }}">
+          <button type="button" class="seg-btn {% if form.is_required.value %}active{% endif %}" data-value="1">필수</button>
+          <button type="button" class="seg-btn {% if not form.is_required.value %}active{% endif %}" data-value="0">선택</button>
+        </div>
+        <input type="hidden" name="{{ form.is_required.html_name }}" value="{% if form.is_required.value %}1{% endif %}">
+      </div>
+
+      {# 지각 제출 — allow_late (bool) #}
+      <div class="field">
+        <label class="field-label"><span class="flag help" title="허용 시 마감 후 제출도 일반 제출과 동일하게 처리됩니다">?</span> 지각 제출</label>
+        <div class="seg-group semantic" data-tt-seg="{{ form.allow_late.html_name }}">
+          <button type="button" class="seg-btn {% if form.allow_late.value %}active{% endif %}" data-value="1">허용</button>
+          <button type="button" class="seg-btn {% if not form.allow_late.value %}active{% endif %}" data-value="0">불가</button>
+        </div>
+        <input type="hidden" name="{{ form.allow_late.html_name }}" value="{% if form.allow_late.value %}1{% endif %}">
+      </div>
+
+      {# 과제 구분 — is_team (bool). 제출물 있으면 잠금 #}
+      <div class="field">
+        <label class="field-label"><span class="flag help" title="팀 과제는 팀원 누구나 팀을 대신해 제출할 수 있습니다">?</span> 과제 구분</label>
+        <div class="seg-group {% if form.has_submissions %}locked{% endif %}" data-tt-seg="{{ form.is_team.html_name }}"
+             {% if form.has_submissions %}data-tt-locked="1"{% endif %}>
+          <button type="button" class="seg-btn {% if not form.is_team.value %}active{% endif %}" data-value="0">개인 과제</button>
+          <button type="button" class="seg-btn {% if form.is_team.value %}active{% endif %}" data-value="1">팀 과제</button>
+        </div>
+        <input type="hidden" name="{{ form.is_team.html_name }}" value="{% if form.is_team.value %}1{% endif %}">
+        <div class="team-note {% if form.is_team.value %}show{% endif %}" data-tt-team-note>팀원 중 한 명이 제출하면 팀 전체 제출로 처리됩니다. 피드백도 팀 전체에 동일하게 적용됩니다.</div>
+        <div class="unit-lock-note {% if form.has_submissions %}show{% endif %}">이미 제출물이 있어 과제 구분(개인/팀)을 변경할 수 없습니다.</div>
+        {{ form.is_team.errors }}
+      </div>
+
+      <div class="field">
+        <label class="field-label">제출 형식</label>
+        <div class="static-note">학생은 .py / .ipynb 등 파일 업로드로 제출합니다 (업로드 시 자동 미리보기 제공). 이 화면에서 설정할 항목은 아닙니다.</div>
+      </div>
+
+      <div class="modal-actions">
+        <a href="{% url 'tutor:assignment-list' %}" class="btn btn-ghost">취소</a>
+        <button type="submit" class="btn btn-primary">{% if form_mode == 'edit' %}과제 수정{% else %}과제 등록{% endif %}</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+
+{# ── 삭제 확인 모달 (제출물 있는 과제) ─────────────────────────── #}
+<div class="tt-modal" id="ttConfirmDelete">
+  <div class="tt-scope"><div class="tt-modal-card sm">
+    <div class="tt-modal-head"><div class="tt-modal-title">과제를 삭제할까요?</div></div>
+    <div class="static-note" id="ttConfirmMsg" style="margin-bottom:20px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-tt-close>취소</button>
+      <form method="post" id="ttConfirmForm"><input type="hidden" name="confirm" value="yes">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger" style="flex:1;justify-content:center;width:100%;">삭제</button>
+      </form>
+    </div>
+  </div></div>
+</div>
+
+{# ── 토스트 (Django messages) ─────────────────────────────────── #}
+{% if messages %}
+<div class="tt-toast-wrap">
+  {% for message in messages %}
+    <div class="tt-toast">{% if 'safe' in message.tags %}{{ message|safe }}{% else %}{{ message }}{% endif %}</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_script %}
+<script>
+(function () {
+  function openModal(id) { var m = document.getElementById(id); if (m) m.classList.add("show"); }
+  function closeModal(m) { m.classList.remove("show"); }
+
+  document.querySelectorAll("[data-tt-open]").forEach(function (b) {
+    b.addEventListener("click", function () { openModal(b.getAttribute("data-tt-open")); });
+  });
+  document.querySelectorAll(".tt-modal").forEach(function (m) {
+    m.addEventListener("click", function (e) { if (e.target === m) closeModal(m); });
+    m.querySelectorAll("[data-tt-close]").forEach(function (b) {
+      b.addEventListener("click", function () { closeModal(m); });
+    });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") document.querySelectorAll(".tt-modal.show").forEach(closeModal);
+  });
+
+  // 세그먼트 컨트롤 → hidden input
+  document.querySelectorAll("[data-tt-seg]").forEach(function (group) {
+    var hidden = group.parentElement.querySelector('input[type="hidden"][name="' + group.getAttribute("data-tt-seg") + '"]');
+    var teamNote = group.parentElement.querySelector("[data-tt-team-note]");
+    group.querySelectorAll(".seg-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (group.getAttribute("data-tt-locked") === "1") return;
+        group.querySelectorAll(".seg-btn").forEach(function (b) { b.classList.toggle("active", b === btn); });
+        var v = btn.getAttribute("data-value");
+        if (hidden) hidden.value = v === "1" ? "1" : "";
+        if (teamNote) teamNote.classList.toggle("show", v === "1");
+      });
+    });
+  });
+
+  // 삭제 확인 모달
+  var cForm = document.getElementById("ttConfirmForm");
+  var cMsg = document.getElementById("ttConfirmMsg");
+  document.querySelectorAll("[data-tt-confirm-delete]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      cForm.setAttribute("action", b.getAttribute("data-action"));
+      cMsg.textContent = '"' + b.getAttribute("data-title") + '"에는 이미 제출물이 '
+        + b.getAttribute("data-count") + b.getAttribute("data-unit") + ' 있습니다. '
+        + '삭제해도 실행취소는 가능하지만 신중하게 진행해주세요.';
+      openModal("ttConfirmDelete");
+    });
+  });
+
+  // 토스트 자동 숨김
+  setTimeout(function () {
+    document.querySelectorAll(".tt-toast").forEach(function (t) { t.style.transition = "opacity .3s"; t.style.opacity = "0"; });
+  }, 5000);
+})();
+</script>
+{% endblock %}
