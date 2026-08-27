@@ -2,10 +2,16 @@
 # ⚠ 공통 담당 전담 — 이 프로젝트의 공유 모델. 학생/튜터팀은 여기 수정 금지 (요청만)
 #
 # 이 프로젝트 전용 PostgreSQL DB 에 실제로 생성되는 테이블 (managed=True)
-# ERD: docs/assignment-system-erd-v5.mermaid 참고
+# ERD: docs/assignment-lms-ERD.md 참고
 #
 # 여기에 들어갈 모델 (상세: docs/assignment-lms-ERD.md):
 # - LECTURE          : 강의. 단일 강의 운영이라 사실상 1행 (BR-001)
+# - LESSON           : 강의 1회차(수업). 튜터가 제목/수업날짜/블로그링크 + 교안 업로드,
+#                      수업 종료 후 유튜브 링크 추가 (FR-015, FR-016)
+#     - lecture FK, title, lesson_date, blog_url, created_by(튜터 id)
+#     - video_url(유튜브, NULL 허용), video_thumbnail_url(미지정 시 video id로 자동생성),
+#       video_published_at(NULL이면 아직 영상 없음)
+# - LESSON_MATERIAL  : 강의 교안(복수). kind(FILE/LINK), title, file 또는 url, sort_order
 # - ASSIGNMENT       : 과제
 #     - lecture FK, 제목, 설명, due_at(마감), is_required(필수/선택),
 #       allow_late(지각 허용), assignment_type(INDIVIDUAL/TEAM), created_by(튜터 id)

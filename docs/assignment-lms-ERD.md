@@ -32,6 +32,10 @@ erDiagram
     SUBMISSION     ||--o| EVALUATION    : "튜터 평가"
     ACCOUNTS_USER  ||--o{ EVALUATION    : "평가자(튜터)"
 
+    LECTURE        ||--o{ LESSON          : "차시(수업)"
+    LESSON         ||--o{ LESSON_MATERIAL : "강의 교안"
+    ACCOUNTS_USER  ||--o{ LESSON          : "작성(튜터)"
+
     ACCOUNTS_USER {
         bigint  id PK
         string  email
@@ -58,6 +62,31 @@ erDiagram
         string  title
         bigint  tutor_id      "accounts_user.id (논리적 참조)"
         datetime created_at
+    }
+
+    LESSON {
+        bigint   id PK
+        bigint   lecture_id FK
+        string   title                   "강의(수업) 제목"
+        date     lesson_date             "수업 날짜 (학생 뷰에 노출)"
+        string   blog_url                "블로그 링크 (NULL 허용)"
+        bigint   created_by              "accounts_user.id — 작성 튜터"
+        string   video_url               "유튜브 링크. 수업 종료 후 추가 (NULL 허용) — FR-016"
+        string   video_thumbnail_url     "미지정 시 유튜브 video id 로 자동 생성 (NULL 허용)"
+        datetime video_published_at      "영상 링크가 등록된 시각 (NULL이면 아직 영상 없음)"
+        datetime created_at
+        datetime updated_at
+    }
+
+    LESSON_MATERIAL {
+        bigint   id PK
+        bigint   lesson_id FK
+        string   kind                    "FILE | LINK"
+        string   title                   "교안 이름/라벨"
+        string   file                    "업로드 파일 경로 (kind=FILE)"
+        string   url                     "외부 링크 (kind=LINK)"
+        integer  sort_order              "학생 화면 노출 순서"
+        datetime uploaded_at
     }
 
     ASSIGNMENT {
@@ -138,6 +167,8 @@ erDiagram
 | 엔티티 | 설명 | 관련 FR/BR |
 |---|---|---|
 | `LECTURE` | 강의(과목). 단일 강의 운영이라 1행 | BR-001 |
+| `LESSON` | 강의 1회차(수업). 튜터가 제목·수업날짜·블로그링크와 교안을 올리고, 수업 종료 후 유튜브 링크를 추가. 학생 뷰에 제목/날짜/교안/블로그링크가 보이고, 영상이 등록되면 썸네일·임베드 플레이어가 같은 화면에 노출 | FR-015, FR-016 |
+| `LESSON_MATERIAL` | 강의 교안(복수). 업로드 파일(`kind=FILE`) 또는 외부 링크(`kind=LINK`) | FR-015, FR-016 |
 | `ASSIGNMENT` | 과제. 마감일·필수/선택·지각허용·개인/팀 속성 보유. 삭제는 `deleted_at` 소프트 삭제로 undo 지원 | FR-001, FR-002, FR-007~009 |
 | `SUBMISSION` | 제출물. `(assignment, 제출단위)` 당 **1행** — 재제출은 덮어쓰기이고 이력을 남기지 않음 | FR-004, FR-006, BR-004, BR-006 |
 | `SUBMISSION_FILE` | 제출 첨부파일(복수 가능). `kind` 로 미리보기 방식 결정(.py/.ipynb 렌더링, 그 외 파일명·크기만) | FR-004, FR-005 |
@@ -170,6 +201,8 @@ erDiagram
 | 제출률 / 미제출자 명단 | 대상 학생·팀 목록(AX Evaluator) − 제출자 (FR-010) |
 | 재제출 가능 여부 | 위 BR-006 조건식 |
 | 제출물 이전/다음 이동 | 목록 정렬 순서 기준 인접 `SUBMISSION` (FR-011) |
+| 강의 영상 공개 여부 | `LESSON.video_url IS NOT NULL` (= 수업 종료 후 유튜브 링크 등록됨) (FR-016) |
+| 유튜브 썸네일 | `video_thumbnail_url` 없으면 영상 링크의 video id 로 `https://img.youtube.com/vi/<id>/hqdefault.jpg` 생성 |
 
 ---
 
@@ -179,4 +212,7 @@ erDiagram
 - **과제 삭제 시 제출물·평가 처리** → 현재는 `ASSIGNMENT.deleted_at` 소프트 삭제만. 하위 `SUBMISSION`/`EVALUATION` 을 같이 숨길지 물리 삭제할지 정책 필요.
 - **팀 대표 지정 방식** → `TEAM_MEMBER.is_representative` 필드 승인 여부에 따라 제출 시 대표 검증 로직 변경.
 - **AI 평가 자동 실행 / 공개 시점 분리** → 필요 시 `AI_EVALUATION` 에 `published_at` 등 상태 필드 추가.
-- **온라인 강의(FR-015/016)** → 계획 단계. 확정 시 `LECTURE_VIDEO`(영상), `VIDEO_VIEW`(시청 기록) 등 별도 엔티티 추가 예정. 본 ERD 범위 밖.
+- **온라인 강의(FR-015/016)** → `LESSON` / `LESSON_MATERIAL` 로 모델링함. 남은 결정:
+  - 교안이 파일이면 허용 확장자·용량 정책 (`LESSON_MATERIAL`).
+  - 영상은 유튜브 링크만 저장(임베드 재생)하며 파일 업로드는 안 함 — 이 전제가 맞는지 확인 필요.
+  - 시청 여부 트래킹이 필요하면 `LESSON_VIEW(lesson_id, user_id, viewed_at)` 추가 (현재 미정 → 미포함).
