@@ -9,9 +9,11 @@
 #     - id, email, name, role("STUDENT" | "TUTOR"), is_active, date_joined ...
 # - TeamsTeam   (Meta: managed=False, db_table="teams_team")
 #     - id, name, ...
-# - TeamMember  (Meta: managed=False) — 팀-학생 매핑
-#     - team_id, user_id, is_representative(팀 대표 여부 — AX Evaluator에 추가 요청중, PRD 9장)
-#     - 실제 테이블명/컬럼은 AX Evaluator 스키마 확인 후 확정
+# - TeamsTeamMembership (Meta: managed=False, db_table="teams_team_membership") — 팀-학생 매핑
+#     - team_id, user_id
+#     - is_representative(팀장 여부 — AX Evaluator에 필드 추가 요청중, 팀당 true 1명. PRD 9장 / 논의정리 §3)
+#       → 승인 전제로 v6 작성. 거절 시 우리 쪽 TEAM_REPRESENTATIVE 테이블(v4)로 폴백
+#     - 실제 컬럼은 AX Evaluator 스키마 확인 후 확정
 #
 # 주의:
 # - 이 모델들로 write/save 하지 않는다 (읽기 전용)
