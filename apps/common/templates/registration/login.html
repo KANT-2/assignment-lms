@@ -1,3 +1,21 @@
-{# apps/common/templates/registration/login.html #}
-{# 공통 담당 전담 — Django LoginView 기본 템플릿 위치 #}
-{# base.html 상속. {{ form }} 렌더링 + {% csrf_token %} + next 파라미터 처리 #}
+{% extends "base.html" %}
+{% comment %}
+Django LoginView 기본 템플릿. DEV_SKIP_AUTH=True 면 이 화면은 거치지 않는다.
+인증 방식(PRD 9장) 확정되면 제대로 구현.
+{% endcomment %}
+{% block title %}로그인{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:360px;margin:48px auto;padding:24px;">
+  <h1 class="h5 mb-3">로그인</h1>
+  {% if form.errors %}
+    <div class="alert alert-danger">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" class="btn btn-primary w-100">로그인</button>
+  </form>
+</div>
+{% endblock %}

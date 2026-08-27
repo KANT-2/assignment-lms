@@ -13,9 +13,19 @@ apps/tutor/urls.py
 """
 from django.urls import path
 
+from . import views_manage
+
 app_name = "tutor"
 
 urlpatterns: list[path] = [
-    # 예)
-    # path("assignments/", views_manage.AssignmentManageView.as_view(), name="assignment-manage"),
+    # 튜터A — 과제 관리 / 제출 현황 (FR-001, FR-002, FR-007, FR-008, FR-010)
+    path("assignments/", views_manage.assignment_list, name="assignment-list"),
+    path("assignments/<int:pk>/edit/", views_manage.assignment_edit, name="assignment-edit"),
+    path("assignments/<int:pk>/delete/", views_manage.assignment_delete, name="assignment-delete"),
+    path("assignments/<int:pk>/restore/", views_manage.assignment_restore, name="assignment-restore"),
+    path(
+        "assignments/<int:pk>/submissions/",
+        views_manage.submission_dashboard,
+        name="submission-dashboard",
+    ),
 ]
