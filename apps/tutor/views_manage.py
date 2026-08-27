@@ -75,12 +75,31 @@ def tutor_required(view_func):
     return _wrapped
 
 
+def _roster_totals():
+    """개인 과제 대상 학생 수 / 팀 과제 대상 팀 수 (제출률 분모)."""
+    try:
+        student_total = len(accounts.get_students() or [])
+    except AttributeError:  # services 미구현 단계
+        student_total = 0
+    try:
+        team_total = len(accounts.get_teams() or [])
+    except AttributeError:
+        team_total = 0
+    return student_total, team_total
+
+
 def _assignment_rows():
-    """목록 화면용 — 활성 과제 + 제출 건수."""
-    return (
-        Assignment.objects.annotate(submission_count=Count("submissions"))
-        .order_by("-created_at")
+    """목록 화면용 — 활성 과제 + 제출 건수 + 제출률 분모 + 마감 경과 여부.
+    마감일 오름차순 정렬 (목업 Screen A 기준)."""
+    now = timezone.now()
+    student_total, team_total = _roster_totals()
+    rows = list(
+        Assignment.objects.annotate(submission_count=Count("submissions")).order_by("due_at")
     )
+    for a in rows:
+        a.unit_total = team_total if a.is_team else student_total
+        a.is_past = a.due_at < now
+    return rows
 
 
 # =========================================================
@@ -193,27 +212,32 @@ def assignment_restore(request, pk):
 # FR-010 — 제출 현황 대시보드 (성취율 없음, 순수 제출 현황)
 # =========================================================
 
-# 정렬 옵션. 앞의 3개는 PRD FR-010 명세.
+# 정렬 옵션 (목업 Screen B 순서). name/recent/unsubmitted_first 는 PRD FR-010 명세,
+# fb_pending_first(피드백 대기 우선)는 명세 이상의 추가 옵션 — 목업이 기본값으로 사용.
 SORT_NAME = "name"
 SORT_RECENT = "recent"
 SORT_UNSUBMITTED_FIRST = "unsubmitted_first"
-SORT_PENDING_FIRST = "pending_first"  # PRD FR-010 명세 이상의 추가 옵션 (피드백 대기 우선)
+SORT_PENDING_FIRST = "fb_pending_first"  # PRD FR-010 명세 이상의 추가 옵션
+SORT_DEFAULT = SORT_PENDING_FIRST
 
 SORT_CHOICES = [
+    (SORT_PENDING_FIRST, "피드백 대기 우선"),  # PRD FR-010 명세 이상의 추가 옵션
     (SORT_NAME, "이름순"),
     (SORT_RECENT, "최근 제출순"),
     (SORT_UNSUBMITTED_FIRST, "미제출 우선"),
-    (SORT_PENDING_FIRST, "피드백 대기 우선"),  # PRD FR-010 명세 이상의 추가 옵션
 ]
 
+# 상태 필터 (목업 Screen B). all/submitted/none 은 PRD 명세 범위,
+# late/fb_pending/fb_done 은 목업이 추가한 세분화 옵션.
 STATUS_ALL = "all"
-STATUS_SUBMITTED = "submitted"
-STATUS_UNSUBMITTED = "unsubmitted"
 
 STATUS_CHOICES = [
-    (STATUS_ALL, "전체"),
-    (STATUS_SUBMITTED, "제출"),
-    (STATUS_UNSUBMITTED, "미제출"),
+    (STATUS_ALL, "전체 상태"),
+    ("submitted", "제출 완료"),
+    ("late", "지각 제출"),
+    ("none", "미제출"),
+    ("fb_pending", "피드백 대기"),
+    ("fb_done", "피드백 완료"),
 ]
 
 
@@ -249,6 +273,10 @@ class RosterRow:
         return bool(self.submission and self.submission.final_score is None)
 
     @property
+    def score(self):
+        return self.submission.final_score if self.submission else None
+
+    @property
     def search_haystack(self):
         return " ".join([self.name, *self.member_names]).lower()
 
@@ -264,15 +292,17 @@ def submission_dashboard(request, pk):
     status = request.GET.get("status", STATUS_ALL)
     if status not in dict(STATUS_CHOICES):
         status = STATUS_ALL
-    sort = request.GET.get("sort", SORT_NAME)
+    sort = request.GET.get("sort", SORT_DEFAULT)
     if sort not in dict(SORT_CHOICES):
-        sort = SORT_NAME
+        sort = SORT_DEFAULT
 
     rows = _build_roster(assignment, submissions)
 
     total = len(rows)
     submitted_total = sum(1 for r in rows if r.submitted)
     pending_total = sum(1 for r in rows if r.feedback_pending)
+    feedback_total = sum(1 for r in rows if r.feedback_done)
+    late_total = sum(1 for r in rows if r.is_late)
     submission_rate = round(submitted_total / total * 100) if total else 0
 
     # 검색 (팀 과제는 팀원 이름도 매칭)
@@ -281,10 +311,15 @@ def submission_dashboard(request, pk):
         rows = [r for r in rows if needle in r.search_haystack]
 
     # 상태 필터
-    if status == STATUS_SUBMITTED:
-        rows = [r for r in rows if r.submitted]
-    elif status == STATUS_UNSUBMITTED:
-        rows = [r for r in rows if not r.submitted]
+    _status_pred = {
+        "submitted": lambda r: r.submitted,
+        "late": lambda r: r.is_late,
+        "none": lambda r: not r.submitted,
+        "fb_pending": lambda r: r.feedback_pending,
+        "fb_done": lambda r: r.feedback_done,
+    }.get(status)
+    if _status_pred:
+        rows = [r for r in rows if _status_pred(r)]
 
     rows = _sort_rows(rows, sort)
 
@@ -295,11 +330,14 @@ def submission_dashboard(request, pk):
             "assignment": assignment,
             "rows": rows,
             "is_overdue": timezone.now() > assignment.due_at,
+            "unit_label": "팀" if assignment.is_team else "명",
             "stats": {
                 "total": total,
                 "submitted": submitted_total,
                 "unsubmitted": total - submitted_total,
                 "pending": pending_total,
+                "feedback": feedback_total,
+                "late": late_total,
                 "rate": submission_rate,
             },
             "filters": {"q": q, "status": status, "sort": sort},

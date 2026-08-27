@@ -1,126 +1,179 @@
 {# apps/tutor/templates/tutor/submission_dashboard.html #}
 {# 튜터A — FR-010 제출 현황 대시보드 (제출률 + 제출자/미제출자 명단 + 검색/필터/정렬) #}
-{# base.html 상속. 성취율(튜터:AI 가중합산)은 ERD v6 §4.3 폐기안이라 포함하지 않음 #}
+{# 목업(AX 프로젝트 과제 관리) Screen B 를 Django 서버렌더링으로. #}
+{# 성취율(튜터:AI 가중합산)은 ERD v6 §4.3 폐기안이라 포함하지 않음. 팀 대표자 개념도 폐기(§5). #}
 {% extends "base.html" %}
 
 {% block title %}제출 현황 — {{ assignment.title }}{% endblock %}
 
+{% block extra_head %}
+<style>
+  .tt-scope{
+    --bg:#eef1f8; --surface:#fff; --surface-muted:#f4f6fb; --surface-sunken:#eef1f8;
+    --text:#1c2130; --text-muted:#6b7280; --text-faint:#9aa1b1;
+    --border:#e4e8f1; --border-strong:#d5dbe8;
+    --accent:#4f6df5; --accent-soft:#eaefff; --accent-text:#3a56d4;
+    --green:#1fa971; --green-soft:#e5f7ee; --red:#ef4b4b; --red-soft:#fdecec;
+    --amber:#c98a1a; --amber-soft:#fbf0dd; --purple:#7c4fd6; --purple-soft:#f1e9ff;
+    --radius-lg:16px; --radius-md:12px; --radius-sm:8px;
+    --shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
+    color:var(--text);
+  }
+  .tt-scope .back-link{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-muted);text-decoration:none;background:none;border:none;cursor:pointer;font-family:inherit;padding:0;margin-bottom:8px;}
+  .tt-scope .back-link:hover{color:var(--accent-text);}
+  .tt-scope .breadcrumb{font-size:12.5px;color:var(--text-faint);font-weight:600;}
+  .tt-scope .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:.15rem 0;}
+  .tt-scope h1.page-title{font-size:21px;font-weight:800;margin:0;letter-spacing:-.01em;}
+  .tt-scope .page-sub{font-size:12.5px;color:var(--text-muted);}
+  .tt-scope .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:20px 22px 22px;}
+
+  .tt-scope .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .tt-scope .badge.type{background:var(--accent-soft);color:var(--accent-text);}
+  .tt-scope .badge.type.optional{background:var(--surface-sunken);color:var(--text-muted);}
+  .tt-scope .badge.unit{background:var(--surface-sunken);color:var(--text-muted);}
+  .tt-scope .badge.unit.team{background:var(--purple-soft);color:var(--purple);}
+  .tt-scope .badge.dday{background:var(--red-soft);color:var(--red);}
+  .tt-scope .badge.dday.later{background:var(--surface-sunken);color:var(--text-muted);}
+  .tt-scope .badge.status-submitted{background:var(--green-soft);color:#147a52;}
+  .tt-scope .badge.status-late{background:var(--amber-soft);color:var(--amber);}
+  .tt-scope .badge.status-none{background:var(--surface-sunken);color:var(--text-faint);}
+  .tt-scope .badge.fb-done{background:var(--accent-soft);color:var(--accent-text);}
+  .tt-scope .badge.fb-pending{background:var(--surface-sunken);color:var(--text-muted);}
+
+  .tt-scope .stat-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .tt-scope .stat-num{font-size:20px;font-weight:800;}
+  .tt-scope .stat-label{font-size:12px;color:var(--text-muted);}
+  .tt-scope .progress-track{flex:1;min-width:120px;height:8px;border-radius:20px;background:var(--surface-sunken);overflow:hidden;}
+  .tt-scope .progress-fill{height:100%;background:var(--accent);border-radius:20px;}
+
+  .tt-scope .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  .tt-scope .search-input{flex:1;min-width:140px;border:1px solid var(--border-strong);background:var(--surface-sunken);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--text);font-family:inherit;}
+  .tt-scope .search-input:focus{outline:none;border-color:var(--accent);background:var(--surface);}
+  .tt-scope .select-input{border:1px solid var(--border-strong);background:var(--surface-sunken);border-radius:var(--radius-sm);padding:9px 10px;font-size:12.5px;color:var(--text);font-family:inherit;cursor:pointer;}
+  .tt-scope .btn{border:none;border-radius:var(--radius-sm);padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--accent);color:#fff;}
+  .tt-scope .btn-ghost{background:var(--surface);color:var(--text-muted);border:1px solid var(--border-strong);text-decoration:none;display:inline-flex;align-items:center;}
+
+  .tt-scope .roster-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+  .tt-scope .roster-row{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);overflow:hidden;}
+  .tt-scope .roster-row-main{display:flex;align-items:center;gap:12px;padding:12px 14px;}
+  .tt-scope .roster-name-wrap{flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .tt-scope .roster-name{font-size:13.5px;font-weight:700;white-space:nowrap;}
+  .tt-scope .roster-meta{font-size:11.5px;color:var(--text-faint);}
+  .tt-scope .expand-toggle{flex-shrink:0;width:26px;height:26px;border-radius:7px;border:1px solid var(--border-strong);background:var(--surface-sunken);color:var(--text-muted);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:transform .15s;}
+  .tt-scope .roster-row.expanded .expand-toggle{transform:rotate(90deg);}
+  .tt-scope .team-members{display:none;flex-wrap:wrap;gap:6px;padding:0 14px 12px 48px;}
+  .tt-scope .roster-row.expanded .team-members{display:flex;}
+  .tt-scope .member-chip{font-size:11.5px;color:var(--text-muted);background:var(--surface-sunken);padding:4px 10px;border-radius:20px;}
+  .tt-scope .roster-empty{text-align:center;color:var(--text-faint);font-size:12.5px;padding:32px 0;}
+  .tt-scope .not-submitted-label{font-size:12px;color:var(--text-faint);}
+</style>
+{% endblock %}
+
 {% block page_header %}
-  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
-    <div>
-      <h1 class="h3 mb-1">제출 현황 — {{ assignment.title }}</h1>
-      <p class="text-muted mb-0">
-        마감 {{ assignment.due_at|date:"Y-m-d H:i" }}
-        · {% if assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}
-        · {% if assignment.allow_late %}지각 허용{% else %}지각 불가{% endif %}
-        {% if is_overdue %}<span class="badge text-bg-warning ms-1">마감됨</span>{% endif %}
-      </p>
-    </div>
-    <a href="{% url 'tutor:assignment-list' %}" class="btn btn-outline-secondary">과제 목록</a>
+<div class="tt-scope">
+  <a class="back-link" href="{% url 'tutor:assignment-list' %}">‹ 과제 관리로 돌아가기</a>
+  <div class="breadcrumb">AX 프로젝트 평가 · {% if assignment.is_team %}팀 과제{% else %}개인 과제{% endif %} 제출 관리</div>
+  <div class="title-row">
+    <h1 class="page-title">{{ assignment.title }}</h1>
+    <span class="badge type {% if not assignment.is_required %}optional{% endif %}">{% if assignment.is_required %}필수{% else %}선택{% endif %}</span>
+    <span class="badge unit {% if assignment.is_team %}team{% endif %}">{% if assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}</span>
+    <span class="badge dday {% if not is_overdue %}later{% endif %}">{% if is_overdue %}마감 지남{% else %}마감 전{% endif %}</span>
   </div>
+  <div class="page-sub">
+    제출 마감: {{ assignment.due_at|date:"Y.m.d (D) H:i" }}
+    {% if assignment.allow_late %}(지각 제출 허용){% else %}(마감 후 제출 불가){% endif %}
+  </div>
+</div>
 {% endblock %}
 
 {% block content %}
-{# ── 요약 ─────────────────────────────────────────────── #}
-<div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3">
-    <div class="card h-100"><div class="card-body">
-      <div class="text-muted small">제출률</div>
-      <div class="h4 mb-0">{{ stats.rate }}%</div>
-      <div class="text-muted small">{{ stats.submitted }} / {{ stats.total }}</div>
-    </div></div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card h-100"><div class="card-body">
-      <div class="text-muted small">제출</div>
-      <div class="h4 mb-0">{{ stats.submitted }}</div>
-    </div></div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card h-100"><div class="card-body">
-      <div class="text-muted small">미제출</div>
-      <div class="h4 mb-0">{{ stats.unsubmitted }}</div>
-    </div></div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card h-100"><div class="card-body">
-      <div class="text-muted small">피드백 대기</div>
-      <div class="h4 mb-0">{{ stats.pending }}</div>
-    </div></div>
-  </div>
-</div>
+<div class="tt-scope">
+  <div class="card">
+    <div class="stat-row">
+      <div>
+        <div class="stat-num">{{ stats.submitted }}/{{ stats.total }}{{ unit_label }}</div>
+        <div class="stat-label">제출 완료 ({{ stats.rate }}%)</div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:{{ stats.rate }}%;"></div></div>
+      <div class="stat-label">피드백 {{ stats.feedback }}건 / 제출 {{ stats.submitted }}건{% if stats.late %} · 지각 {{ stats.late }}건{% endif %}</div>
+    </div>
 
-{# ── 검색 / 필터 / 정렬 ───────────────────────────────── #}
-<form method="get" class="row g-2 align-items-end mb-3">
-  <div class="col-12 col-md-5">
-    <label for="q" class="form-label">이름 검색{% if assignment.is_team %} (팀명·팀원){% endif %}</label>
-    <input type="search" class="form-control" id="q" name="q" value="{{ filters.q }}"
-           placeholder="{% if assignment.is_team %}팀명 또는 팀원 이름{% else %}학생 이름{% endif %}">
-  </div>
-  <div class="col-6 col-md-3">
-    <label for="status" class="form-label">상태</label>
-    <select class="form-select" id="status" name="status">
-      {% for value, label in status_choices %}
-        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-6 col-md-3">
-    <label for="sort" class="form-label">정렬</label>
-    <select class="form-select" id="sort" name="sort">
-      {% for value, label in sort_choices %}
-        <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-12 col-md-1 d-grid">
-    <button type="submit" class="btn btn-primary">적용</button>
-  </div>
-</form>
-
-{# ── 명단 ─────────────────────────────────────────────── #}
-<div class="card">
-  <div class="table-responsive">
-    <table class="table align-middle mb-0">
-      <thead>
-        <tr>
-          <th scope="col">{% if assignment.is_team %}팀{% else %}학생{% endif %}</th>
-          {% if assignment.is_team %}<th scope="col">팀원</th>{% endif %}
-          <th scope="col">상태</th>
-          <th scope="col">제출 시각</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in rows %}
-          <tr>
-            <td class="fw-semibold">{{ row.name }}</td>
-            {% if assignment.is_team %}
-              <td class="text-muted small">{{ row.member_names|join:", " }}</td>
-            {% endif %}
-            <td>
-              {% if row.submitted %}
-                <span class="badge text-bg-success">제출</span>
-                {% if row.is_late %}<span class="badge text-bg-warning">지각 제출</span>{% endif %}
-                {% if row.feedback_done %}
-                  <span class="badge text-bg-light border">피드백 완료</span>
-                {% else %}
-                  <span class="badge text-bg-light border">피드백 대기</span>
-                {% endif %}
-              {% else %}
-                <span class="badge text-bg-danger">미제출</span>
-              {% endif %}
-            </td>
-            <td>{% if row.submitted_at %}{{ row.submitted_at|date:"Y-m-d H:i" }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="{% if assignment.is_team %}4{% else %}3{% endif %}" class="text-center text-muted py-4">
-              조건에 맞는 대상이 없습니다.
-            </td>
-          </tr>
+    <form method="get" class="toolbar">
+      <input type="search" name="q" class="search-input" value="{{ filters.q }}"
+             placeholder="이름으로 검색{% if assignment.is_team %} (팀명·팀원 이름도 검색됩니다){% endif %}">
+      <select name="status" class="select-input">
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
-      </tbody>
-    </table>
+      </select>
+      <select name="sort" class="select-input">
+        {% for value, label in sort_choices %}
+          <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn">적용</button>
+      <a href="{% url 'tutor:submission-dashboard' assignment.pk %}" class="btn btn-ghost">초기화</a>
+    </form>
+
+    <div class="roster-list">
+      {% for row in rows %}
+        <div class="roster-row">
+          <div class="roster-row-main">
+            {% if assignment.is_team %}
+              <button type="button" class="expand-toggle" data-tt-expand>▸</button>
+            {% endif %}
+            <div class="roster-name-wrap">
+              <span class="roster-name">{{ row.name }}</span>
+              {% if row.submitted %}
+                {% if row.is_late %}
+                  <span class="badge status-late">지각 제출</span>
+                {% else %}
+                  <span class="badge status-submitted">제출 완료</span>
+                {% endif %}
+                {% if row.feedback_done %}
+                  <span class="badge fb-done">피드백 완료{% if row.score is not None %} · {{ row.score }}점{% endif %}</span>
+                {% else %}
+                  <span class="badge fb-pending">피드백 대기</span>
+                {% endif %}
+                <span class="roster-meta">{{ row.submitted_at|date:"Y.m.d (D) H:i" }}</span>
+              {% else %}
+                <span class="badge status-none">미제출</span>
+                {% if assignment.is_team %}<span class="roster-meta">{{ row.member_names|length }}명</span>{% endif %}
+              {% endif %}
+            </div>
+            <div class="roster-actions">
+              {% if row.submitted %}
+                {# 제출물 상세/검토는 튜터B(views_review) 담당 — 링크 지점만 남겨둠 #}
+                <span class="not-submitted-label">제출됨</span>
+              {% else %}
+                <span class="not-submitted-label">미제출</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if assignment.is_team %}
+            <div class="team-members">
+              {% for m in row.member_names %}<span class="member-chip">{{ m }}</span>{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="roster-empty">조건에 맞는 {% if assignment.is_team %}팀{% else %}학생{% endif %}이 없습니다.</div>
+      {% endfor %}
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+(function () {
+  document.querySelectorAll("[data-tt-expand]").forEach(function (b) {
+    b.addEventListener("click", function () { b.closest(".roster-row").classList.toggle("expanded"); });
+  });
+  // 필터/정렬 select 변경 시 자동 제출
+  document.querySelectorAll(".toolbar select").forEach(function (s) {
+    s.addEventListener("change", function () { s.form.submit(); });
+  });
+})();
+</script>
 {% endblock %}

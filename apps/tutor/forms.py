@@ -36,8 +36,15 @@ class AssignmentForm(forms.ModelForm):
         model = Assignment
         fields = ["title", "description", "due_at", "is_required", "allow_late", "is_team"]
         widgets = {
-            "title": forms.TextInput(attrs={"class": "form-control", "maxlength": 200}),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+            "title": forms.TextInput(
+                attrs={"class": "form-control", "maxlength": 60,
+                       "placeholder": "예: 4차 프로젝트 최종 보고서 제출"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "form-control", "rows": 4, "maxlength": 600,
+                       "placeholder": "학생들에게 안내할 과제 내용을 입력하세요. "
+                                      "(예: 무엇을 해야 하는지, 평가 기준 등)"}
+            ),
             "due_at": forms.DateTimeInput(
                 attrs={"class": "form-control", "type": "datetime-local"},
                 format="%Y-%m-%dT%H:%M",
@@ -69,6 +76,8 @@ class AssignmentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self.fields["due_at"].input_formats = _DATETIME_LOCAL_FORMATS
+        # 목업 기준: 과제 설명도 필수 입력 (모델은 blank 허용이나 화면에서는 요구)
+        self.fields["description"].required = True
 
         if has_submissions is None:
             has_submissions = bool(self.instance.pk) and self.instance.submissions.exists()
