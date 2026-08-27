@@ -1,0 +1,44 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- 가상환경 ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Django ---
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# --- 환경변수 / 시크릿 ---
+.env
+.env.*
+!.env.example
+
+# --- 미디어 / 정적 파일 수집 ---
+/media/
+/staticfiles/
+/static_root/
+
+# --- 커버리지 / 테스트 ---
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.tox/
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

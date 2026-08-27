@@ -1,0 +1,26 @@
+# requirements.txt  —  런타임 의존성
+# Python 3.14 / .venv 에서 설치·검증 완료 (2026-08-27)
+# 설치:  py -m venv .venv && .venv\Scripts\pip install -r requirements.txt
+
+# --- 프레임워크 / DB ---
+Django==6.1
+psycopg[binary]==3.3.4       # PostgreSQL 드라이버 (3.14용 wheel 확인됨)
+python-dotenv==1.2.3         # .env 로드
+
+# --- 배포 ---
+gunicorn==26.2.0             # WSGI 서버
+whitenoise==6.12.0           # 정적 파일 서빙 (별도 웹서버 없이)
+
+# --- 제출물 미리보기 (FR-005) ---
+nbconvert==7.17.1            # .ipynb -> HTML 렌더링
+Pygments==2.21.0             # .py 코드 신택스 하이라이트
+Pillow==12.3.0               # 이미지 첨부/썸네일 처리
+
+# --- 템플릿 / 폼 (Django 템플릿 UI) ---
+django-widget-tweaks==1.5.1  # 템플릿에서 폼 위젯 class/속성 조정
+
+# --- 나중에 필요해지면 (지금은 PRD상 범위 밖 / 미정) ---
+# google-genai              # FR-012 실제 Gemini 연동 (현재는 시뮬레이션, Out of Scope)
+# requests                  # AX Evaluator 연동이 DB 가 아니라 REST API 인 경우
+# django-storages[s3]       # 업로드 파일을 S3 등 외부 스토리지로 뺄 경우
+# django-allauth            # 인증 방식 확정되면 (Open Question 9장)

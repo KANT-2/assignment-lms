@@ -1,0 +1,13 @@
+{# apps/common/templates/base.html #}
+{# 공통 담당 전담 — 전체 레이아웃. 학생/튜터 모든 템플릿이 상속해서 사용 #}
+{#
+  블록 구성 (예정):
+  - {% block title %}       페이지 타이틀
+  - {% block extra_head %}  페이지별 추가 <head> (css 등)
+  - 헤더: 로고, 로그인 사용자 이름/역할, 로그아웃
+  - 네비게이션: 역할별 메뉴 (학생 / 튜터)
+  - {% block content %}     본문
+  - 푸터
+  - {% block extra_script %} 페이지별 JS
+  공통 static: {% static 'common/css/...' %}, {% static 'common/js/...' %}
+#}

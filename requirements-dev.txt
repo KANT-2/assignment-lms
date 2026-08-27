@@ -1,0 +1,9 @@
+# requirements-dev.txt  —  개발 전용 (런타임 배포에는 미포함)
+# 설치:  .venv\Scripts\pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+django-debug-toolbar==7.1.1   # 개발 중 SQL/템플릿 디버깅
+ruff==0.16.4                  # 린터 + 포매터 (black/flake8/isort 대체)
+pytest==9.1.1
+pytest-django==4.14.0
