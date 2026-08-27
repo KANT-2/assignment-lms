@@ -1104,6 +1104,37 @@
     return { id: "a4-t" + i, teamName: def.name, members: teamMembers(def), status: "none", submittedAt: null, submittedBy: null, fileName: null, ext: null, content: "", desc: "", feedback: null, tutorScore: null, aiFeedback: null };
   });
 
+  
+  const STORAGE_KEY_ASSIGN = 'ax_lms_assign_data_v1';
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY_ASSIGN, JSON.stringify({
+      assignments: assignments,
+      ROSTERS: ROSTERS,
+      nextId: nextId
+    }));
+  }
+
+  const storedData = localStorage.getItem(STORAGE_KEY_ASSIGN);
+  if (storedData) {
+    const parsed = JSON.parse(storedData);
+    assignments = parsed.assignments.map(function(a) { a.due = new Date(a.due); return a; });
+    ROSTERS = parsed.ROSTERS;
+    Object.keys(ROSTERS).forEach(function(k) {
+      ROSTERS[k].forEach(function(r) {
+        if(r.submittedAt) r.submittedAt = new Date(r.submittedAt);
+      });
+    });
+    nextId = parsed.nextId || nextId;
+  } else {
+    saveData();
+  }
+
+  window.addEventListener('storage', function(e) {
+    if (e.key === STORAGE_KEY_ASSIGN) {
+      location.reload();
+    }
+  });
+
   function getRoster(a) {
     if (ROSTERS[a.id]) return ROSTERS[a.id];
     var fresh;
@@ -1379,6 +1410,7 @@
     if (idx === -1) return;
     var removed = assignments[idx];
     assignments.splice(idx, 1);
+    saveData();
     if (editingId === id) closeModal();
     renderAssignList();
     showToast('"' + removed.title + '" 삭제됨', function () {
@@ -1410,6 +1442,7 @@
       data.id = "a" + (nextId++);
       data.stats = s.team ? "0/6팀 제출" : "0/23 제출";
       assignments.unshift(data);
+        saveData();
       closeModal(); renderAssignList();
       showToast("과제가 등록되었습니다");
     }
@@ -1692,6 +1725,7 @@
       danger: false,
       onConfirm: function () {
         entry.aiFeedback = generateAIFeedback(entry);
+        saveData();
         renderAiSection(entry);
         updateFinalScorePreview(entry);
         showToast("AI 평가가 생성되었습니다");
@@ -1756,6 +1790,7 @@
       if (!val) { input.focus(); return; }
       entry.feedback = val;
       entry.tutorScore = Math.round(scoreNum);
+      saveData();
       renderFeedbackArea(entry, findAssignment(currentAssignmentId).team);
       showToast("피드백이 저장되었습니다");
     });

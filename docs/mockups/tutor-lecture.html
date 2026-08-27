@@ -53,7 +53,7 @@
   a { color: inherit; text-decoration: none; }
 
   .wrap {
-    max-width: 1040px;
+    max-width: 1080px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -88,6 +88,19 @@
     letter-spacing: -0.01em;
   }
   .page-sub { font-size: 13px; color: var(--text-muted); }
+
+  /* Sync Badge */
+  .sync-badge {
+    background: var(--green-soft);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
 
   /* Buttons */
   .btn {
@@ -179,7 +192,7 @@
   }
   .search-input:focus { border-color: var(--accent); }
 
-  .filter-tabs { display: flex; gap: 6px; }
+  .filter-tabs { display: flex; gap: 6px; align-items: center; }
   .tab-btn {
     border: 1px solid var(--border);
     background: var(--surface);
@@ -224,6 +237,40 @@
   table.lesson-table tr:last-child td { border-bottom: none; }
   table.lesson-table tr:hover td { background: #fafbff; }
 
+  /* Table Thumb Cell */
+  .video-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .table-thumb {
+    width: 60px;
+    aspect-ratio: 16 / 9;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #1e293b;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .table-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .table-thumb-none {
+    width: 60px;
+    aspect-ratio: 16 / 9;
+    border-radius: 4px;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
   /* Badges */
   .badge {
     font-size: 11.5px;
@@ -267,7 +314,7 @@
     border-radius: var(--radius-lg);
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
     width: 100%;
-    max-width: 620px;
+    max-width: 640px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
@@ -373,19 +420,47 @@
   .material-row-del:hover { background: var(--red-soft); }
 
   /* Live Video Preview Box */
-  .video-preview-box {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: #000;
-    aspect-ratio: 16 / 9;
-    width: 100%;
-    max-height: 180px;
-    overflow: hidden;
+  .video-preview-wrap {
     display: none;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px;
   }
-  .video-preview-box iframe {
+  .thumb-info-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+  }
+  .thumb-info-badge {
+    background: var(--green-soft);
+    color: var(--green);
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .preview-media-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .preview-box {
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #000;
+    position: relative;
+  }
+  .preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .preview-box iframe {
     width: 100%;
     height: 100%;
     border: none;
@@ -441,42 +516,54 @@
     </a>
     <a href="student-lecture.html" class="back-link" style="margin-left: 8px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-      학생용 강의 화면 보기
+      학생용 화면으로 이동하여 연동 확인
     </a>
   </div>
 
   <!-- Page Header -->
   <div class="page-head">
     <div class="page-head-text">
-      <div class="breadcrumb">강의 관리 · FR-015</div>
+      <div class="breadcrumb">
+        강의 관리 · FR-015
+        <span class="sync-badge" style="margin-left: 8px;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>
+          학생 강의 페이지와 실시간 연동중
+        </span>
+      </div>
       <div class="title-row">
         <h1 class="page-title">강의(차시) 및 교안 관리</h1>
       </div>
-      <div class="page-sub">회차별 수업 정보, 교안 파일/링크 및 수업 후 다시보기 유튜브 영상을 등록·관리합니다.</div>
+      <div class="page-sub">회차별 수업 정보, 교안 파일/링크 및 수업 후 다시보기 유튜브 영상을 등록·관리합니다. (등록 즉시 학생 화면에 반영)</div>
     </div>
-    <button class="btn btn-primary" onclick="openCreateModal()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-      새 차시 등록
-    </button>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn btn-outline" onclick="resetToDefaultData()" title="기본 8개 차시 샘플로 복원">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+        샘플 초기화
+      </button>
+      <button class="btn btn-primary" onclick="openCreateModal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        새 차시 등록
+      </button>
+    </div>
   </div>
 
   <!-- Summary Stats Bar -->
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-label">총 등록 차시</div>
-      <div class="stat-value" id="stat-total">8개</div>
+      <div class="stat-value" id="stat-total">0개</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">영상 등록 완료</div>
-      <div class="stat-value highlight" id="stat-video-ok">5개</div>
+      <div class="stat-value highlight" id="stat-video-ok">0개</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">영상 등록 대기 (수업 완료)</div>
-      <div class="stat-value pending" id="stat-video-wait">1개</div>
+      <div class="stat-value pending" id="stat-video-wait">0개</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">총 교안 자료 건수</div>
-      <div class="stat-value" id="stat-materials">14건</div>
+      <div class="stat-value" id="stat-materials">0건</div>
     </div>
   </div>
 
@@ -492,8 +579,8 @@
 
       <div class="filter-tabs">
         <button class="tab-btn active" onclick="setTab('all', this)">전체 차시</button>
-        <button class="tab-btn" onclick="setTab('video-ok', this)">영상 완료 (5)</button>
-        <button class="tab-btn" onclick="setTab('video-wait', this)">영상 대기/미등록 (3)</button>
+        <button class="tab-btn" onclick="setTab('video-ok', this)" id="tab-btn-ok">영상 완료</button>
+        <button class="tab-btn" onclick="setTab('video-wait', this)" id="tab-btn-wait">영상 대기/미등록</button>
       </div>
     </div>
 
@@ -503,12 +590,12 @@
         <thead>
           <tr>
             <th style="width: 70px;">회차</th>
-            <th style="width: 100px;">수업 일자</th>
+            <th style="width: 95px;">수업 일자</th>
             <th>수업 제목</th>
-            <th style="width: 90px;">교안 자료</th>
-            <th style="width: 120px;">유튜브 다시보기</th>
-            <th style="width: 90px;">블로그</th>
-            <th style="width: 150px; text-align: right;">관리 액션</th>
+            <th style="width: 85px;">교안 자료</th>
+            <th style="width: 170px;">유튜브 영상</th>
+            <th style="width: 80px;">블로그</th>
+            <th style="width: 155px; text-align: right;">관리 액션</th>
           </tr>
         </thead>
         <tbody id="lesson-table-body">
@@ -560,11 +647,22 @@
       <div class="form-group">
         <label class="form-label">유튜브 다시보기 영상 링크 (URL)</label>
         <input type="url" id="form-video" class="form-control" placeholder="https://www.youtube.com/watch?v=..." oninput="updateVideoPreview()">
-        <span class="form-hint">수업 종료 후 등록 가능하며, 입력 시 학생 화면에 즉시 임베드 영상이 공개됩니다.</span>
+        <span class="form-hint">URL 입력 시 썸네일이 자동 감지되고 학생 화면에 임베드 영상이 공개됩니다.</span>
         
         <!-- Live Preview -->
-        <div id="video-preview" class="video-preview-box">
-          <iframe id="video-preview-iframe" src="" allowfullscreen></iframe>
+        <div id="video-preview" class="video-preview-wrap">
+          <div class="thumb-info-bar">
+            <span class="thumb-info-badge">유튜브 썸네일 & 플레이어 자동 감지</span>
+            <span id="video-id-display" style="color:var(--text-muted); font-size:11px;"></span>
+          </div>
+          <div class="preview-media-container">
+            <div class="preview-box">
+              <img id="video-thumb-preview" src="" alt="유튜브 썸네일">
+            </div>
+            <div class="preview-box">
+              <iframe id="video-preview-iframe" src="" allowfullscreen></iframe>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -591,7 +689,7 @@
 <!-- Modal 2: Quick Video URL Modal             -->
 <!-- ========================================== -->
 <div id="quick-video-modal" class="modal-backdrop" onclick="handleBackdropClick(event, 'quick-video-modal')">
-  <div class="modal-box" style="max-width: 480px;">
+  <div class="modal-box" style="max-width: 520px;">
     <div class="modal-head">
       <h3 class="modal-title">유튜브 영상 링크 빠른 등록</h3>
       <button class="modal-close" onclick="closeModal('quick-video-modal')">
@@ -600,16 +698,22 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="quick-lesson-id">
-      <div id="quick-lesson-target" style="font-size: 13px; font-weight: 700; color: var(--accent-text); margin-bottom: 4px;"></div>
+      <div id="quick-lesson-target" style="font-size: 13.5px; font-weight: 700; color: var(--accent-text); margin-bottom: 4px;"></div>
       
       <div class="form-group">
         <label class="form-label">유튜브 다시보기 링크<span class="req">*</span></label>
         <input type="url" id="quick-video-input" class="form-control" placeholder="https://www.youtube.com/watch?v=..." oninput="updateQuickPreview()">
-        <span class="form-hint">저장 즉시 학생 화면에서 시청 가능한 영상으로 전환됩니다.</span>
+        <span class="form-hint">저장 즉시 썸네일과 영상이 생성되어 학생 화면에 노출됩니다.</span>
       </div>
 
-      <div id="quick-video-preview" class="video-preview-box" style="margin-top: 4px;">
-        <iframe id="quick-preview-iframe" src="" allowfullscreen></iframe>
+      <div id="quick-video-preview" class="video-preview-wrap">
+        <div class="thumb-info-bar">
+          <span class="thumb-info-badge">자동 추출 썸네일</span>
+          <span id="quick-video-id" style="color:var(--text-muted); font-size:11px;"></span>
+        </div>
+        <div class="preview-box" style="width: 100%; aspect-ratio: 16/9;">
+          <img id="quick-thumb-preview" src="" alt="썸네일" style="width:100%; height:100%; object-fit:cover;">
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -626,15 +730,17 @@
 </div>
 
 <script>
-  // Initial dataset matching apps/core/models.py (Lesson + LessonMaterial)
-  let lessons = [
+  const STORAGE_KEY = 'ax_lms_lessons_data_v2';
+
+  // Default seed dataset
+  const defaultLessonsData = [
     {
       id: 1,
       order: 1,
       title: "오리엔테이션 및 생성형 AI 모델 아키텍처 개론",
       date: "2026-08-08",
       blogUrl: "https://blog.example.com/ax-intro",
-      videoUrl: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+      videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE",
       materials: [
         { kind: "FILE", title: "01_orientation_ai_intro.pdf", url: "https://example.com/file1.pdf" },
         { kind: "LINK", title: "OpenAI vs Google Gemini 아키텍처 비교 문서", url: "https://example.com/docs" }
@@ -646,7 +752,7 @@
       title: "프롬프트 엔지니어링 기법과 Few-shot 실무 튜닝",
       date: "2026-08-12",
       blogUrl: "https://blog.example.com/prompt-engineering",
-      videoUrl: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+      videoUrl: "https://www.youtube.com/embed/jC4v5AS4RIM",
       materials: [
         { kind: "FILE", title: "02_prompt_engineering_guide.pdf", url: "https://example.com/file2.pdf" },
         { kind: "FILE", title: "prompt_templates_sample.ipynb", url: "https://example.com/file2.ipynb" }
@@ -658,7 +764,7 @@
       title: "함수 호출(Function Calling)과 외부 API Tool 연동",
       date: "2026-08-15",
       blogUrl: "https://blog.example.com/function-calling",
-      videoUrl: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+      videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE",
       materials: [
         { kind: "FILE", title: "03_function_calling_and_tools.pdf", url: "https://example.com/file3.pdf" },
         { kind: "FILE", title: "tool_calling_demo.py", url: "https://example.com/file3.py" }
@@ -670,7 +776,7 @@
       title: "LangChain과 Gemini API를 활용한 RAG 에이전트 구축",
       date: "2026-08-20",
       blogUrl: "https://blog.example.com/rag-agents",
-      videoUrl: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+      videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE",
       materials: [
         { kind: "FILE", title: "04_rag_agent_hands_on.pdf", url: "https://example.com/file4.pdf" },
         { kind: "FILE", title: "gemini_rag_starter.zip", url: "https://example.com/file4.zip" },
@@ -683,7 +789,7 @@
       title: "Multi-Agent 협업 워크플로우와 상태 관리 패턴",
       date: "2026-08-25",
       blogUrl: "https://blog.example.com/multi-agent",
-      videoUrl: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+      videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE",
       materials: [
         { kind: "FILE", title: "05_multi_agent_systems.pdf", url: "https://example.com/file5.pdf" }
       ]
@@ -722,8 +828,54 @@
     }
   ];
 
+  let lessons = [];
   let currentTab = 'all';
   let deletedLessonBackup = null;
+
+  function loadLessons() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        lessons = JSON.parse(stored);
+      } else {
+        lessons = defaultLessonsData;
+        saveToStorage();
+      }
+    } catch(e) {
+      lessons = defaultLessonsData;
+    }
+    lessons.sort((a, b) => a.order - b.order);
+    renderTable();
+  }
+
+  function saveToStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lessons));
+    } catch(e) {
+      console.error('Storage error:', e);
+    }
+  }
+
+  function resetToDefaultData() {
+    if (confirm('모든 차시 데이터를 기본 샘플 8개로 초기화하시겠습니까? (작성한 내용이 초기화됩니다)')) {
+      lessons = JSON.parse(JSON.stringify(defaultLessonsData));
+      saveToStorage();
+      renderTable();
+      showToast('기본 샘플 데이터로 복원되었습니다.');
+    }
+  }
+
+  // Helper to extract YouTube ID & Thumbnail
+  function getYouTubeId(url) {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+    return match ? match[1] : null;
+  }
+
+  function getYouTubeThumbnail(url) {
+    const id = getYouTubeId(url);
+    return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
+  }
 
   function renderTable() {
     const tbody = document.getElementById('lesson-table-body');
@@ -750,18 +902,30 @@
     filtered.forEach(lesson => {
       const tr = document.createElement('tr');
 
-      // Video Status Badge
-      let videoStatusHtml = '';
-      if (lesson.videoUrl) {
-        videoStatusHtml = `<span class="badge video-ok">등록 완료</span>`;
-      } else if (lesson.order <= 6) {
-        videoStatusHtml = `<span class="badge video-wait">수업종료(대기)</span>`;
+      // Video Status & Thumbnail
+      const thumbUrl = getYouTubeThumbnail(lesson.videoUrl);
+      let videoCellHtml = '';
+
+      if (thumbUrl) {
+        videoCellHtml = `
+          <div class="video-cell">
+            <div class="table-thumb" title="유튜브 썸네일">
+              <img src="${thumbUrl}" alt="썸네일" loading="lazy">
+            </div>
+            <span class="badge video-ok">등록 완료</span>
+          </div>
+        `;
       } else {
-        videoStatusHtml = `<span class="badge video-none">수업 예정</span>`;
+        videoCellHtml = `
+          <div class="video-cell">
+            <div class="table-thumb-none">미등록</div>
+            <span class="badge video-wait">영상 대기</span>
+          </div>
+        `;
       }
 
       // Blog status
-      const blogHtml = lesson.blogUrl 
+      const blogHtml = (lesson.blogUrl && lesson.blogUrl.trim())
         ? `<a href="${lesson.blogUrl}" target="_blank" style="color:var(--accent-text); font-weight:600; text-decoration:underline;">링크</a>`
         : `<span style="color:var(--text-faint);">-</span>`;
 
@@ -778,7 +942,7 @@
           <span style="font-weight:700; color:var(--text);">${lesson.title}</span>
         </td>
         <td>${matHtml}</td>
-        <td>${videoStatusHtml}</td>
+        <td>${videoCellHtml}</td>
         <td>${blogHtml}</td>
         <td style="text-align: right;">
           <div class="action-group" style="justify-content: flex-end;">
@@ -799,8 +963,8 @@
 
   function updateStats() {
     const total = lessons.length;
-    const videoOk = lessons.filter(l => l.videoUrl).length;
-    const videoWait = lessons.filter(l => !l.videoUrl && l.order <= 6).length;
+    const videoOk = lessons.filter(l => !!l.videoUrl).length;
+    const videoWait = lessons.filter(l => !l.videoUrl).length;
     let totalMat = 0;
     lessons.forEach(l => { totalMat += (l.materials ? l.materials.length : 0); });
 
@@ -808,6 +972,9 @@
     document.getElementById('stat-video-ok').textContent = `${videoOk}개`;
     document.getElementById('stat-video-wait').textContent = `${videoWait}개`;
     document.getElementById('stat-materials').textContent = `${totalMat}건`;
+
+    document.getElementById('tab-btn-ok').textContent = `영상 완료 (${videoOk})`;
+    document.getElementById('tab-btn-wait').textContent = `영상 대기/미등록 (${videoWait})`;
   }
 
   function setTab(tab, btn) {
@@ -865,13 +1032,24 @@
     const list = document.getElementById('material-builder-list');
     const row = document.createElement('div');
     row.className = 'material-row';
+    
+    // UUID for input ID matching
+    const rowId = 'mat-' + Math.random().toString(36).substr(2, 9);
+    
     row.innerHTML = `
-      <select class="form-control mat-kind" style="padding: 6px 8px; font-size:12px;">
-        <option value="FILE" ${kind === 'FILE' ? 'selected' : ''}>파일</option>
-        <option value="LINK" ${kind === 'LINK' ? 'selected' : ''}>링크</option>
+      <select class="form-control mat-kind" style="padding: 6px 8px; font-size:12px;" onchange="toggleMaterialInput(this, '${rowId}')">
+        <option value="FILE" ${kind === 'FILE' ? 'selected' : ''}>내 PC 파일</option>
+        <option value="LINK" ${kind === 'LINK' ? 'selected' : ''}>외부 링크</option>
       </select>
-      <input type="text" class="form-control mat-title" placeholder="자료명 (예: 교안 슬라이드)" value="${title}" style="padding: 6px 8px; font-size:12px;">
-      <input type="text" class="form-control mat-url" placeholder="다운로드/웹 링크 URL" value="${url}" style="padding: 6px 8px; font-size:12px;">
+      <input type="text" class="form-control mat-title" placeholder="자료명 (예: 1주차 교안)" value="${title}" style="padding: 6px 8px; font-size:12px;">
+      
+      <div id="wrap-file-${rowId}" style="display: ${kind === 'FILE' ? 'block' : 'none'};">
+        <input type="file" class="form-control mat-file" style="padding: 4px 8px; font-size:12px;" ${kind === 'FILE' ? '' : 'disabled'}>
+      </div>
+      <div id="wrap-url-${rowId}" style="display: ${kind === 'LINK' ? 'block' : 'none'};">
+        <input type="text" class="form-control mat-url" placeholder="https://..." value="${url}" style="padding: 6px 8px; font-size:12px;" ${kind === 'LINK' ? '' : 'disabled'}>
+      </div>
+      
       <button type="button" class="material-row-del" onclick="this.parentElement.remove()" title="삭제">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
@@ -879,28 +1057,46 @@
     list.appendChild(row);
   }
 
+  function toggleMaterialInput(selectEl, rowId) {
+    const kind = selectEl.value;
+    const wrapFile = document.getElementById('wrap-file-' + rowId);
+    const wrapUrl = document.getElementById('wrap-url-' + rowId);
+    const inputFile = wrapFile.querySelector('.mat-file');
+    const inputUrl = wrapUrl.querySelector('.mat-url');
+
+    if (kind === 'FILE') {
+      wrapFile.style.display = 'block';
+      wrapUrl.style.display = 'none';
+      inputFile.disabled = false;
+      inputUrl.disabled = true;
+    } else {
+      wrapFile.style.display = 'none';
+      wrapUrl.style.display = 'block';
+      inputFile.disabled = true;
+      inputUrl.disabled = false;
+    }
+  }
+
   function updateVideoPreview() {
     const url = document.getElementById('form-video').value.trim();
     const box = document.getElementById('video-preview');
     const iframe = document.getElementById('video-preview-iframe');
+    const thumbImg = document.getElementById('video-thumb-preview');
+    const idDisplay = document.getElementById('video-id-display');
 
-    if (url) {
+    const vId = getYouTubeId(url);
+
+    if (vId) {
       box.style.display = 'flex';
-      iframe.src = formatEmbedUrl(url);
+      const originParam = window.location.protocol === 'file:' ? '?origin=http://localhost' : `?origin=${encodeURIComponent(window.location.origin)}`;
+      iframe.src = `https://www.youtube.com/embed/${vId}${originParam}`;
+      thumbImg.src = `https://img.youtube.com/vi/${vId}/mqdefault.jpg`;
+      idDisplay.textContent = `Video ID: ${vId}`;
     } else {
       box.style.display = 'none';
       iframe.src = '';
+      thumbImg.src = '';
     }
-  }
-
-  function formatEmbedUrl(url) {
-    if (!url) return '';
-    if (url.includes('embed')) return url;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-    if (match && match[1]) {
-      return `https://www.youtube-nocookie.com/embed/${match[1]}`;
-    }
-    return url;
   }
 
   function saveLesson() {
@@ -921,9 +1117,24 @@
     document.querySelectorAll('#material-builder-list .material-row').forEach(row => {
       const kind = row.querySelector('.mat-kind').value;
       const matTitle = row.querySelector('.mat-title').value.trim();
-      const matUrl = row.querySelector('.mat-url').value.trim();
+      let matUrl = '';
+      let matSize = '';
+      
+      if (kind === 'FILE') {
+        const fileInput = row.querySelector('.mat-file');
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          matUrl = file.name; // Use filename for mockup display
+          matSize = (file.size / 1024 / 1024).toFixed(1) + ' MB';
+        } else {
+          matUrl = '#'; // Fallback
+        }
+      } else {
+        matUrl = row.querySelector('.mat-url').value.trim() || '#';
+      }
+
       if (matTitle) {
-        materials.push({ kind, title: matTitle, url: matUrl || '#' });
+        materials.push({ kind, title: matTitle, url: matUrl, size: matSize });
       }
     });
 
@@ -937,11 +1148,11 @@
           date,
           title,
           blogUrl,
-          videoUrl: videoUrl ? formatEmbedUrl(videoUrl) : null,
+          videoUrl,
           materials
         };
       }
-      showToast(`${order}회차 수업 정보가 수정되었습니다.`);
+      showToast(`${order}회차 수업 정보가 수정되었습니다. (학생 화면 즉시 반영)`);
     } else {
       // Create
       const newLesson = {
@@ -950,14 +1161,15 @@
         date,
         title,
         blogUrl,
-        videoUrl: videoUrl ? formatEmbedUrl(videoUrl) : null,
+        videoUrl,
         materials
       };
       lessons.push(newLesson);
-      lessons.sort((a, b) => a.order - b.order);
-      showToast('새 차시가 성공적으로 등록되었습니다.');
+      showToast('새 차시가 등록되었습니다. (학생 화면 즉시 반영)');
     }
 
+    lessons.sort((a, b) => a.order - b.order);
+    saveToStorage();
     closeModal('lesson-modal');
     renderTable();
   }
@@ -977,14 +1189,18 @@
   function updateQuickPreview() {
     const url = document.getElementById('quick-video-input').value.trim();
     const box = document.getElementById('quick-video-preview');
-    const iframe = document.getElementById('quick-preview-iframe');
+    const thumbImg = document.getElementById('quick-thumb-preview');
+    const idDisplay = document.getElementById('quick-video-id');
 
-    if (url) {
+    const vId = getYouTubeId(url);
+
+    if (vId) {
       box.style.display = 'flex';
-      iframe.src = formatEmbedUrl(url);
+      thumbImg.src = `https://img.youtube.com/vi/${vId}/mqdefault.jpg`;
+      idDisplay.textContent = `Video ID: ${vId}`;
     } else {
       box.style.display = 'none';
-      iframe.src = '';
+      thumbImg.src = '';
     }
   }
 
@@ -994,8 +1210,9 @@
 
     const idx = lessons.findIndex(l => l.id === id);
     if (idx !== -1) {
-      lessons[idx].videoUrl = videoUrl ? formatEmbedUrl(videoUrl) : null;
-      showToast(`${lessons[idx].order}회차 유튜브 영상 링크가 저장되었습니다.`);
+      lessons[idx].videoUrl = videoUrl || null;
+      saveToStorage();
+      showToast(`${lessons[idx].order}회차 유튜브 영상이 저장되었습니다. (학생 화면 즉시 반영)`);
     }
 
     closeModal('quick-video-modal');
@@ -1010,6 +1227,7 @@
     deletedLessonBackup = { index: idx, data: lessons[idx] };
     const order = lessons[idx].order;
     lessons.splice(idx, 1);
+    saveToStorage();
     renderTable();
 
     showToast(`${order}회차가 삭제되었습니다.`, true);
@@ -1018,7 +1236,9 @@
   function undoDelete() {
     if (deletedLessonBackup) {
       lessons.splice(deletedLessonBackup.index, 0, deletedLessonBackup.data);
+      lessons.sort((a, b) => a.order - b.order);
       deletedLessonBackup = null;
+      saveToStorage();
       renderTable();
       showToast('삭제가 취소되었습니다.');
     }
@@ -1056,8 +1276,15 @@
     }, 3200);
   }
 
+  // Real-time synchronization
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) {
+      loadLessons();
+    }
+  });
+
   // Init
-  renderTable();
+  loadLessons();
 </script>
 
 </body>
