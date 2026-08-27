@@ -1,0 +1,8 @@
+{# apps/common/templates/includes/messages.html #}
+{# 공통 담당 전담 — Django messages 렌더링 #}
+{#
+  {% if messages %} 반복하며 Bootstrap alert 로 출력
+  message.tags → alert-success / alert-warning / alert-danger / alert-info 매핑
+  색만으로 의미 전달 금지 — 아이콘/텍스트 병행 (DESIGN.md Accessibility)
+  dismiss 가능(alert-dismissible), main 컨텐츠 상단 Page Header 앞에 위치
+#}

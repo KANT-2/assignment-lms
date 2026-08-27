@@ -1,0 +1,12 @@
+{# apps/common/templates/includes/sidebar.html #}
+{# 공통 담당 전담 — 좌측 네비게이션 (LAYOUT.md §3, §17) #}
+{#
+  - 데스크탑: 좌측 고정, 확장 240px / 축소 시 아이콘 레일 72~80px
+  - 모바일: Bootstrap offcanvas 로 열림 (같은 마크업 재사용, 정의 이중화 금지)
+  - 상단에 햄버거 버튼(사이드바 자체 토글), 서비스 아이덴티티(로고)
+  - 네비게이션 항목은 로그인 사용자 role 로 분기 (STUDENT / TUTOR), 2단계 이하 depth
+      · 학생: 대시보드 / 과제 확인 / 강의
+      · 튜터: 과제 관리 / 제출·평가 / 강의 관리
+  - active 항목 표시 (request.resolver_match 기반)
+  - 하단: 저순위 유틸 링크 (도움말 등)
+#}

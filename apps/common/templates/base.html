@@ -1,13 +1,27 @@
 {# apps/common/templates/base.html #}
-{# 공통 담당 전담 — 전체 레이아웃. 학생/튜터 모든 템플릿이 상속해서 사용 #}
+{# 공통 담당 전담 — 전체 애플리케이션 shell. 학생/튜터 모든 템플릿이 상속 #}
+{# 디자인: docs/DESIGN.md  /  레이아웃: docs/LAYOUT.md #}
 {#
-  블록 구성 (예정):
-  - {% block title %}       페이지 타이틀
-  - {% block extra_head %}  페이지별 추가 <head> (css 등)
-  - 헤더: 로고, 로그인 사용자 이름/역할, 로그아웃
-  - 네비게이션: 역할별 메뉴 (학생 / 튜터)
-  - {% block content %}     본문
-  - 푸터
+  구조 (LAYOUT.md §2 — Sidebar + Top Bar + Main Content):
+  <body>
+    include "includes/sidebar.html"      → 좌측 고정 사이드바(240px), 모바일은 offcanvas
+    <div> (콘텐츠 영역)
+      include "includes/topbar.html"      → 상단 유틸리티 바(64px): 알림, 계정메뉴, 로그아웃
+      <main><div class="container-fluid"> (max-width 1440px, 좌우 24~32px)
+        include "includes/messages.html"  → Django messages
+        {% block page_header %}            → 페이지 제목 + 설명 + primary action (페이지별)
+        {% block content %}                → 본문
+      </main>
+
+  블록:
+  - {% block title %}        <title>
+  - {% block extra_head %}   페이지별 <head> 추가
+  - {% block page_header %}  Page Header (LAYOUT.md §9)
+  - {% block content %}      본문
   - {% block extra_script %} 페이지별 JS
-  공통 static: {% static 'common/css/...' %}, {% static 'common/js/...' %}
+
+  정적 파일:
+  - Bootstrap 5.3: {% static 'common/vendor/bootstrap/...' %}  (CDN 아님 — DESIGN.md)
+  - 공통 토큰/스타일: {% static 'common/css/tokens.css' %}, {% static 'common/css/app.css' %}
+  - 각 앱 CSS 는 common 토큰(CSS 변수)만 참조
 #}
