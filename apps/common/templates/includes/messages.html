@@ -1,8 +1,23 @@
-{# apps/common/templates/includes/messages.html #}
-{# 공통 담당 전담 — Django messages 렌더링 #}
-{#
-  {% if messages %} 반복하며 Bootstrap alert 로 출력
-  message.tags → alert-success / alert-warning / alert-danger / alert-info 매핑
-  색만으로 의미 전달 금지 — 아이콘/텍스트 병행 (DESIGN.md Accessibility)
-  dismiss 가능(alert-dismissible), main 컨텐츠 상단 Page Header 앞에 위치
-#}
+{% comment %}
+apps/common/templates/includes/messages.html — 공통 담당 전담
+Django messages → Bootstrap alert.
+- message.tags 에 "safe" 가 포함되면 본문을 |safe 로 렌더링한다
+  (tutor 삭제 뷰의 '실행취소' 링크 등 format_html 메시지용 — LAYOUT.md §20 규약).
+{% endcomment %}
+{% if messages %}
+  <div class="messages mb-3">
+    {% for message in messages %}
+      {% if "error" in message.tags %}{% with cls="danger" %}
+        <div class="alert alert-{{ cls }} alert-dismissible fade show" role="alert">
+          {% if "safe" in message.tags %}{{ message|safe }}{% else %}{{ message }}{% endif %}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="닫기"></button>
+        </div>
+      {% endwith %}{% else %}
+        <div class="alert alert-{% if 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+          {% if "safe" in message.tags %}{{ message|safe }}{% else %}{{ message }}{% endif %}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="닫기"></button>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}

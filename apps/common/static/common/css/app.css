@@ -1,0 +1,110 @@
+/* apps/common/static/common/css/app.css
+   공통 담당 전담 — 애플리케이션 shell 스타일 + 디자인 토큰.
+   토큰 값 출처: docs/DESIGN.md front matter. 각 앱 CSS 는 이 변수만 참조할 것. */
+
+:root {
+  --color-primary: #1769E0;
+  --color-primary-hover: #0F5AC4;
+  --color-primary-container: #EAF2FF;
+  --color-navigation: #082A4B;
+  --color-navigation-hover: #103A62;
+  --color-background: #F6F8FC;
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #FAFBFD;
+  --color-text: #182230;
+  --color-text-muted: #667085;
+  --color-outline: #E2E8F0;
+  --color-success: #168A50;
+  --color-warning: #B7791F;
+  --color-error: #C93C3C;
+
+  --space-xs: 4px; --space-sm: 8px; --space-md: 16px;
+  --space-lg: 24px; --space-xl: 32px; --space-xxl: 48px;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+
+  --sidebar-width: 240px;
+  --topbar-height: 64px;
+  --content-max-width: 1440px;
+
+  --font-sans: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+/* ---------- App shell (LAYOUT.md §2) ---------- */
+.app-shell { display: flex; min-height: 100vh; }
+
+.app-sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--color-navigation);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.app-sidebar .brand {
+  font-weight: 700;
+  font-size: 16px;
+  padding: var(--space-lg) var(--space-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.app-sidebar nav { padding: var(--space-sm); flex: 1; overflow-y: auto; }
+.app-sidebar a {
+  display: block;
+  padding: 10px 12px;
+  margin-bottom: 2px;
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  font-size: 13.5px;
+}
+.app-sidebar a:hover { background: var(--color-navigation-hover); color: #fff; }
+.app-sidebar a.active { background: var(--color-primary); color: #fff; font-weight: 600; }
+.app-sidebar .nav-group-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 14px 12px 4px;
+}
+
+.app-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.app-topbar {
+  height: var(--topbar-height);
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-outline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+  gap: var(--space-md);
+}
+.app-topbar .crumb { font-size: 12.5px; color: var(--color-text-muted); font-weight: 600; }
+.app-topbar .utils { display: flex; align-items: center; gap: var(--space-md); font-size: 13px; }
+.app-topbar .utils a { color: var(--color-text-muted); text-decoration: none; }
+.app-topbar .utils a:hover { color: var(--color-primary); }
+
+.app-main { flex: 1; padding: var(--space-lg) var(--space-xl); }
+.app-main > .container-fluid { max-width: var(--content-max-width); margin: 0 auto; }
+
+.page-header { margin-bottom: var(--space-lg); }
+
+@media (max-width: 992px) {
+  .app-sidebar { display: none; }
+  .app-main { padding: var(--space-md); }
+}
