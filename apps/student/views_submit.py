@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -46,6 +47,12 @@ def student_required(view_func):
 def assignment_list(request):
     student_id = request.user.id
     team = accounts.get_user_team(external_student_id(request))
+    submission_filter = request.GET.get("submission", "all")
+    deadline_filter = request.GET.get("deadline", "all")
+    if submission_filter not in {"all", "submitted", "unsubmitted"}:
+        submission_filter = "all"
+    if deadline_filter not in {"all", "open", "closed"}:
+        deadline_filter = "all"
     submissions = {
         item.assignment_id: item for item in Submission.objects.filter(
             Q(student_id=student_id, team_id__isnull=True)
@@ -62,7 +69,7 @@ def assignment_list(request):
             status, status_class = "평가완료", "primary"
         elif submission:
             status, status_class = "제출완료", "success"
-        elif assignment.due_at < now and not assignment.allow_late:
+        elif assignment.due_at < now:
             status, status_class = "미제출로 마감", "danger"
         else:
             status, status_class = "미제출", "secondary"
@@ -75,11 +82,34 @@ def assignment_list(request):
             "can_submit": (
                 submission is None
                 and (not assignment.is_team or team is not None)
-                and (assignment.allow_late or assignment.due_at >= now)
+                and assignment.due_at >= now
             ),
             "due_date_str": timezone.localtime(assignment.due_at).strftime('%Y-%m-%d'),
         })
-    return render(request, "student/assignment_list.html", {"rows": rows})
+    filtered_rows = [
+        row
+        for row in rows
+        if (
+            submission_filter == "all"
+            or (submission_filter == "submitted" and row["submission"] is not None)
+            or (submission_filter == "unsubmitted" and row["submission"] is None)
+        )
+        and (
+            deadline_filter == "all"
+            or (deadline_filter == "open" and not row["is_past"])
+            or (deadline_filter == "closed" and row["is_past"])
+        )
+    ]
+    return render(
+        request,
+        "student/assignment_list.html",
+        {
+            "rows": filtered_rows,
+            "total_count": len(rows),
+            "submission_filter": submission_filter,
+            "deadline_filter": deadline_filter,
+        },
+    )
 
 
 @student_required
@@ -95,7 +125,7 @@ def assignment_submit(request, assignment_id):
     if assignment.is_team and team is None:
         messages.error(request, "소속된 팀이 없어 팀 과제를 제출할 수 없습니다.")
         return redirect("student:assignment-list")
-    if timezone.now() > assignment.due_at and not assignment.allow_late:
+    if timezone.now() > assignment.due_at:
         messages.error(request, "마감되어 더 이상 제출할 수 없는 과제입니다.")
         return redirect("student:assignment-list")
 
@@ -125,6 +155,12 @@ def assignment_submit(request, assignment_id):
                 locked_assignment = Assignment.objects.select_for_update().get(
                     pk=assignment.id
                 )
+                if timezone.now() > locked_assignment.due_at:
+                    messages.error(
+                        request,
+                        "제출 처리 중 마감 시각이 지나 과제를 제출할 수 없습니다.",
+                    )
+                    return redirect("student:assignment-list")
                 if Submission.objects.filter(**existing_filter).exists():
                     messages.info(
                         request,
@@ -176,7 +212,9 @@ def assignment_preview(request, assignment_id):
         raise PermissionDenied("소속된 팀의 제출물만 볼 수 있습니다.")
 
     submission = get_object_or_404(
-        Submission.objects.prefetch_related("files"),
+        Submission.objects.select_related(
+            "evaluation", "ai_evaluation"
+        ).prefetch_related("files"),
         assignment=assignment,
         student_id=None if assignment.is_team else request.user.id,
         team_id=team.id if assignment.is_team else None,
@@ -190,6 +228,9 @@ def assignment_preview(request, assignment_id):
         "assignment": assignment,
         "submission": submission,
         "last_editor": editor,
+        "evaluation": getattr(submission, "evaluation", None),
+        "ai_evaluation": getattr(submission, "ai_evaluation", None),
+        "is_past": timezone.now() >= assignment.due_at,
         "previews": [_preview(file) for file in submission.files.all()],
         # 팀 과제도 재제출 허용 — 제출물이 팀당 1행이라 팀원 누구나 고치면 전원 반영.
         "can_resubmit": (
@@ -197,3 +238,31 @@ def assignment_preview(request, assignment_id):
             and not submission.is_locked
         ),
     })
+
+
+@student_required
+def submission_file_download(request, file_id):
+    submission_file = get_object_or_404(
+        SubmissionFile.objects.select_related("submission__assignment"),
+        pk=file_id,
+    )
+    submission = submission_file.submission
+    if submission.team_id is not None:
+        team = accounts.get_user_team(external_student_id(request))
+        allowed = bool(team and team.id == submission.team_id)
+    else:
+        allowed = submission.student_id == request.user.id
+    if not allowed:
+        raise Http404("다운로드할 수 있는 제출 파일이 없습니다.")
+
+    try:
+        storage_name = _storage_name(submission_file.file_url)
+        file_handle = default_storage.open(storage_name, "rb")
+    except (FileNotFoundError, OSError, ValueError):
+        raise Http404("저장된 제출 파일을 찾을 수 없습니다.") from None
+
+    return FileResponse(
+        file_handle,
+        as_attachment=True,
+        filename=Path(submission_file.file_name).name,
+    )

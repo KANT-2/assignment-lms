@@ -15,6 +15,7 @@ urlpatterns = [
     path("assignments/", views_submit.assignment_list, name="assignment-list"),
     path("assignments/<int:assignment_id>/submit/", views_submit.assignment_submit, name="assignment-submit"),
     path("assignments/<int:assignment_id>/preview/", views_submit.assignment_preview, name="assignment-preview"),
+    path("submission-files/<int:file_id>/download/", views_submit.submission_file_download, name="submission-file-download"),
     path("results/", views_result.result_list, name="result-list"),
     path("submissions/<int:submission_id>/resubmit/", views_result.resubmit, name="submission-resubmit"),
     path("submissions/<int:submission_id>/result/", views_result.result, name="submission-result"),

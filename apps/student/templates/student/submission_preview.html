@@ -21,32 +21,62 @@
   </section>
   <section class="student-card">
     <h2 class="student-section-title">📄 내 제출 정보</h2>
-    {% for preview in previews %}<div class="file-meta"><strong>{{ preview.file.file_name }}</strong><span>{{ preview.file.file_size|filesizeformat }}</span></div>{% endfor %}
+    {% for preview in previews %}
+      <div class="file-meta">
+        <a class="fw-semibold text-decoration-none" href="{% url 'student:submission-file-download' preview.file.id %}" download>{{ preview.file.file_name }}</a>
+        <span>{{ preview.file.file_size|filesizeformat }}</span>
+      </div>
+    {% endfor %}
   </section>
   <section class="student-card">
-    <h2 class="student-section-title">🔍 제출 파일 미리보기</h2>
-    {% for preview in previews %}
-      <div class="preview-panel">
-        <div class="preview-file-name">{{ preview.file.file_name }}</div>
-        {% if preview.kind == "PY" %}
-          {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% else %}<pre class="code-preview"><code>{{ preview.highlighted }}</code></pre>{% endif %}
-        {% elif preview.kind == "IPYNB" %}
-          {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% endif %}
-          {% if preview.cells %}
-            <div class="notebook-preview">
-              {% for cell in preview.cells %}
-                <article class="notebook-cell">
-                  <div class="cell-label">{{ cell.type|upper }} CELL</div>
-                  <pre class="{% if cell.type == 'code' %}code-preview{% else %}text-preview{% endif %}"><code>{{ cell.source }}</code></pre>
-                  {% for output in cell.outputs %}<div class="cell-output"><span>Output</span><pre>{{ output }}</pre></div>{% endfor %}
-                </article>
-              {% empty %}<p class="text-muted mb-0">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
-            </div>
-          {% elif preview.raw_text %}<pre class="text-preview">{{ preview.raw_text }}</pre>{% endif %}
-        {% else %}<div class="preview-message">📁 이 파일 형식은 미리보기를 지원하지 않습니다. 파일명과 크기만 표시됩니다.</div>{% endif %}
-      </div>
-    {% empty %}<div class="empty-state">첨부된 파일이 없습니다.</div>{% endfor %}
+    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+      <h2 class="student-section-title mb-0">🔍 제출 파일 미리보기</h2>
+      <button id="preview-toggle" class="btn btn-link btn-sm p-1 text-secondary text-decoration-none" style="font-size:18px; line-height:1;" type="button" aria-label="미리보기 접기" aria-expanded="true" aria-controls="submission-preview-content" title="미리보기 접기">⌃</button>
+    </div>
+    <div id="submission-preview-content">
+      {% for preview in previews %}
+        <div class="preview-panel">
+          <div class="preview-file-name">{{ preview.file.file_name }}</div>
+          {% if preview.kind == "PY" %}
+            {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% else %}<pre class="code-preview"><code>{{ preview.highlighted }}</code></pre>{% endif %}
+          {% elif preview.kind == "IPYNB" %}
+            {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% endif %}
+            {% if preview.cells %}
+              <div class="notebook-preview">
+                {% for cell in preview.cells %}
+                  <article class="notebook-cell">
+                    <div class="cell-label">{{ cell.type|upper }} CELL</div>
+                    <pre class="{% if cell.type == 'code' %}code-preview{% else %}text-preview{% endif %}"><code>{{ cell.source }}</code></pre>
+                    {% for output in cell.outputs %}<div class="cell-output"><span>Output</span><pre>{{ output }}</pre></div>{% endfor %}
+                  </article>
+                {% empty %}<p class="text-muted mb-0">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
+              </div>
+            {% elif preview.raw_text %}<pre class="text-preview">{{ preview.raw_text }}</pre>{% endif %}
+          {% else %}<div class="preview-message">📁 이 파일 형식은 미리보기를 지원하지 않습니다. 파일명과 크기만 표시됩니다.</div>{% endif %}
+        </div>
+      {% empty %}<div class="empty-state">첨부된 파일이 없습니다.</div>{% endfor %}
+    </div>
   </section>
+  {% if is_past %}
+    <section class="student-card">
+      <h2 class="student-section-title">🏆 튜터 평가</h2>
+      {% if evaluation %}
+        <div class="result-score">{{ evaluation.score }}<span>/100</span></div>
+        <div class="result-feedback">{{ evaluation.feedback|default:"등록된 피드백이 없습니다."|linebreaksbr }}</div>
+      {% else %}
+        <div class="result-pending">평가 대기 중입니다. 튜터 평가가 등록되면 결과가 표시됩니다.</div>
+      {% endif %}
+    </section>
+    <section class="student-card">
+      <h2 class="student-section-title">🤖 AI 평가</h2>
+      {% if ai_evaluation %}
+        <div class="result-score result-score-ai">{{ ai_evaluation.score }}<span>/100</span></div>
+        <div class="result-feedback result-feedback-ai">{{ ai_evaluation.comment|default:"등록된 AI 코멘트가 없습니다."|linebreaksbr }}</div>
+      {% else %}
+        <div class="result-pending">아직 AI 평가가 등록되지 않았습니다.</div>
+      {% endif %}
+    </section>
+  {% endif %}
   {% if can_resubmit %}
     {% if assignment.is_team %}
       <div class="alert alert-warning mb-0">⚠️ 팀 공유 제출물입니다. 재제출하면 <strong>모든 팀원의 제출물</strong>이 새 파일로 교체됩니다.</div>
@@ -56,4 +86,24 @@
     </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+(() => {
+  const button = document.getElementById("preview-toggle");
+  const content = document.getElementById("submission-preview-content");
+  if (!button || !content) return;
+
+  button.addEventListener("click", () => {
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", String(!expanded));
+    const label = expanded ? "미리보기 펼치기" : "미리보기 접기";
+    button.textContent = expanded ? "⌄" : "⌃";
+    button.setAttribute("aria-label", label);
+    button.setAttribute("title", label);
+    content.hidden = expanded;
+  });
+})();
+</script>
 {% endblock %}
