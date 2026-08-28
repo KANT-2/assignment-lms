@@ -9,6 +9,8 @@ AX2 통합 플랫폼(`ax_evaluation` DB)이 제공하는 **VIEW 2개**를 읽기
 - 다른 앱은 이 모델을 직접 import 하지 말고 services.py 헬퍼로만 접근. 절대 write 금지.
 
 VIEW 정의는 AX2 팀 소유 (문서: "AX2 통합 플랫폼 DB VIEW 제공 안내").
+로그인 인증은 `accounts_user` 테이블(VIEW 아님)의 password/승인상태를 읽어서 처리한다
+(backends.AxPasswordBackend). 역시 읽기 전용 — 절대 write 하지 않는다.
 """
 from django.db import models
 
@@ -46,6 +48,36 @@ class AxUserLogin(models.Model):
     @property
     def email(self):
         return self.primary_email or self.user_email
+
+
+class AccountsUser(models.Model):
+    """
+    accounts_user 테이블 (VIEW 아님) — 로그인 인증 전용 읽기 매핑.
+    password 는 Django 표준 해시(pbkdf2_sha256$...)라 check_password 로 그대로 검증된다.
+    승인 규칙: is_active=True AND approval_status='approved' 여야 로그인 허용.
+    """
+
+    id = models.BigIntegerField(primary_key=True)
+    email = models.EmailField()
+    password = models.CharField(max_length=128)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    role = models.CharField(max_length=20)
+    approval_status = models.CharField(max_length=20)
+    is_active = models.BooleanField()
+    is_staff = models.BooleanField()
+    is_superuser = models.BooleanField()
+
+    class Meta:
+        managed = False
+        db_table = "accounts_user"
+
+    def __str__(self):
+        return f"{self.first_name or self.email} ({self.role})"
+
+    @property
+    def is_login_allowed(self):
+        return self.is_active and self.approval_status == "approved"
 
 
 class RoundTeamMember(models.Model):
