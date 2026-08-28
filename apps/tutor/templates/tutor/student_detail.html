@@ -1,0 +1,136 @@
+{# apps/tutor/templates/tutor/student_detail.html #}
+{# 튜터 학생 관리 — 상세(과제별 제출 이력). 목업: docs/mockups/tutor-student-management.html (Screen B) #}
+{% extends "base.html" %}
+
+{% block title %}{{ student.name }} · 학생 상세{% endblock %}
+
+{% block extra_head %}
+<style>
+  .sdet {
+    --s-surface:#fff; --s-sunken:#eef1f8; --s-muted:#f4f6fb;
+    --s-text:#1c2130; --s-tmuted:#6b7280; --s-tfaint:#9aa1b1;
+    --s-border:#e4e8f1; --s-bstrong:#d5dbe8;
+    --s-accent:#4f6df5; --s-accent-soft:#eaefff; --s-accent-text:#3a56d4;
+    --s-green-soft:#e5f7ee; --s-red:#ef4b4b; --s-red-soft:#fdecec;
+    --s-amber:#c98a1a; --s-amber-soft:#fbf0dd; --s-purple:#7c4fd6; --s-purple-soft:#f1e9ff;
+    --s-r-lg:16px; --s-r-md:12px; --s-r-sm:8px;
+    --s-shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
+    color:var(--s-text);
+  }
+  .sdet .back-link { font-size:12.5px; color:var(--s-tmuted); font-weight:600; }
+  .sdet .back-link:hover { color:var(--s-accent-text); }
+  .sdet .card { background:var(--s-surface); border:1px solid var(--s-border); border-radius:var(--s-r-lg); box-shadow:var(--s-shadow); padding:16px 18px 18px; margin-top:14px; }
+  .sdet .card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .sdet .card-title { font-size:14px; font-weight:700; }
+  .sdet .muted { color:var(--s-tmuted); font-weight:600; }
+
+  .sdet .detail-head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .sdet .avatar { width:44px; height:44px; border-radius:50%; flex-shrink:0; background:var(--s-accent-soft);
+    color:var(--s-accent-text); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; }
+  .sdet .d-name { font-size:17px; font-weight:800; }
+  .sdet .d-meta { font-size:12px; color:var(--s-tmuted); }
+
+  .sdet .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:14px; }
+  @media (max-width:760px){ .sdet .tiles { grid-template-columns:repeat(2,1fr); } }
+  .sdet .tile { border:1px solid var(--s-border); border-radius:var(--s-r-md); padding:12px 14px; display:flex; flex-direction:column; gap:4px; background:var(--s-surface); }
+  .sdet .tile .t-label { font-size:11px; color:var(--s-tmuted); font-weight:600; }
+  .sdet .tile .t-value { font-size:17px; font-weight:800; }
+  .sdet .tile .t-value small { font-size:11px; color:var(--s-tfaint); font-weight:700; }
+
+  .sdet .scroll-x { overflow:auto; }
+  .sdet table.tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .sdet .tbl thead th { text-align:left; font-size:11px; color:var(--s-tfaint); font-weight:700; padding:8px 10px; border-bottom:1px solid var(--s-border); }
+  .sdet .tbl td { padding:11px 10px; border-bottom:1px solid var(--s-border); vertical-align:middle; }
+  .sdet .tbl tr:last-child td { border-bottom:0; }
+
+  .sdet .badge { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .sdet .badge.req { background:var(--s-accent-soft); color:var(--s-accent-text); }
+  .sdet .badge.opt { background:var(--s-sunken); color:var(--s-tmuted); }
+  .sdet .badge.unit { background:var(--s-sunken); color:var(--s-tmuted); }
+  .sdet .badge.unit.team { background:var(--s-purple-soft); color:var(--s-purple); }
+  .sdet .badge.st-done { background:var(--s-green-soft); color:#147a52; }
+  .sdet .badge.st-late { background:var(--s-amber-soft); color:var(--s-amber); }
+  .sdet .badge.st-none { background:var(--s-red-soft); color:var(--s-red); }
+  .sdet .badge.st-open { background:var(--s-sunken); color:var(--s-tfaint); }
+  .sdet .badge.st-team { background:var(--s-purple-soft); color:var(--s-purple); }
+  .sdet .pill { background:var(--s-sunken); color:var(--s-tfaint); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .sdet .dash-val { color:var(--s-tfaint); font-weight:700; }
+  .sdet .note { font-size:11px; color:var(--s-tfaint); margin-top:12px; line-height:1.6; }
+  .sdet a.go { color:var(--s-tmuted); font-weight:600; }
+  .sdet a.go:hover { color:var(--s-accent-text); }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="sdet">
+  <a class="back-link" href="{% url 'tutor:student-list' %}">← 학생 목록</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="sdet">
+
+  <div class="card" style="margin-top:0;">
+    <div class="detail-head">
+      <span class="avatar">{{ student.name|slice:":1" }}</span>
+      <div>
+        <div class="d-name">{{ student.name }}</div>
+        <div class="d-meta">{{ student.email }} · 팀 <span class="pill">미연동</span> · 성적 <span class="dash-val">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><span class="t-label">필수 과제 제출률</span>
+      <span class="t-value">{% if req_rate is not None %}{{ req_rate }}<small>%</small>{% else %}<span class="dash-val">—</span>{% endif %}</span>
+      <span class="muted" style="font-size:11px;">{{ req_done }}/{{ req_total }}</span>
+    </div>
+    <div class="tile"><span class="t-label">선택 과제 제출률</span>
+      <span class="t-value">{% if opt_rate is not None %}{{ opt_rate }}<small>%</small>{% else %}<span class="dash-val">—</span>{% endif %}</span>
+      <span class="muted" style="font-size:11px;">{{ opt_done }}/{{ opt_total }}</span>
+    </div>
+    <div class="tile"><span class="t-label">마지막 활동</span>
+      <span class="t-value" style="font-size:15px;">{% if last_at %}{{ last_at|timesince }} 전{% else %}<span class="dash-val">활동 없음</span>{% endif %}</span>
+    </div>
+    <div class="tile"><span class="t-label">체류 시간</span><span class="t-value dash-val">—</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🗂️ 과제별 제출 이력</div>
+      <span class="muted">전체 {{ timeline|length }}개</span>
+    </div>
+    {% if timeline %}
+    <div class="scroll-x">
+      <table class="tbl">
+        <thead>
+          <tr><th>과제명</th><th>유형</th><th>마감</th><th>상태</th><th>제출 일시</th><th>점수</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for t in timeline %}
+          <tr>
+            <td style="font-weight:700;">{{ t.assignment.title }}</td>
+            <td>
+              <span class="badge {% if t.assignment.is_required %}req{% else %}opt{% endif %}">{% if t.assignment.is_required %}필수{% else %}선택{% endif %}</span>
+              <span class="badge unit {% if t.assignment.is_team %}team{% endif %}">{% if t.assignment.is_team %}팀{% else %}개인{% endif %}</span>
+            </td>
+            <td>{{ t.assignment.due_at|date:"m.d" }}</td>
+            <td><span class="badge st-{{ t.status_class }}">{{ t.status }}</span></td>
+            <td>{% if t.submitted_at %}{{ t.submitted_at|date:"m.d H:i" }}{% else %}<span class="dash-val">—</span>{% endif %}</td>
+            <td>{% if t.score is not None %}{{ t.score }}{% else %}<span class="dash-val">—</span>{% endif %}</td>
+            <td>{% if t.submission %}<a class="go" href="{% url 'tutor:submission-review' t.submission.id %}">제출물 보기 ›</a>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="dash-val" style="text-align:center;padding:24px 0;">등록된 과제가 없습니다.</div>
+    {% endif %}
+    <p class="note">
+      상태 = 제출완료 / 지각 제출(마감 후·지각 허용) / 미제출 / 마감 전 / 팀 과제(학생 귀속 정보 없음).
+      점수는 튜터 평가가 등록된 개인 과제만 표시됩니다. 성적 집계 방식은 추후 확정.
+    </p>
+  </div>
+</div>
+{% endblock %}
