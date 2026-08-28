@@ -1,0 +1,158 @@
+{# apps/tutor/templates/tutor/student_list.html #}
+{# 튜터 학생 관리 — 목록. 목업: docs/mockups/tutor-student-management.html (Screen A) #}
+{% extends "base.html" %}
+
+{% block title %}학생 관리{% endblock %}
+
+{% block extra_head %}
+<style>
+  .smgmt {
+    --s-surface:#fff; --s-sunken:#eef1f8; --s-muted:#f4f6fb;
+    --s-text:#1c2130; --s-tmuted:#6b7280; --s-tfaint:#9aa1b1;
+    --s-border:#e4e8f1; --s-bstrong:#d5dbe8;
+    --s-accent:#4f6df5; --s-accent-soft:#eaefff; --s-accent-text:#3a56d4;
+    --s-green-soft:#e5f7ee; --s-red:#ef4b4b; --s-red-soft:#fdecec;
+    --s-amber:#c98a1a; --s-amber-soft:#fbf0dd; --s-purple:#7c4fd6; --s-purple-soft:#f1e9ff;
+    --s-r-lg:16px; --s-r-md:12px; --s-r-sm:8px;
+    --s-shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
+    color:var(--s-text);
+  }
+  .smgmt .page-head { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+  .smgmt .breadcrumb { font-size:12.5px; color:var(--s-tfaint); font-weight:600; }
+  .smgmt h1.s-title { font-size:21px; font-weight:800; margin:0; letter-spacing:-.01em; }
+  .smgmt .summary-line { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; font-size:12.5px; color:var(--s-tmuted); margin-top:4px; }
+  .smgmt .summary-line b { color:var(--s-text); font-weight:800; }
+  .smgmt .summary-line .s-alert b { color:var(--s-red); }
+  .smgmt .summary-line .sep { color:var(--s-bstrong); }
+
+  .smgmt .card { background:var(--s-surface); border:1px solid var(--s-border); border-radius:var(--s-r-lg); box-shadow:var(--s-shadow); padding:16px 18px 18px; }
+  .smgmt .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .smgmt .toolbar input[type=text] { flex:1; min-width:180px; max-width:280px; border:1px solid var(--s-bstrong);
+    background:var(--s-sunken); border-radius:20px; padding:8px 12px; font-size:12.5px; color:var(--s-text); font-family:inherit; outline:none; }
+  .smgmt .toolbar input:focus { border-color:var(--s-accent); background:var(--s-surface); }
+  .smgmt .toolbar select { border:1px solid var(--s-bstrong); background:var(--s-surface); border-radius:20px;
+    padding:7px 12px; font-size:12px; color:var(--s-tmuted); font-weight:600; font-family:inherit; cursor:pointer; }
+
+  .smgmt .scroll-x { overflow:auto; }
+  .smgmt table.tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .smgmt .tbl thead th { position:sticky; top:0; z-index:1; background:var(--s-surface); text-align:left;
+    font-size:11px; color:var(--s-tfaint); font-weight:700; padding:8px 10px; border-bottom:1px solid var(--s-border); }
+  .smgmt .tbl td { padding:11px 10px; border-bottom:1px solid var(--s-border); vertical-align:middle; }
+  .smgmt .tbl tbody tr { cursor:pointer; }
+  .smgmt .tbl tbody tr:hover { background:var(--s-muted); }
+  .smgmt .tbl tr:last-child td { border-bottom:0; }
+
+  .smgmt .stu { display:flex; align-items:center; gap:10px; }
+  .smgmt .avatar { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:var(--s-accent-soft);
+    color:var(--s-accent-text); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+  .smgmt .stu .s-name { font-weight:700; }
+  .smgmt .stu .s-email { font-size:10.5px; color:var(--s-tfaint); }
+
+  .smgmt .bar-wrap { display:flex; align-items:center; gap:8px; min-width:120px; }
+  .smgmt .bar-track { flex:1; height:7px; border-radius:20px; background:var(--s-sunken); overflow:hidden; }
+  .smgmt .bar-fill { height:100%; border-radius:20px; background:var(--s-accent); }
+  .smgmt .bar-fill.opt { background:var(--s-purple); }
+  .smgmt .bar-fill.low { background:var(--s-red); }
+  .smgmt .bar-num { font-size:11.5px; color:var(--s-tmuted); font-weight:600; white-space:nowrap; }
+
+  .smgmt .pill { background:var(--s-sunken); color:var(--s-tfaint); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .smgmt .dash-val { color:var(--s-tfaint); font-weight:700; }
+  .smgmt .miss-tag { color:var(--s-red); font-weight:700; font-size:11px; }
+  .smgmt .note { font-size:11px; color:var(--s-tfaint); margin-top:12px; line-height:1.7; }
+  .smgmt .empty { text-align:center; color:var(--s-tfaint); font-size:12.5px; padding:26px 0; }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="smgmt">
+  <div class="page-head">
+    <div class="breadcrumb">튜터 · 학생 관리</div>
+    <h1 class="s-title">학생 관리</h1>
+    <div class="summary-line">
+      <span>학생 <b>{{ total_students }}명</b></span>
+      <span class="sep">·</span>
+      <span>평균 필수 제출률 <b>{% if avg_required_rate is not None %}{{ avg_required_rate }}%{% else %}—{% endif %}</b></span>
+      <span class="sep">·</span>
+      <span class="s-alert">미제출 있는 학생 <b>{{ students_with_missing }}명</b></span>
+      <span class="sep">·</span>
+      <span>팀 정보 <b>미연동</b></span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="smgmt">
+  <div class="card">
+    <form class="toolbar" method="get">
+      <input type="text" name="q" value="{{ filters.q }}" placeholder="학생 이름 검색">
+      <select name="sort" onchange="this.form.submit()">
+        {% for value, label in sort_choices %}
+          <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="pill" style="border:none;cursor:pointer;padding:7px 14px;">검색</button>
+    </form>
+
+    {% if rows %}
+    <div class="scroll-x">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>학생</th><th>팀</th>
+            <th style="min-width:150px;">필수 과제 제출률</th>
+            <th style="min-width:150px;">선택 과제 제출률</th>
+            <th>성적</th><th>마지막 활동</th><th>체류 시간</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr onclick="location.href='{% url 'tutor:student-detail' r.id %}'">
+            <td>
+              <div class="stu">
+                <span class="avatar">{{ r.name|slice:":1" }}</span>
+                <span>
+                  <span class="s-name">{{ r.name }}</span><br>
+                  <span class="s-email">{{ r.email }}</span>
+                </span>
+              </div>
+            </td>
+            <td><span class="pill">미연동</span></td>
+            <td>
+              {% if r.req_rate is not None %}
+              <div class="bar-wrap">
+                <div class="bar-track"><div class="bar-fill {% if r.req_rate < 60 %}low{% endif %}" style="width:{{ r.req_rate }}%"></div></div>
+                <span class="bar-num">{{ r.req_done }}/{{ r.req_total }}</span>
+              </div>
+              {% if r.missing_required %}<span class="miss-tag">미제출 {{ r.missing_required }}건</span>{% endif %}
+              {% else %}<span class="dash-val">과제 없음</span>{% endif %}
+            </td>
+            <td>
+              {% if r.opt_rate is not None %}
+              <div class="bar-wrap">
+                <div class="bar-track"><div class="bar-fill opt" style="width:{{ r.opt_rate }}%"></div></div>
+                <span class="bar-num">{{ r.opt_done }}/{{ r.opt_total }}</span>
+              </div>
+              {% else %}<span class="dash-val">—</span>{% endif %}
+            </td>
+            <td class="dash-val">—</td>
+            <td class="bar-num">{% if r.last_at %}{{ r.last_at|timesince }} 전{% else %}활동 없음{% endif %}</td>
+            <td class="dash-val">—</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="empty">표시할 학생이 없습니다.</div>
+    {% endif %}
+
+    <p class="note">
+      · <b>팀</b> — 라운드(프로젝트)마다 팀이 재편성되며 팀 명단은 별도 테이블에서 관리됩니다. 아직 연동 전이라 "미연동"으로 표시됩니다.<br>
+      · <b>성적</b> — 평가 집계 방식이 확정되지 않아 컬럼 자리만 잡아 두었습니다.<br>
+      · <b>제출률</b> — 개인 과제 전체 기준입니다. 팀 과제는 학생 귀속 정보가 없어 분모에서 제외했습니다.<br>
+      · <b>체류 시간</b> — 학습 활동 추적이 아직 없어 값이 비어 있습니다.
+    </p>
+  </div>
+</div>
+{% endblock %}
