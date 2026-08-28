@@ -13,6 +13,10 @@
 {% block content %}
 <div class="student-form-stack">
   <section class="student-card">
+    <h2 class="student-section-title">📝 내가 작성한 설명</h2>
+    <div class="description-view">{{ submission.description|default:"작성한 설명이 없습니다."|linebreaksbr }}</div>
+  </section>
+  <section class="student-card">
     <h2 class="student-section-title">📄 내 제출 정보</h2>
     {% for preview in previews %}<div class="file-meta"><strong>{{ preview.file.file_name }}</strong><span>{{ preview.file.file_size|filesizeformat }}</span></div>{% endfor %}
   </section>
@@ -39,10 +43,6 @@
         {% else %}<div class="preview-message">📁 이 파일 형식은 미리보기를 지원하지 않습니다. 파일명과 크기만 표시됩니다.</div>{% endif %}
       </div>
     {% empty %}<div class="empty-state">첨부된 파일이 없습니다.</div>{% endfor %}
-  </section>
-  <section class="student-card">
-    <h2 class="student-section-title">📝 내가 작성한 설명</h2>
-    <div class="description-view">{{ submission.description|default:"작성한 설명이 없습니다."|linebreaksbr }}</div>
   </section>
   {% if can_resubmit %}
     <div class="d-flex justify-content-end">

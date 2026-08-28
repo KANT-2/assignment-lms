@@ -23,6 +23,11 @@ class SubmissionResultTests(TestCase):
         )
         self.student_gate.start()
         self.addCleanup(self.student_gate.stop)
+        self.team_lookup = patch(
+            "apps.student.views_result.accounts.get_user_team", return_value=None
+        )
+        self.team_lookup.start()
+        self.addCleanup(self.team_lookup.stop)
 
     def make_submission(self, *, due_at=None):
         assignment = Assignment.objects.create(
@@ -102,6 +107,25 @@ class SubmissionResultTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "95")
         self.assertContains(response, "잘했습니다.")
+
+    def test_result_list_shows_closed_submission(self):
+        submission = self.make_submission(
+            due_at=timezone.now() - timedelta(minutes=1)
+        )
+        Evaluation.objects.create(submission=submission, score=88, feedback="수고했어요.")
+
+        response = self.client.get(reverse("student:result-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "학생 B 테스트")
+        self.assertContains(response, "88점")
+        self.assertContains(response, "피드백 완료")
+
+    def test_result_list_has_empty_state_without_closed_submission(self):
+        response = self.client.get(reverse("student:result-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "등록된 과제가 없습니다.")
 
     def test_other_students_result_returns_404(self):
         submission = self.make_submission(
