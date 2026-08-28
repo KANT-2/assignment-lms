@@ -23,6 +23,13 @@ def nav(request):
             role = "STUDENT"
 
     match = getattr(request, "resolver_match", None)
+    
+    if getattr(settings, "DEV_SKIP_AUTH", False):
+        if request.path.startswith("/tutor/"):
+            role = "TUTOR"
+        else:
+            role = "STUDENT"
+
     return {
         "nav_role": role,
         "url_namespace": match.namespace if match else "",

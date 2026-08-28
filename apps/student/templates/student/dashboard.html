@@ -182,18 +182,29 @@
       <div class="day-panel">
         <div class="day-panel-head">
           <span class="label">{{ selected|date:"n월 j일" }} 일정</span>
-          <span class="count">{{ day_items|length }}건</span>
         </div>
-        {% for it in day_items %}
-          <div class="sched-item">
-            <span class="chip {% if it.kind == 'lecture' %}g{% else %}r{% endif %}"></span>
+        
+        {% if day_lectures %}
+          <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+            <span class="chip g"></span>
+            <span class="t">오늘의 강의 보러가기</span>
+            <span class="stag g" style="margin-left:auto;">강의 {{ day_lectures|length }}개</span>
+            <span style="color:var(--d-tfaint);">›</span>
+          </a>
+        {% endif %}
+
+        {% for it in day_assignments %}
+          <div class="sched-item" style="margin-bottom:6px;">
+            <span class="chip r"></span>
             <span class="t">{{ it.title }}</span>
-            <span class="stag {% if it.kind == 'lecture' %}g{% else %}r{% endif %}">{% if it.kind == 'lecture' %}강의{% else %}과제{% endif %}</span>
+            <span class="stag r">과제</span>
             {% if it.time %}<span class="time">{{ it.time }}</span>{% endif %}
           </div>
-        {% empty %}
-          <div class="day-empty">등록된 일정이 없습니다.</div>
         {% endfor %}
+
+        {% if not day_lectures and not day_assignments %}
+          <div class="day-empty">등록된 일정이 없습니다.</div>
+        {% endif %}
       </div>
     </div>
 
