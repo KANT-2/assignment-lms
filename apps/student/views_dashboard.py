@@ -63,7 +63,8 @@ def dashboard(request):
     weeks = _month_weeks(year, month, today, selected, by_day)
 
     day_bucket = by_day.get(selected, {})
-    day_items = [*day_bucket.get("lecture", []), *day_bucket.get("assignment", [])]
+    day_lectures = day_bucket.get("lecture", [])
+    day_assignments = day_bucket.get("assignment", [])
 
     # 내 팀 (없으면 None)
     team = accounts.get_user_team(uid)
@@ -112,7 +113,8 @@ def dashboard(request):
                 "next": {"y": next_y, "m": next_m},
             },
             "selected": selected,
-            "day_items": day_items,
+            "day_lectures": day_lectures,
+            "day_assignments": day_assignments,
             "assign_stats": {
                 "total": total, "submitted": submitted, "graded": graded,
                 "todo": total - submitted, "pct": progress_pct,
