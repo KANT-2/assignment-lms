@@ -7,8 +7,6 @@ apps/common/templates/includes/topbar.html — 공통 담당 전담 (LAYOUT.md �
     {% if nav_role == "TUTOR" %}튜터 콘솔{% elif nav_role == "STUDENT" %}학생{% endif %}
   </div>
   <div class="utils">
-    <a href="{% url 'student:dashboard' %}" class="btn btn-sm btn-outline-success ms-2">학생 모드</a>
-    <a href="{% url 'tutor:dashboard' %}" class="btn btn-sm btn-outline-primary ms-2">강사 모드</a>
 
     {% if user.is_authenticated %}
       <span>{{ user.get_username }}{% if nav_role %} · {{ nav_role }}{% endif %}</span>
