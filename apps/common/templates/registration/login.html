@@ -1,20 +1,43 @@
 {% extends "base.html" %}
 {% comment %}
-Django LoginView 기본 템플릿. DEV_SKIP_AUTH=True 면 이 화면은 거치지 않는다.
-인증 방식(PRD 9장) 확정되면 제대로 구현.
+로그인 — ax_evaluation.accounts_user 이메일+비밀번호 (apps.accounts_client).
+계정은 AX2 통합 플랫폼에서 관리 (회원가입/비번재설정 없음).
+DEV_SKIP_AUTH=True 면 이 화면을 거치지 않는다 (자동 로그인).
 {% endcomment %}
 {% block title %}로그인{% endblock %}
 
+{% block page_header %}{% endblock %}
+
 {% block content %}
-<div class="card" style="max-width:360px;margin:48px auto;padding:24px;">
-  <h1 class="h5 mb-3">로그인</h1>
-  {% if form.errors %}
-    <div class="alert alert-danger">아이디 또는 비밀번호가 올바르지 않습니다.</div>
-  {% endif %}
-  <form method="post">
+<div class="card" style="max-width:400px;margin:56px auto;padding:28px 26px;">
+  <h1 class="h5 fw-bold mb-1">AX 과제 시스템</h1>
+  <p class="text-muted small mb-4">AX 평가 시스템 계정으로 로그인하세요.</p>
+
+  {% for error in form.non_field_errors %}
+    <div class="alert alert-danger py-2 small">{{ error }}</div>
+  {% endfor %}
+
+  <form method="post" novalidate>
     {% csrf_token %}
-    {{ form.as_p }}
-    <input type="hidden" name="next" value="{{ next }}">
+    <input type="hidden" name="next" value="{{ request.GET.next }}">
+
+    <div class="mb-3">
+      <label class="form-label small fw-bold" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+      {{ form.email }}
+      {% for error in form.email.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-bold" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+      {{ form.password }}
+      {% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </div>
+
+    <div class="form-check mb-3">
+      {{ form.remember }}
+      <label class="form-check-label small" for="{{ form.remember.id_for_label }}">{{ form.remember.label }}</label>
+    </div>
+
     <button type="submit" class="btn btn-primary w-100">로그인</button>
   </form>
 </div>
