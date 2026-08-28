@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views_dashboard, views_result, views_submit
+from . import views_dashboard, views_lecture, views_result, views_submit
 
 app_name = "student"
 
@@ -13,6 +13,7 @@ urlpatterns: list[path] = [
     path("todos/add/", views_dashboard.todo_add, name="todo-add"),
     path("todos/<int:pk>/toggle/", views_dashboard.todo_toggle, name="todo-toggle"),
     path("todos/<int:pk>/delete/", views_dashboard.todo_delete, name="todo-delete"),
+    path("lecture/", views_lecture.student_lecture_view, name="lecture"),
     path("assignments/", views_submit.assignment_list, name="assignment-list"),
     path("assignments/<int:assignment_id>/submit/", views_submit.assignment_submit, name="assignment-submit"),
     path("assignments/<int:assignment_id>/preview/", views_submit.assignment_preview, name="assignment-preview"),
