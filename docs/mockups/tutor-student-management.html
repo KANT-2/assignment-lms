@@ -108,7 +108,7 @@
   .pending-pill { background:var(--surface-sunken); color:var(--text-faint); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
   .dash-val { color:var(--text-faint); font-weight:700; }
 
-  .stat-tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .stat-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
   @media (max-width:760px){ .stat-tiles { grid-template-columns:repeat(2,1fr); } }
   .tile { border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; display:flex; flex-direction:column; gap:4px; }
   .tile .t-label { font-size:11px; color:var(--text-muted); font-weight:600; }
@@ -167,7 +167,7 @@
             <select class="sort">
               <option>필수 제출률 낮은 순</option>
               <option>이름순</option>
-              <option>마지막 활동 오래된 순</option>
+              <option>마지막 제출 오래된 순</option>
             </select>
           </div>
         </div>
@@ -179,7 +179,7 @@
                 <th>학생</th><th>팀</th>
                 <th style="min-width:150px;">필수 과제 제출률</th>
                 <th style="min-width:150px;">선택 과제 제출률</th>
-                <th>성적</th><th>마지막 활동</th><th>체류 시간</th>
+                <th>성적</th><th>마지막 제출</th>
               </tr>
             </thead>
             <tbody id="stu-rows">
@@ -192,7 +192,7 @@
           · <b>팀</b> — 라운드(프로젝트)마다 팀이 재편성되며, 팀 명단은 별도 테이블에서 관리됩니다. 아직 연동 전이라 "미연동"으로 표시됩니다.<br>
           · <b>성적</b> — 평가 집계 방식이 확정되지 않아 컬럼 자리만 잡아 두었습니다.<br>
           · <b>제출률</b> — 현재는 전체 과제 기준입니다. 프로젝트별 제출률은 과제–프로젝트 연결 후 제공됩니다.<br>
-          · <b>체류 시간</b> — 학습 활동 추적이 아직 없어 값이 비어 있습니다.
+          · <b>마지막 제출</b> — 마지막 과제 제출 시각 기준 (접속 기록은 수집하지 않음).
         </p>
       </div>
     </div>
@@ -214,8 +214,7 @@
       <div class="stat-tiles">
         <div class="tile"><span class="t-label">필수 과제 제출률</span><span class="t-value" id="d-req">82<small>%</small></span></div>
         <div class="tile"><span class="t-label">선택 과제 제출률</span><span class="t-value" id="d-opt">40<small>%</small></span></div>
-        <div class="tile"><span class="t-label">마지막 활동</span><span class="t-value" id="d-last">2일 전<small></small></span></div>
-        <div class="tile"><span class="t-label">체류 시간</span><span class="t-value dash-val">—</span></div>
+        <div class="tile"><span class="t-label">마지막 제출</span><span class="t-value" id="d-last">2일 전<small></small></span></div>
       </div>
 
       <div class="card">
