@@ -1,13 +1,10 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AX 프로젝트 강의 및 교안</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% extends 'base.html' %}
+
+{% block title %}강의 및 교안{% endblock %}
+
+{% block extra_head %}
 <style>
+
   :root {
     --bg: #eef1f8;
     --surface: #ffffff;
@@ -37,17 +34,10 @@
     --radius-sm: 8px;
   }
 
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  
+  html, 
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: "Noto Sans KR", "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
-    font-feature-settings: "tnum" 1;
-    -webkit-font-smoothing: antialiased;
-    padding: 28px 20px 60px;
-  }
+  
 
   a { color: inherit; text-decoration: none; }
 
@@ -489,18 +479,19 @@
   .cal-day.has-lesson.active { background: var(--accent); color: white; border-color: var(--accent); }
   .playlist-item-order { color: var(--accent); font-weight: 800; font-size: 12px; margin-right: 6px; }
 
-  </style>
-</head>
-<body>
+  
+</style>
+{% endblock %}
 
+{% block content %}
 <div class="wrap">
   <!-- Nav links -->
   <div class="nav-links">
-    <a href="student-dashboard.html" class="back-link">
+    <a href="{% url 'student:dashboard' %}" class="back-link">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
       학생 대시보드로 이동
     </a>
-    <a href="student-assignment-submission.html" class="back-link" style="margin-left: 8px;">
+    <a href="{% url 'student:dashboard' %}" class="back-link" style="margin-left: 8px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
       과제 확인·제출
     </a>
@@ -612,41 +603,46 @@
   <span id="toast-msg">다운로드를 시작합니다.</span>
 </div>
 
+
+
+
+{% endblock %}
+
+{% block extra_script %}
 <script>
+
   // Dummy data according to ERD (Lecture -> Lesson -> LessonMaterial)
   
   const defaultLessonsData = [
-      { id: 1, order: 1, title: "오리엔테이션 및 생성형 AI 모델 아키텍처 개론", date: "2026-08-08", blogUrl: "https://blog.example.com/ax-intro", videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "01_orientation_ai_intro.pdf", size: "14.2 MB", url: "#" }] },
-      { id: 2, order: 1, title: "프롬프트 엔지니어링 1부: 기초", date: "2026-08-12", blogUrl: "https://blog.example.com/prompt-engineering", videoUrl: "https://www.youtube.com/embed/jC4v5AS4RIM", materials: [{ kind: "FILE", title: "02_prompt_engineering_1.pdf", size: "8.7 MB", url: "#" }] },
-      { id: 3, order: 2, title: "프롬프트 엔지니어링 2부: 심화 실무 튜닝", date: "2026-08-12", blogUrl: "https://blog.example.com/prompt-engineering-2", videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "prompt_templates_sample.ipynb", size: "2.1 MB", url: "#" }] },
-      { id: 4, order: 1, title: "함수 호출(Function Calling) 개념", date: "2026-08-15", blogUrl: "https://blog.example.com/function-calling", videoUrl: "https://www.youtube.com/embed/jC4v5AS4RIM", materials: [{ kind: "FILE", title: "03_function_calling_intro.pdf", size: "11.3 MB", url: "#" }] },
-      { id: 5, order: 2, title: "외부 API Tool 연동 실습", date: "2026-08-15", blogUrl: "https://blog.example.com/function-calling-practice", videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "tool_calling_demo.py", size: "45 KB", url: "#" }] },
-      { id: 6, order: 1, title: "LangChain과 Gemini API를 활용한 RAG 에이전트 구축", date: "2026-08-20", blogUrl: "https://blog.example.com/rag-agents", videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "04_rag_agent_hands_on.pdf", size: "12.4 MB", url: "#" }, { kind: "FILE", title: "gemini_rag_starter.zip", size: "2.8 MB", url: "#" }] }
+      { id: 1, order: 1, title: "오리엔테이션 및 생성형 AI 모델 아키텍처 개론", date: "2026-08-08", blogUrl: "https://blog.example.com/ax-intro", videoUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "01_orientation_ai_intro.pdf", size: "14.2 MB", url: "#" }] },
+      { id: 2, order: 1, title: "프롬프트 엔지니어링 1부: 기초", date: "2026-08-12", blogUrl: "https://blog.example.com/prompt-engineering", videoUrl: "https://www.youtube-nocookie.com/embed/jC4v5AS4RIM", materials: [{ kind: "FILE", title: "02_prompt_engineering_1.pdf", size: "8.7 MB", url: "#" }] },
+      { id: 3, order: 2, title: "프롬프트 엔지니어링 2부: 심화 실무 튜닝", date: "2026-08-12", blogUrl: "https://blog.example.com/prompt-engineering-2", videoUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "prompt_templates_sample.ipynb", size: "2.1 MB", url: "#" }] },
+      { id: 4, order: 1, title: "함수 호출(Function Calling) 개념", date: "2026-08-15", blogUrl: "https://blog.example.com/function-calling", videoUrl: "https://www.youtube-nocookie.com/embed/jC4v5AS4RIM", materials: [{ kind: "FILE", title: "03_function_calling_intro.pdf", size: "11.3 MB", url: "#" }] },
+      { id: 5, order: 2, title: "외부 API Tool 연동 실습", date: "2026-08-15", blogUrl: "https://blog.example.com/function-calling-practice", videoUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "tool_calling_demo.py", size: "45 KB", url: "#" }] },
+      { id: 6, order: 1, title: "LangChain과 Gemini API를 활용한 RAG 에이전트 구축", date: "2026-08-20", blogUrl: "https://blog.example.com/rag-agents", videoUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "04_rag_agent_hands_on.pdf", size: "12.4 MB", url: "#" }, { kind: "FILE", title: "gemini_rag_starter.zip", size: "2.8 MB", url: "#" }] }
   ];
 
-  const STORAGE_KEY = 'ax_lms_lessons_data_v2';
-  let lessonsData = [];
+  const lessonsData = {{ lessons_json|safe }};
   let currentLessonId = null;
   let selectedDateStr = null;
   let currentCalDate = new Date();
 
   function loadLessons() {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      lessonsData = JSON.parse(stored);
-    } else {
-      lessonsData = [...defaultLessonsData];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultLessonsData));
-    }
-
     if (lessonsData.length === 0) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const hasToday = lessonsData.some(l => l.date === todayStr);
-    if (hasToday) {
-        selectedDateStr = todayStr;
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get('date');
+
+    if (dateParam && lessonsData.some(l => l.date === dateParam)) {
+        selectedDateStr = dateParam;
     } else {
-        selectedDateStr = lessonsData[0].date;
+        const todayStr = new Date().toISOString().split('T')[0];
+        const hasToday = lessonsData.some(l => l.date === todayStr);
+        if (hasToday) {
+            selectedDateStr = todayStr;
+        } else {
+            selectedDateStr = lessonsData[0].date;
+        }
     }
 
     renderCalendar();
@@ -664,6 +660,8 @@
     container.innerHTML = '';
     
     const filteredLessons = lessonsData.filter(l => l.date === selectedDateStr);
+    filteredLessons.sort((a, b) => a.order - b.order); // Ascending order
+    
     totalCountSpan.textContent = `해당 일자 총 ${filteredLessons.length}개`;
 
     if (filteredLessons.length === 0) {
@@ -681,14 +679,14 @@
       item.className = 'playlist-item' + (lesson.id === currentLessonId ? ' active' : '');
       item.onclick = () => selectLesson(lesson.id);
       
-      const sessionLabel = (index + 1) + '회차';
+      const sessionLabel = (index + 1) + '교시';
 
       item.innerHTML = `
         ${thumbHtml}
         <div class="playlist-info">
           <div class="playlist-item-top">
             <span class="playlist-item-order" style="font-size: 12px;">${lesson.date}</span>
-            <span style="font-size:11.5px; color:var(--text-muted); font-weight: 600;">${sessionLabel}</span>
+            <span style="font-size:11.5px; color:var(--text-muted); font-weight: 600;">${sessionLabel} (총 ${lesson.order}차시)</span>
           </div>
           <div class="playlist-item-title">${lesson.title}</div>
           <div class="playlist-item-meta">
@@ -777,9 +775,9 @@
     const playerContainer = document.getElementById('player-container');
     if (lesson.videoUrl) {
       const vId = getYouTubeId(lesson.videoUrl);
-      const embedUrl = vId ? `https://www.youtube.com/embed/${vId}` : lesson.videoUrl;
+      const embedUrl = vId ? `https://www.youtube-nocookie.com/embed/${vId}` : lesson.videoUrl;
       playerContainer.innerHTML = `
-        <iframe src="${embedUrl}" title="${lesson.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <iframe src="${embedUrl}" title="${lesson.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
       `;
     } else {
 
@@ -788,14 +786,18 @@
           <div class="placeholder-icon">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
           </div>
-          <h4 class="placeholder-title">${lesson.order}회차 강의 영상 준비중</h4>
+          <h4 class="placeholder-title">강의 영상 준비중</h4>
           <p class="placeholder-desc">${lesson.statusNote || '수업 종료 후 다시보기 영상 링크가 이 곳에 업로드됩니다.'}</p>
         </div>
       `;
     }
 
     // Update Details
-    document.getElementById('cur-order-badge').textContent = `${lesson.order}회차`;
+    
+    // Calculate daily index for cur-order-badge
+    const filteredLessons = lessonsData.filter(l => l.date === lesson.date);
+    const dailyIndex = filteredLessons.findIndex(l => l.id === lesson.id) + 1;
+    document.getElementById('cur-order-badge').textContent = `${dailyIndex}교시`;
     document.getElementById('cur-date').textContent = lesson.date;
     document.getElementById('cur-title').textContent = lesson.title;
 
@@ -882,7 +884,6 @@
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=))([^"&?\/\s]{11})/i);
     return match ? match[1] : null;
   }
-</script>
 
-</body>
-</html>
+</script>
+{% endblock %}

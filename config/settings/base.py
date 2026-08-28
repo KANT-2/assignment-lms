@@ -79,6 +79,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.common.context_processors.nav",
             ],
         },
     },
@@ -120,6 +121,14 @@ AUTH_PASSWORD_VALIDATORS = [
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "login"
+
+# --- 개발 전용: 로그인 우회 ---
+# 인증 방식(PRD 9장)이 확정되기 전까지, DEV_SKIP_AUTH=True 이면
+#   1) apps.common.middleware.DevAutoLoginMiddleware 가 모든 요청을 고정 dev 유저로 인증 처리
+#   2) apps.accounts_client.services 가 외부 accounts DB 대신 가짜 데이터를 반환
+# 하여 로그인 화면 없이 화면을 볼 수 있다. prod(config.settings.prod)에서는 절대 켜지 말 것.
+DEV_SKIP_AUTH = env_bool("DEV_SKIP_AUTH", False)
+DEV_ROLE = (env("DEV_ROLE", "TUTOR") or "TUTOR").upper()  # TUTOR | STUDENT — 볼 화면 선택
 
 # --- 국제화 ---
 LANGUAGE_CODE = "ko-kr"

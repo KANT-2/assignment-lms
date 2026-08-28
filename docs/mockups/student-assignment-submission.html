@@ -735,6 +735,76 @@
     { id: "a3", title: "3차 프로젝트 실습 코드 제출", desc: "조건문을 활용해 상품 금액에 따라 할인율을 안내하는 프로그램을 작성하세요. 입력값 검증, 예외 케이스 처리 여부도 함께 평가합니다.", due: new Date(2026, 7, 27, 18, 0), required: true, late: true, team: false },
     { id: "a4", title: "4차 프로젝트 최종 발표", desc: "최종 결과물과 발표 자료를 함께 제출하세요. 팀별로 한 명이 대표 제출하면 됩니다.", due: new Date(2026, 8, 3, 18, 0), required: false, late: true, team: true }
   ];
+  
+  const STORAGE_KEY_ASSIGN = 'ax_lms_assign_data_v1';
+  let storedData = localStorage.getItem(STORAGE_KEY_ASSIGN);
+  let globalRosters = {};
+  if (storedData) {
+    const parsed = JSON.parse(storedData);
+    ASSIGNMENTS = parsed.assignments.map(a => ({...a, due: new Date(a.due)}));
+    globalRosters = parsed.ROSTERS;
+    MY_SUBMISSIONS = {};
+    
+    ASSIGNMENTS.forEach(a => {
+        const rosterList = globalRosters[a.id] || [];
+        let myRoster = null;
+        if (a.team) {
+            myRoster = rosterList.find(r => r.teamName === '1조');
+        } else {
+            myRoster = rosterList.find(r => r.name === '김동윤');
+        }
+        
+        if (myRoster) {
+            MY_SUBMISSIONS[a.id] = {
+                status: myRoster.status,
+                submittedAt: myRoster.submittedAt ? new Date(myRoster.submittedAt) : null,
+                fileName: myRoster.fileName,
+                ext: myRoster.ext,
+                content: myRoster.content,
+                desc: myRoster.desc,
+                feedback: myRoster.feedback,
+                tutorScore: myRoster.tutorScore,
+                aiFeedback: myRoster.aiFeedback
+            };
+        } else {
+            MY_SUBMISSIONS[a.id] = { status: 'none', submittedAt: null, fileName: null, ext: null, content: '', desc: '', feedback: null, tutorScore: null, aiFeedback: null };
+        }
+    });
+  }
+
+  function saveMySubmission(assignId, file, desc) {
+      storedData = localStorage.getItem(STORAGE_KEY_ASSIGN);
+      if (!storedData) return;
+      const parsed = JSON.parse(storedData);
+      const a = parsed.assignments.find(x => x.id === assignId);
+      if (!a) return;
+      const rList = parsed.ROSTERS[assignId] || [];
+      let r = null;
+      if (a.team) {
+          r = rList.find(x => x.teamName === '1조');
+      } else {
+          r = rList.find(x => x.name === '김동윤');
+      }
+      if (r) {
+          r.status = a.late && new Date() > new Date(a.due) ? 'late' : 'submitted';
+          r.submittedAt = new Date().toISOString();
+          if (a.team) r.submittedBy = '김동윤';
+          r.fileName = file && file.name ? file.name : (r.fileName || '제출파일.pdf');
+          r.ext = r.fileName.split('.').pop().toLowerCase();
+          r.desc = desc;
+          r.feedback = null;
+          r.tutorScore = null;
+          r.aiFeedback = null;
+      }
+      localStorage.setItem(STORAGE_KEY_ASSIGN, JSON.stringify(parsed));
+  }
+  
+  window.addEventListener('storage', function(e) {
+    if (e.key === STORAGE_KEY_ASSIGN) {
+      location.reload();
+    }
+  });
+
   function findAssignment(id) { return ASSIGNMENTS.filter(function (x) { return x.id === id; })[0]; }
 
   // ---------- "나" = 김도윤. 튜터 과제 관리 목업의 1차/2차/3차 제출 데이터와 동일하게 맞춘 값입니다. ----------

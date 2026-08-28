@@ -1,3 +1,314 @@
 {# apps/student/templates/student/dashboard.html #}
-{# 학생 대시보드 — common/templates/base.html 상속 #}
-{# 표시 항목: 마감 임박 과제, 미제출 과제 수, 최근 평가 결과 요약 #}
+{# 학생 메인 대시보드 (PRD 7장). 목업: docs/mockups/student-dashboard.html #}
+{# common/templates/base.html 상속 (공통 shell). 페이지 스타일은 .dash 스코프로 자체완결. #}
+{% extends "base.html" %}
+
+{% block title %}학생 대시보드{% endblock %}
+
+{% block extra_head %}
+<style>
+  .dash {
+    --d-surface:#fff; --d-sunken:#eef1f8; --d-muted:#f4f6fb;
+    --d-text:#1c2130; --d-tmuted:#6b7280; --d-tfaint:#9aa1b1;
+    --d-border:#e4e8f1; --d-bstrong:#d5dbe8;
+    --d-accent:#4f6df5; --d-accent-soft:#eaefff; --d-accent-text:#3a56d4;
+    --d-green:#1fa971; --d-green-soft:#e5f7ee; --d-red:#ef4b4b; --d-red-soft:#fdecec;
+    --d-r-lg:16px; --d-r-md:12px; --d-r-sm:8px;
+    --d-shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
+    color:var(--d-text);
+  }
+  .dash .grid { display:grid; gap:18px; grid-template-columns:2fr 1fr; align-items:start; }
+  .dash .col { display:flex; flex-direction:column; gap:18px; min-width:0; }
+  @media (max-width:960px){ .dash .grid { grid-template-columns:1fr; } }
+
+  .dash .card { background:var(--d-surface); border:1px solid var(--d-border); border-radius:var(--d-r-lg);
+    box-shadow:var(--d-shadow); padding:20px 22px 22px; }
+  .dash .card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; }
+  .dash .card-title { font-size:15px; font-weight:700; display:flex; align-items:center; gap:7px; }
+  .dash .card-sub { font-size:12.5px; color:var(--d-tmuted); font-weight:600; }
+  .dash .pill { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap;
+    background:var(--d-sunken); color:var(--d-tmuted); }
+  .dash .pill.accent { background:var(--d-accent-soft); color:var(--d-accent-text); }
+
+  .dash .notice { display:flex; align-items:center; gap:12px; background:var(--d-surface); border:1px solid var(--d-border);
+    border-radius:var(--d-r-md); box-shadow:var(--d-shadow); padding:12px 18px; font-size:13.5px; margin-bottom:16px; }
+  .dash .notice .tag { color:var(--d-accent-text); font-weight:700; white-space:nowrap; }
+  .dash .notice .body { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dash .notice .nav { display:flex; align-items:center; gap:8px; color:var(--d-tfaint); flex-shrink:0; }
+  .dash .notice .nav button { border:none; background:none; color:var(--d-tmuted); cursor:pointer; font-size:15px; padding:2px 6px; border-radius:6px; }
+  .dash .notice .nav button:hover { background:var(--d-muted); color:var(--d-text); }
+  .dash h1.dash-title { font-size:21px; font-weight:800; margin:4px 0 0; letter-spacing:-.01em; }
+
+  .dash .cal-head { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .dash .cal-head .card-title { flex:1; }
+  .dash .cal-nav a { border:1px solid var(--d-border); background:var(--d-surface); color:var(--d-tmuted);
+    width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
+  .dash .cal-nav a:hover { background:var(--d-muted); color:var(--d-text); }
+  .dash .legend { display:flex; gap:12px; font-size:11px; color:var(--d-tfaint); margin-bottom:8px; }
+  .dash .legend i { width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:4px; }
+  .dash .legend i.g { background:var(--d-green); } .dash .legend i.r { background:var(--d-red); }
+  .dash .cal-grid-head, .dash .cal-week { display:grid; grid-template-columns:repeat(7,1fr); }
+  .dash .cal-grid-head { text-align:center; font-size:11px; color:var(--d-tfaint); font-weight:600; margin-bottom:4px; }
+  .dash .cal-grid-head span:first-child { color:#e2837e; } .dash .cal-grid-head span:last-child { color:#7f9bdb; }
+  .dash .cal-week { gap:3px; margin-bottom:3px; }
+  .dash .cal-cell { height:42px; border-radius:12px; border:1.5px solid transparent; display:flex; flex-direction:column;
+    align-items:center; padding-top:5px; gap:3px; font-size:12px; color:var(--d-text); text-decoration:none; }
+  .dash .cal-cell.blank { visibility:hidden; }
+  .dash .cal-cell.pick:hover { background:var(--d-muted); }
+  .dash .cal-cell.today { border-color:var(--d-green); }
+  .dash .cal-cell.today .num { color:var(--d-green); font-weight:700; }
+  .dash .cal-cell.sel { border-color:var(--d-accent); background:var(--d-accent-soft); }
+  .dash .cal-cell .num { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .dash .cal-cell .dots { display:flex; gap:2px; height:4px; }
+  .dash .cal-cell .dots i { width:4px; height:4px; border-radius:50%; }
+  .dash .cal-cell .dots i.g { background:var(--d-green); } .dash .cal-cell .dots i.r { background:var(--d-red); }
+
+  .dash .day-panel { margin-top:12px; padding-top:10px; border-top:1px dashed var(--d-bstrong); }
+  .dash .day-panel-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
+  .dash .day-panel-head .label { font-size:13px; font-weight:700; }
+  .dash .day-panel-head .count { font-size:11.5px; color:var(--d-tmuted); font-weight:600; }
+  .dash .sched-item { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:10px; }
+  .dash .sched-item:hover { background:var(--d-muted); }
+  .dash .sched-item .chip { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .dash .sched-item .chip.g { background:var(--d-green); } .dash .sched-item .chip.r { background:var(--d-red); }
+  .dash .sched-item .t { flex:1; font-size:13px; font-weight:600; }
+  .dash .sched-item .stag { font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:5px; }
+  .dash .sched-item .stag.g { background:var(--d-green-soft); color:var(--d-green); }
+  .dash .sched-item .stag.r { background:var(--d-red-soft); color:var(--d-red); }
+  .dash .sched-item .time { font-size:11.5px; color:var(--d-tmuted); }
+  .dash .day-empty { padding:14px 0; text-align:center; color:var(--d-tfaint); font-size:12.5px; }
+
+  .dash .prog-top { display:flex; align-items:center; gap:10px; font-size:12.5px; margin-bottom:8px; }
+  .dash .prog-top .status { color:var(--d-green); font-weight:700; }
+  .dash .prog-track { height:6px; border-radius:4px; background:var(--d-sunken); overflow:hidden; margin-bottom:6px; }
+  .dash .prog-fill { height:100%; background:linear-gradient(90deg,var(--d-accent),#8aa2ff); border-radius:4px; }
+  .dash .prog-pct { font-size:12px; color:var(--d-tmuted); font-weight:700; text-align:right; margin-bottom:12px; }
+  .dash .task-row { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--d-border);
+    border-radius:var(--d-r-md); background:var(--d-surface); text-decoration:none; color:inherit; }
+  .dash .task-row:hover { background:var(--d-muted); }
+  .dash .task-row .ico { width:30px; height:30px; border-radius:9px; background:var(--d-accent-soft); color:var(--d-accent-text);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .dash .task-row .lbl { flex:1; font-size:13.5px; font-weight:600; }
+  .dash .prog-note { margin-top:12px; font-size:11.5px; color:var(--d-tfaint); }
+
+  .dash .todo-input { display:flex; gap:8px; margin-bottom:12px; }
+  .dash .todo-input input { flex:1; border:1px solid var(--d-bstrong); background:var(--d-sunken); border-radius:var(--d-r-sm);
+    padding:9px 12px; font-size:13px; color:var(--d-text); font-family:inherit; }
+  .dash .todo-input input:focus { outline:none; border-color:var(--d-accent); background:var(--d-surface); }
+  .dash .todo-input button { border:none; background:var(--d-accent); color:#fff; width:36px; border-radius:var(--d-r-sm);
+    font-size:17px; cursor:pointer; flex-shrink:0; }
+  .dash .todo-item { display:flex; align-items:center; gap:10px; padding:8px 6px; border-radius:8px; }
+  .dash .todo-item:hover { background:var(--d-muted); }
+  .dash .todo-item .chk { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--d-bstrong); background:none;
+    flex-shrink:0; cursor:pointer; color:#fff; font-size:10px; display:flex; align-items:center; justify-content:center; }
+  .dash .todo-item .chk.done { background:var(--d-green); border-color:var(--d-green); }
+  .dash .todo-item .txt { flex:1; font-size:13px; word-break:break-all; }
+  .dash .todo-item.done .txt { color:var(--d-tfaint); text-decoration:line-through; }
+  .dash .todo-item .del { border:none; background:none; color:var(--d-tfaint); cursor:pointer; font-size:15px; padding:2px 4px; }
+  .dash .todo-empty { color:var(--d-tfaint); font-size:12.5px; text-align:center; padding:18px 0; }
+  .dash .todo-foot { margin-top:10px; font-size:11.5px; color:var(--d-tfaint); text-align:right; }
+
+  .dash .team-list { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; }
+  @media (max-width:520px){ .dash .team-list { grid-template-columns:1fr; } }
+  .dash .team-row { display:flex; align-items:center; gap:8px; padding:6px 4px; border-radius:9px; min-width:0; }
+  .dash .team-row .avatar { width:28px; height:28px; border-radius:50%; background:var(--d-accent); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+  .dash .team-row .info { min-width:0; }
+  .dash .team-row .name { font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dash .team-row .email { font-size:10.5px; color:var(--d-tmuted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .dash .result-tile { background:var(--d-sunken); border-radius:var(--d-r-md); padding:12px 14px; display:flex;
+    align-items:center; justify-content:space-between; }
+  .dash .result-tile .rl { font-size:12px; color:var(--d-tmuted); font-weight:600; }
+  .dash .result-tile .rv { font-size:18px; font-weight:800; }
+  .dash .muted-empty { color:var(--d-tfaint); font-size:12.5px; padding:10px 0; }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="dash">
+  {% if notices %}
+  <div class="notice" id="notice">
+    <span class="tag">🔔 공지</span>
+    <span class="body" id="noticeBody">{{ notices.0 }}</span>
+    <span class="nav">
+      <button type="button" id="noticePrev" aria-label="이전 공지">‹</button>
+      <span id="noticeIdx">1 / {{ notices|length }}</span>
+      <button type="button" id="noticeNext" aria-label="다음 공지">›</button>
+    </span>
+  </div>
+  {{ notices|json_script:"noticeData" }}
+  {% endif %}
+  <h1 class="dash-title">학생 대시보드</h1>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="dash">
+<div class="grid">
+  {# ── 왼쪽 ── #}
+  <div class="col">
+    <div class="card">
+      <div class="cal-head">
+        <div class="card-title">📅 {{ cal.year }}년 {{ cal.month }}월 · 일정</div>
+        <div class="cal-nav">
+          <a href="?y={{ cal.prev.y }}&m={{ cal.prev.m }}" aria-label="이전 달">‹</a>
+          <a href="?y={{ cal.next.y }}&m={{ cal.next.m }}" aria-label="다음 달">›</a>
+        </div>
+      </div>
+      <div class="legend"><span><i class="g"></i>온라인 강의</span><span><i class="r"></i>과제 마감</span></div>
+      <div class="cal-grid-head">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      {% for week in cal.weeks %}
+        <div class="cal-week">
+          {% for c in week %}
+            {% if c.in_month %}
+              <a class="cal-cell pick {% if c.is_today %}today{% endif %} {% if c.is_selected %}sel{% endif %}"
+                 href="?y={{ cal.year }}&m={{ cal.month }}&d={{ c.date|date:'Y-m-d' }}">
+                <span class="num">{{ c.day }}</span>
+                <span class="dots">
+                  {% if c.has_lecture %}<i class="g"></i>{% endif %}
+                  {% if c.has_assignment %}<i class="r"></i>{% endif %}
+                </span>
+              </a>
+            {% else %}
+              <span class="cal-cell blank"></span>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <div class="day-panel">
+        <div class="day-panel-head">
+          <span class="label">{{ selected|date:"n월 j일" }} 일정</span>
+        </div>
+        
+        {% if day_lectures %}
+          <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+            <span class="chip g"></span>
+            <span class="t">오늘의 강의 보러가기</span>
+            <span class="stag g" style="margin-left:auto;">강의 {{ day_lectures|length }}개</span>
+            <span style="color:var(--d-tfaint);">›</span>
+          </a>
+        {% endif %}
+
+        {% for it in day_assignments %}
+          <div class="sched-item" style="margin-bottom:6px;">
+            <span class="chip r"></span>
+            <span class="t">{{ it.title }}</span>
+            <span class="stag r">과제</span>
+            {% if it.time %}<span class="time">{{ it.time }}</span>{% endif %}
+          </div>
+        {% endfor %}
+
+        {% if not day_lectures and not day_assignments %}
+          <div class="day-empty">등록된 일정이 없습니다.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">🔵 내 과제 현황</div>
+        <div class="card-sub">{{ assign_stats.submitted }} / {{ assign_stats.total }} 제출</div>
+      </div>
+      <div class="prog-top">
+        <span class="status">진행 중</span>
+        {% if assign_stats.todo %}<span style="margin-left:auto;color:var(--d-red);font-weight:700;">미제출 {{ assign_stats.todo }}건</span>{% endif %}
+      </div>
+      <div class="prog-track"><div class="prog-fill" style="width:{{ assign_stats.pct }}%"></div></div>
+      <div class="prog-pct">{{ assign_stats.pct }}%</div>
+
+      <a class="task-row" href="#" title="준비 중 (학생 A 과제 페이지)">
+        <span class="ico">📄</span>
+        <span class="lbl">과제 목록으로 이동</span>
+        <span class="pill">제출 {{ assign_stats.submitted }}/{{ assign_stats.total }}</span>
+        <span class="pill accent">평가완료 {{ assign_stats.graded }}</span>
+        <span style="color:var(--d-tfaint);">›</span>
+      </a>
+      <div class="prog-note">ℹ️ 미제출·제출·평가완료 개수는 개인 과제 전체{% if team %} + 내 팀 과제{% endif %} 기준입니다.</div>
+    </div>
+  </div>
+
+  {# ── 오른쪽 ── #}
+  <div class="col">
+    <div class="card">
+      <div class="card-head"><div class="card-title">📝 TODO</div></div>
+      <form class="todo-input" method="post" action="{% url 'student:todo-add' %}">
+        {% csrf_token %}
+        <input type="text" name="content" maxlength="80" placeholder="할 일을 입력하고 추가" required>
+        <button type="submit" aria-label="추가">+</button>
+      </form>
+      {% for t in todos %}
+        <div class="todo-item {% if t.is_done %}done{% endif %}">
+          <form method="post" action="{% url 'student:todo-toggle' t.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="chk {% if t.is_done %}done{% endif %}" aria-label="완료 토글">{% if t.is_done %}✓{% endif %}</button>
+          </form>
+          <span class="txt">{{ t.content }}</span>
+          <form method="post" action="{% url 'student:todo-delete' t.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="del" aria-label="삭제">×</button>
+          </form>
+        </div>
+      {% empty %}
+        <div class="todo-empty">할 일을 추가해보세요.</div>
+      {% endfor %}
+      {% if todos %}<div class="todo-foot">{{ todo_done }} / {{ todos|length }} 완료</div>{% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">👥 내 팀</div>
+        {% if team %}<span class="pill accent">{{ team.name }}</span>{% endif %}
+      </div>
+      {% if team_members %}
+        <div class="team-list">
+          {% for m in team_members %}
+            <div class="team-row">
+              <span class="avatar">{{ m.name|slice:":1" }}</span>
+              <span class="info">
+                <span class="name">{{ m.name }}</span>
+                <span class="email">{{ m.email }}</span>
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="muted-empty">배정된 팀이 없습니다.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">🏆 최근 공개 결과</div></div>
+      {% if recent_result %}
+        <div class="result-tile">
+          <span class="rl">{{ recent_result.assignment.title }}</span>
+          <span class="rv">{{ recent_result.final_score }}<span style="font-size:12px;color:var(--d-tmuted);"> / 100</span></span>
+        </div>
+      {% else %}
+        <div class="muted-empty">아직 공개된 평가 결과가 없습니다.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+(function () {
+  var el = document.getElementById("notice");
+  if (!el) return;
+  var data = [];
+  try { data = JSON.parse(document.getElementById("noticeData").textContent); } catch (e) { return; }
+  if (data.length < 2) return;
+  var i = 0;
+  var body = document.getElementById("noticeBody"), idx = document.getElementById("noticeIdx");
+  function render() { body.textContent = data[i]; idx.textContent = (i + 1) + " / " + data.length; }
+  document.getElementById("noticePrev").addEventListener("click", function () { i = (i - 1 + data.length) % data.length; render(); });
+  document.getElementById("noticeNext").addEventListener("click", function () { i = (i + 1) % data.length; render(); });
+})();
+</script>
+{% endblock %}

@@ -1,8 +1,23 @@
-{# apps/common/templates/includes/topbar.html #}
-{# 공통 담당 전담 — 상단 유틸리티 바 (LAYOUT.md §4, §10) #}
-{#
-  높이 64px, 사이드바 우측 콘텐츠 영역 전체 폭, 가벼운 외형(그림자 대신 border)
-  좌측: 가벼운 breadcrumb 또는 현재 위치 라벨 / 모바일 메뉴 트리거
-  우측: 전역 기능만 — 알림, 사용자 계정 메뉴, 로그아웃, 도움말
-  금지: 페이지 제목 중복 노출, 페이지별 액션(과제 생성/평가 저장 등) 배치 → Page Header 로
-#}
+{% comment %}
+apps/common/templates/includes/topbar.html — 공통 담당 전담 (LAYOUT.md §4, §10)
+전역 유틸리티만. 페이지 제목·페이지별 액션은 여기 두지 않는다 (page_header 블록).
+{% endcomment %}
+<header class="app-topbar">
+  <div class="crumb">
+    {% if nav_role == "TUTOR" %}튜터 콘솔{% elif nav_role == "STUDENT" %}학생{% endif %}
+  </div>
+  <div class="utils">
+    <a href="{% url 'student:dashboard' %}" class="btn btn-sm btn-outline-success ms-2">학생 모드</a>
+    <a href="{% url 'tutor:assignment-list' %}" class="btn btn-sm btn-outline-primary ms-2">강사 모드</a>
+
+    {% if user.is_authenticated %}
+      <span>{{ user.get_username }}{% if nav_role %} · {{ nav_role }}{% endif %}</span>
+      <form method="post" action="{% url 'logout' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-link btn-sm p-0 align-baseline">로그아웃</button>
+      </form>
+    {% else %}
+      <a href="{% url 'login' %}">로그인</a>
+    {% endif %}
+  </div>
+</header>

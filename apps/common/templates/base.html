@@ -1,27 +1,36 @@
-{# apps/common/templates/base.html #}
-{# 공통 담당 전담 — 전체 애플리케이션 shell. 학생/튜터 모든 템플릿이 상속 #}
-{# 디자인: docs/DESIGN.md  /  레이아웃: docs/LAYOUT.md #}
-{#
-  구조 (LAYOUT.md §2 — Sidebar + Top Bar + Main Content):
-  <body>
-    include "includes/sidebar.html"      → 좌측 고정 사이드바(240px), 모바일은 offcanvas
-    <div> (콘텐츠 영역)
-      include "includes/topbar.html"      → 상단 유틸리티 바(64px): 알림, 계정메뉴, 로그아웃
-      <main><div class="container-fluid"> (max-width 1440px, 좌우 24~32px)
-        include "includes/messages.html"  → Django messages
-        {% block page_header %}            → 페이지 제목 + 설명 + primary action (페이지별)
-        {% block content %}                → 본문
+{% load static %}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AX 과제 시스템{% endblock %}</title>
+
+  {% comment %} Bootstrap 5.3 — DESIGN.md 는 로컬 벤더링을 권장. 현재는 임시 CDN.
+  static/common/vendor/bootstrap/ 에 dist 파일 넣으면 아래 두 CDN 링크를 static 태그로 교체. {% endcomment %}
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{% static 'common/css/app.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="app-shell">
+    {% include "includes/sidebar.html" %}
+
+    <div class="app-body">
+      {% include "includes/topbar.html" %}
+
+      <main class="app-main">
+        <div class="container-fluid">
+          {% include "includes/messages.html" %}
+          {% block page_header %}{% endblock %}
+          {% block content %}{% endblock %}
+        </div>
       </main>
+    </div>
+  </div>
 
-  블록:
-  - {% block title %}        <title>
-  - {% block extra_head %}   페이지별 <head> 추가
-  - {% block page_header %}  Page Header (LAYOUT.md §9)
-  - {% block content %}      본문
-  - {% block extra_script %} 페이지별 JS
-
-  정적 파일:
-  - Bootstrap 5.3: {% static 'common/vendor/bootstrap/...' %}  (CDN 아님 — DESIGN.md)
-  - 공통 토큰/스타일: {% static 'common/css/tokens.css' %}, {% static 'common/css/app.css' %}
-  - 각 앱 CSS 는 common 토큰(CSS 변수)만 참조
-#}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_script %}{% endblock %}
+</body>
+</html>

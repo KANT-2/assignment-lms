@@ -1,13 +1,10 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AX 프로젝트 강의 및 교안 관리 (튜터용)</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% extends 'base.html' %}
+
+{% block title %}강의 및 교안 관리{% endblock %}
+
+{% block extra_head %}
 <style>
+
   :root {
     --bg: #eef1f8;
     --surface: #ffffff;
@@ -37,17 +34,10 @@
     --radius-sm: 8px;
   }
 
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  
+  html, 
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: "Noto Sans KR", "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
-    font-feature-settings: "tnum" 1;
-    -webkit-font-smoothing: antialiased;
-    padding: 28px 20px 60px;
-  }
+  
   body.modal-open { overflow: hidden; }
 
   a { color: inherit; text-decoration: none; }
@@ -343,7 +333,7 @@
   }
   .modal-close:hover { background: var(--surface-muted); color: var(--text); }
   .modal-body {
-    padding: 20px 22px;
+    padding: 22px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -503,14 +493,15 @@
     cursor: pointer;
   }
   .toast-undo-btn:hover { background: #6884f7; }
-</style>
-</head>
-<body>
 
+</style>
+{% endblock %}
+
+{% block content %}
 <div class="wrap">
   <!-- Nav links -->
   <div class="nav-links">
-    <a href="tutor-assign-management.html" class="back-link">
+    <a href="{% url 'tutor:assignment-list' %}" class="back-link">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
       과제 관리로 이동
     </a>
@@ -547,25 +538,7 @@
     </div>
   </div>
 
-  <!-- Summary Stats Bar -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">총 등록 차시</div>
-      <div class="stat-value" id="stat-total">0개</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">영상 등록 완료</div>
-      <div class="stat-value highlight" id="stat-video-ok">0개</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">영상 등록 대기 (수업 완료)</div>
-      <div class="stat-value pending" id="stat-video-wait">0개</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">총 교안 자료 건수</div>
-      <div class="stat-value" id="stat-materials">0건</div>
-    </div>
-  </div>
+  <!-- Summary Stats Bar Removed per user request -->
 
   <!-- Main Content Card -->
   <div class="card">
@@ -589,8 +562,8 @@
       <table class="lesson-table">
         <thead>
           <tr>
-            <th style="width: 70px;">회차</th>
             <th style="width: 95px;">수업 일자</th>
+            <th style="width: 100px;">당일 교시</th>
             <th>수업 제목</th>
             <th style="width: 85px;">교안 자료</th>
             <th style="width: 170px;">유튜브 영상</th>
@@ -660,7 +633,7 @@
               <img id="video-thumb-preview" src="" alt="유튜브 썸네일">
             </div>
             <div class="preview-box">
-              <iframe id="video-preview-iframe" src="" allowfullscreen></iframe>
+              <iframe id="video-preview-iframe" src="" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
             </div>
           </div>
         </div>
@@ -729,141 +702,49 @@
   <button id="toast-undo" class="toast-undo-btn" style="display:none;" onclick="undoDelete()">실행취소</button>
 </div>
 
+
+
+
+{% endblock %}
+
+{% block extra_script %}
 <script>
-  const STORAGE_KEY = 'ax_lms_lessons_data_v2';
 
-  // Default seed dataset
-  const defaultLessonsData = [
-    {
-      id: 1,
-      order: 1,
-      title: "오리엔테이션 및 생성형 AI 모델 아키텍처 개론",
-      date: "2026-08-08",
-      blogUrl: "https://blog.example.com/ax-intro",
-      videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE",
-      materials: [
-        { kind: "FILE", title: "01_orientation_ai_intro.pdf", url: "https://example.com/file1.pdf" },
-        { kind: "LINK", title: "OpenAI vs Google Gemini 아키텍처 비교 문서", url: "https://example.com/docs" }
-      ]
-    },
-    {
-      id: 2,
-      order: 2,
-      title: "프롬프트 엔지니어링 기법과 Few-shot 실무 튜닝",
-      date: "2026-08-12",
-      blogUrl: "https://blog.example.com/prompt-engineering",
-      videoUrl: "https://www.youtube.com/embed/jC4v5AS4RIM",
-      materials: [
-        { kind: "FILE", title: "02_prompt_engineering_guide.pdf", url: "https://example.com/file2.pdf" },
-        { kind: "FILE", title: "prompt_templates_sample.ipynb", url: "https://example.com/file2.ipynb" }
-      ]
-    },
-    {
-      id: 3,
-      order: 3,
-      title: "함수 호출(Function Calling)과 외부 API Tool 연동",
-      date: "2026-08-15",
-      blogUrl: "https://blog.example.com/function-calling",
-      videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE",
-      materials: [
-        { kind: "FILE", title: "03_function_calling_and_tools.pdf", url: "https://example.com/file3.pdf" },
-        { kind: "FILE", title: "tool_calling_demo.py", url: "https://example.com/file3.py" }
-      ]
-    },
-    {
-      id: 4,
-      order: 4,
-      title: "LangChain과 Gemini API를 활용한 RAG 에이전트 구축",
-      date: "2026-08-20",
-      blogUrl: "https://blog.example.com/rag-agents",
-      videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE",
-      materials: [
-        { kind: "FILE", title: "04_rag_agent_hands_on.pdf", url: "https://example.com/file4.pdf" },
-        { kind: "FILE", title: "gemini_rag_starter.zip", url: "https://example.com/file4.zip" },
-        { kind: "LINK", title: "Google AI Studio Gemini API 공식 레퍼런스", url: "https://ai.google.dev" }
-      ]
-    },
-    {
-      id: 5,
-      order: 5,
-      title: "Multi-Agent 협업 워크플로우와 상태 관리 패턴",
-      date: "2026-08-25",
-      blogUrl: "https://blog.example.com/multi-agent",
-      videoUrl: "https://www.youtube.com/embed/M7lc1UVf-VE",
-      materials: [
-        { kind: "FILE", title: "05_multi_agent_systems.pdf", url: "https://example.com/file5.pdf" }
-      ]
-    },
-    {
-      id: 6,
-      order: 6,
-      title: "실전 과제 평가 자동화 파이프라인 설계 및 보안",
-      date: "2026-08-27",
-      blogUrl: "https://blog.example.com/eval-pipeline",
-      videoUrl: null,
-      materials: [
-        { kind: "FILE", title: "06_eval_pipeline_security.pdf", url: "https://example.com/file6.pdf" },
-        { kind: "LINK", title: "LLM Security Checklist (OWASP Top 10)", url: "https://owasp.org" }
-      ]
-    },
-    {
-      id: 7,
-      order: 7,
-      title: "AX 프로젝트 중간 점검 및 코드 리뷰 실습",
-      date: "2026-08-30",
-      blogUrl: null,
-      videoUrl: null,
-      materials: [
-        { kind: "FILE", title: "07_code_review_rubric.pdf", url: "https://example.com/file7.pdf" }
-      ]
-    },
-    {
-      id: 8,
-      order: 8,
-      title: "최종 프로젝트 발표 및 성과 분석 회고",
-      date: "2026-09-03",
-      blogUrl: null,
-      videoUrl: null,
-      materials: []
-    }
-  ];
-
-  let lessons = [];
+  let lessons = {{ lessons_json|safe }};
+const csrfToken = "{{ csrf_token }}";
   let currentTab = 'all';
   let deletedLessonBackup = null;
 
-  function loadLessons() {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        lessons = JSON.parse(stored);
+  window.toggleRows = function(dateStr) {
+    const rows = document.querySelectorAll(`.child-row-${dateStr}`);
+    rows.forEach(r => {
+      if (r.style.display === 'none') {
+        r.style.display = 'table-row';
       } else {
-        lessons = defaultLessonsData;
-        saveToStorage();
+        r.style.display = 'none';
       }
-    } catch(e) {
-      lessons = defaultLessonsData;
-    }
+    });
+  };
+
+  function loadLessons() {
     lessons.sort((a, b) => a.order - b.order);
     renderTable();
   }
 
   function saveToStorage() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lessons));
-    } catch(e) {
-      console.error('Storage error:', e);
-    }
+    fetch('/tutor/lecture/api/update/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({lessons: lessons})
+    }).then(res => res.json()).then(data => {
+      if(data.status !== 'success') console.error('Save failed', data);
+    }).catch(e => console.error('Error saving:', e));
   }
 
-  function resetToDefaultData() {
-    if (confirm('모든 차시 데이터를 기본 샘플 8개로 초기화하시겠습니까? (작성한 내용이 초기화됩니다)')) {
-      lessons = JSON.parse(JSON.stringify(defaultLessonsData));
-      saveToStorage();
-      renderTable();
-      showToast('기본 샘플 데이터로 복원되었습니다.');
-    }
-  }
+  
 
   // Helper to extract YouTube ID & Thumbnail
   function getYouTubeId(url) {
@@ -898,6 +779,22 @@
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 36px; color: var(--text-muted);">조건에 맞는 차시가 없습니다.</td></tr>`;
       return;
     }
+
+    // Sort by date (descending), then by absolute order (ascending)
+    filtered.sort((a, b) => {
+      if (a.date === b.date) {
+        return a.order - b.order;
+      }
+      return new Date(b.date) - new Date(a.date);
+    });
+
+    const dateSpans = {};
+    filtered.forEach(lesson => {
+      dateSpans[lesson.date] = (dateSpans[lesson.date] || 0) + 1;
+    });
+
+    let renderedDates = {};
+    let dailyIndex = {};
 
     filtered.forEach(lesson => {
       const tr = document.createElement('tr');
@@ -935,9 +832,33 @@
         ? `<span class="badge mat-chip">${matCount}건</span>` 
         : `<span style="color:var(--text-faint); font-size:12px;">없음</span>`;
 
+      let dateCellHtml = '';
+      const span = dateSpans[lesson.date];
+      
+      if (!renderedDates[lesson.date]) {
+         let toggleBtn = '';
+         if (span > 1) {
+            toggleBtn = `<br><button class="btn btn-sm btn-outline" style="margin-top: 8px; font-size: 11px; padding: 4px 8px; color: var(--accent-text);" onclick="toggleRows('${lesson.date}')">▼ ${span-1}개 더보기</button>`;
+         }
+         dateCellHtml = `<td style="color:var(--text); font-size:13px; font-weight:800; border-right:1px solid var(--border); text-align:center; vertical-align:middle; background:#f8fafc;">${lesson.date} ${toggleBtn}</td>`;
+         renderedDates[lesson.date] = true;
+         dailyIndex[lesson.date] = 1;
+      } else {
+         dailyIndex[lesson.date]++;
+         dateCellHtml = `<td style="border-right:1px solid var(--border); background:#fcfcfc; text-align:center;"><span style="color:var(--border-strong);">↳</span></td>`;
+      }
+      
+      const currentDailyIndex = dailyIndex[lesson.date];
+      
+      const rowClass = currentDailyIndex > 1 ? `child-row-${lesson.date}` : '';
+      const displayStyle = currentDailyIndex > 1 ? 'display: none;' : '';
+      
+      tr.className = rowClass;
+      tr.style.cssText = displayStyle;
+
       tr.innerHTML = `
-        <td><span class="badge order">${lesson.order}회차</span></td>
-        <td style="color:var(--text-muted); font-size:12.5px;">${lesson.date}</td>
+        ${dateCellHtml}
+        <td><span class="badge order">${currentDailyIndex}교시 <span style="color:var(--text-faint); font-weight:500; font-size:10px; margin-left:4px;">(총 ${lesson.order}차시)</span></span></td>
         <td>
           <span style="font-weight:700; color:var(--text);">${lesson.title}</span>
         </td>
@@ -957,8 +878,6 @@
       `;
       tbody.appendChild(tr);
     });
-
-    updateStats();
   }
 
   function updateStats() {
@@ -1044,7 +963,9 @@
       <input type="text" class="form-control mat-title" placeholder="자료명 (예: 1주차 교안)" value="${title}" style="padding: 6px 8px; font-size:12px;">
       
       <div id="wrap-file-${rowId}" style="display: ${kind === 'FILE' ? 'block' : 'none'};">
+        <input type="hidden" class="mat-existing-url" value="${kind === 'FILE' ? url : ''}">
         <input type="file" class="form-control mat-file" style="padding: 4px 8px; font-size:12px;" ${kind === 'FILE' ? '' : 'disabled'}>
+        ${kind === 'FILE' && url ? `<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">현재 파일: ${url}</div>` : ''}
       </div>
       <div id="wrap-url-${rowId}" style="display: ${kind === 'LINK' ? 'block' : 'none'};">
         <input type="text" class="form-control mat-url" placeholder="https://..." value="${url}" style="padding: 6px 8px; font-size:12px;" ${kind === 'LINK' ? '' : 'disabled'}>
@@ -1089,7 +1010,7 @@
     if (vId) {
       box.style.display = 'flex';
       const originParam = window.location.protocol === 'file:' ? '?origin=http://localhost' : `?origin=${encodeURIComponent(window.location.origin)}`;
-      iframe.src = `https://www.youtube.com/embed/${vId}${originParam}`;
+      iframe.src = `https://www.youtube-nocookie.com/embed/${vId}${originParam}`;
       thumbImg.src = `https://img.youtube.com/vi/${vId}/mqdefault.jpg`;
       idDisplay.textContent = `Video ID: ${vId}`;
     } else {
@@ -1116,7 +1037,7 @@
     const materials = [];
     document.querySelectorAll('#material-builder-list .material-row').forEach(row => {
       const kind = row.querySelector('.mat-kind').value;
-      const matTitle = row.querySelector('.mat-title').value.trim();
+      let matTitle = row.querySelector('.mat-title').value.trim();
       let matUrl = '';
       let matSize = '';
       
@@ -1126,11 +1047,20 @@
           const file = fileInput.files[0];
           matUrl = file.name; // Use filename for mockup display
           matSize = (file.size / 1024 / 1024).toFixed(1) + ' MB';
+          if (!matTitle) matTitle = file.name;
         } else {
-          matUrl = '#'; // Fallback
+          const existingUrlInput = row.querySelector('.mat-existing-url');
+          if (existingUrlInput && existingUrlInput.value) {
+            matUrl = existingUrlInput.value;
+            matSize = '기존 파일';
+            if (!matTitle) matTitle = matUrl;
+          } else {
+            matUrl = '#'; // Fallback
+          }
         }
       } else {
         matUrl = row.querySelector('.mat-url').value.trim() || '#';
+        if (!matTitle && matUrl !== '#') matTitle = '외부 링크';
       }
 
       if (matTitle) {
@@ -1277,15 +1207,10 @@
   }
 
   // Real-time synchronization
-  window.addEventListener('storage', (e) => {
-    if (e.key === STORAGE_KEY) {
-      loadLessons();
-    }
-  });
+  
 
   // Init
   loadLessons();
-</script>
 
-</body>
-</html>
+</script>
+{% endblock %}
