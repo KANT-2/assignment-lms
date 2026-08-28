@@ -29,6 +29,12 @@ class SubmissionResultTests(TestCase):
         )
         self.team_lookup.start()
         self.addCleanup(self.team_lookup.stop)
+        # DEV_SKIP_AUTH 여부와 무관하게 "현재 로그인 사용자" 로 고정
+        eid = patch(
+            "apps.student.views_result.external_student_id", return_value=self.user.id
+        )
+        eid.start()
+        self.addCleanup(eid.stop)
 
     def make_submission(self, *, due_at=None):
         assignment = Assignment.objects.create(

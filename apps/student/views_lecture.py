@@ -3,8 +3,8 @@ from django.shortcuts import render
 from apps.core.models import Lecture, Lesson
 
 def student_lecture_view(request):
-    # Fetch the single course (BR-001)
-    lecture = Lecture.objects.first()
+    # Fetch the single course (BR-001) — 튜터 화면과 같은 헬퍼로 항상 동일 행을 본다.
+    lecture = Lecture.get_singleton()
     
     # Format lessons for JSON
     lessons_data = []

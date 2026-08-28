@@ -1,103 +1,133 @@
 import json
-from django.shortcuts import render
+
+from django.db import transaction
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.http import require_POST
+
 from apps.core.models import Lecture, Lesson, LessonMaterial
 
-def tutor_lecture_manage_view(request):
-    lecture, created = Lecture.objects.get_or_create(title="AX 실무 프로젝트 집중 과정")
-    
-    lessons_data = []
-    lessons = lecture.lessons.all().prefetch_related('materials')
-    for idx, lesson in enumerate(lessons):
-        materials_data = []
-        for mat in lesson.materials.all():
-            materials_data.append({
-                'kind': mat.kind,
-                'title': mat.title,
-                'size': '0 MB',
-                'url': mat.file_url if mat.kind == 'FILE' else mat.link_url
-            })
-        
-        lessons_data.append({
-            'id': lesson.id,
-            'order': idx + 1,
-            'title': lesson.title,
-            'date': lesson.lesson_date.strftime('%Y-%m-%d'),
-            'blogUrl': lesson.blog_link,
-            'videoUrl': lesson.video_url,
-            'materials': materials_data
-        })
-    
-    context = {
-        'lecture': lecture,
-        'lessons_json': json.dumps(lessons_data)
-    }
-    return render(request, 'tutor/lecture_manage.html', context)
+from .views_manage import tutor_required
 
-@csrf_exempt
+
+def _serialize_lessons(lecture):
+    """템플릿 JS의 `lessons` 배열 형태로 직렬화. 날짜 오름차순(회차 순)."""
+    lessons = (
+        lecture.lessons.all().order_by("lesson_date", "id").prefetch_related("materials")
+    )
+    out = []
+    for idx, lesson in enumerate(lessons, start=1):
+        out.append({
+            "id": lesson.id,
+            "order": idx,
+            "title": lesson.title,
+            "date": lesson.lesson_date.strftime("%Y-%m-%d"),
+            "blogUrl": lesson.blog_link,
+            "videoUrl": lesson.video_url,
+            "materials": [
+                {
+                    "kind": mat.kind,
+                    "title": mat.title,
+                    "size": "기존 파일" if mat.kind == "FILE" else "",
+                    "url": mat.file_url if mat.kind == "FILE" else mat.link_url,
+                }
+                for mat in lesson.materials.all()
+            ],
+        })
+    return out
+
+
+def _revision(lecture):
+    """저장 시점의 서버 상태 지문. 다른 탭/세션이 그새 바꿨는지 판별용 (낙관적 잠금)."""
+    agg = lecture.lessons.all().order_by("-updated_at").values_list("updated_at", flat=True).first()
+    count = lecture.lessons.count()
+    return f"{count}:{agg.isoformat() if agg else 'empty'}"
+
+
+@tutor_required
+def tutor_lecture_manage_view(request):
+    lecture = Lecture.get_singleton()
+    return render(request, "tutor/lecture_manage.html", {
+        "lecture": lecture,
+        "lessons_json": json.dumps(_serialize_lessons(lecture)),
+        "revision": _revision(lecture),
+    })
+
+
+@tutor_required
+@require_POST
 def tutor_lecture_update_api(request):
-    if request.method == 'POST':
-        lecture = Lecture.objects.first()
-        data = json.loads(request.body)
-        lessons_list = data.get('lessons', [])
-        
-        # Simple sync: update existing, create new, delete missing
-        existing_lesson_ids = set(lecture.lessons.values_list('id', flat=True))
-        incoming_ids = set()
-        
-        for l_data in lessons_list:
-            l_id = l_data.get('id')
-            if l_id and l_id in existing_lesson_ids:
-                # Update
-                lesson = Lesson.objects.get(id=l_id)
-                lesson.title = l_data.get('title', '')
-                lesson.lesson_date = l_data.get('date')
-                lesson.blog_link = l_data.get('blogUrl')
-                lesson.video_url = l_data.get('videoUrl')
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "detail": "잘못된 요청"}, status=400)
+
+    lessons_list = data.get("lessons", [])
+    base_revision = data.get("base_revision")
+    lecture_pk = Lecture.get_singleton().pk
+
+    with transaction.atomic():
+        lecture = Lecture.objects.select_for_update().get(pk=lecture_pk)
+
+        # 낙관적 잠금 — 페이지를 연 뒤 다른 곳에서 변경됐으면 덮어쓰지 않는다.
+        if base_revision is not None and base_revision != _revision(lecture):
+            return JsonResponse(
+                {
+                    "status": "stale",
+                    "detail": "다른 곳에서 강의안이 변경되었습니다. 새로고침 후 다시 시도해 주세요.",
+                    "lessons": _serialize_lessons(lecture),
+                    "revision": _revision(lecture),
+                },
+                status=409,
+            )
+
+        existing_ids = set(lecture.lessons.values_list("id", flat=True))
+        seen_ids = set()
+
+        for item in lessons_list:
+            title = (item.get("title") or "").strip()
+            date = item.get("date") or None
+            if not title or not date:
+                continue
+            blog = item.get("blogUrl") or None
+            video = item.get("videoUrl") or None
+
+            raw_id = item.get("id")
+            lesson_id = raw_id if raw_id in existing_ids else None
+
+            if lesson_id is not None:
+                lesson = Lesson.objects.get(pk=lesson_id)
+                lesson.title = title
+                lesson.lesson_date = date
+                lesson.blog_link = blog
+                lesson.video_url = video
                 lesson.save()
-                incoming_ids.add(l_id)
             else:
-                # Create (or recreate if id was fake)
                 lesson = Lesson.objects.create(
-                    lecture=lecture,
-                    title=l_data.get('title', ''),
-                    lesson_date=l_data.get('date'),
-                    blog_link=l_data.get('blogUrl'),
-                    video_url=l_data.get('videoUrl')
+                    lecture=lecture, title=title, lesson_date=date,
+                    blog_link=blog, video_url=video,
                 )
-                incoming_ids.add(lesson.id)
-            
-            # Sync materials (just delete and recreate for simplicity)
+            seen_ids.add(lesson.id)
+
             lesson.materials.all().delete()
-            for mat in l_data.get('materials', []):
+            for mat in item.get("materials", []):
+                kind = mat.get("kind", "FILE")
+                url = mat.get("url")
                 LessonMaterial.objects.create(
                     lesson=lesson,
-                    kind=mat.get('kind', 'FILE'),
-                    title=mat.get('title', ''),
-                    file_url=mat.get('url') if mat.get('kind') == 'FILE' else None,
-                    link_url=mat.get('url') if mat.get('kind') == 'LINK' else None
+                    kind=kind,
+                    title=(mat.get("title") or "").strip() or (url or ""),
+                    file_url=url if kind == "FILE" else None,
+                    link_url=url if kind == "LINK" else None,
                 )
-                
-        # Delete lessons not in incoming
-        for l_id in existing_lesson_ids - incoming_ids:
-            Lesson.objects.filter(id=l_id).delete()
-            
-        # Return updated lessons so frontend gets real DB IDs
-        updated_lessons = []
-        for idx, lesson in enumerate(lecture.lessons.all().prefetch_related('materials')):
-            updated_lessons.append({
-                'id': lesson.id,
-                'order': idx + 1,
-                'title': lesson.title,
-                'date': lesson.lesson_date.strftime('%Y-%m-%d'),
-                'blogUrl': lesson.blog_link,
-                'videoUrl': lesson.video_url,
-                'materials': [
-                    {'kind': mat.kind, 'title': mat.title, 'size': '0 MB', 'url': mat.file_url if mat.kind == 'FILE' else mat.link_url}
-                    for mat in lesson.materials.all()
-                ]
-            })
-            
-        return JsonResponse({'status': 'success', 'lessons': updated_lessons})
-    return JsonResponse({'status': 'error'}, status=400)
+
+        for stale_id in existing_ids - seen_ids:
+            Lesson.objects.filter(pk=stale_id).delete()
+
+        payload = {
+            "status": "success",
+            "lessons": _serialize_lessons(lecture),
+            "revision": _revision(lecture),
+        }
+
+    return JsonResponse(payload)
