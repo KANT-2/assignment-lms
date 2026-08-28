@@ -24,6 +24,12 @@
     <div class="alert alert-info mb-0">팀원 중 한 명이 제출하면 팀 제출이 완료되며, 다른 팀원은 추가로 제출할 수 없습니다.</div>
   {% endif %}
   <section class="student-card">
+    <h2 class="student-section-title">📝 과제 설명</h2>
+    <label class="form-label" for="{{ form.description.id_for_label }}">간단한 설명</label>
+    {{ form.description }}
+    {% for error in form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </section>
+  <section class="student-card">
     <h2 class="student-section-title">📤 제출 파일 <span class="required-mark">필수</span></h2>
     <label class="form-label" for="{{ form.file.id_for_label }}">파일 선택</label>
     {{ form.file }}
@@ -33,12 +39,6 @@
       <div class="preview-file-name" id="upload-preview-name"></div>
       <div id="upload-preview-body"></div>
     </div>
-  </section>
-  <section class="student-card">
-    <h2 class="student-section-title">📝 과제 설명</h2>
-    <label class="form-label" for="{{ form.description.id_for_label }}">간단한 설명</label>
-    {{ form.description }}
-    {% for error in form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
   </section>
   {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
   <div class="d-flex justify-content-end gap-2">

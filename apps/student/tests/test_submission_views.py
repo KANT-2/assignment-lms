@@ -3,12 +3,13 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.core.models import Assignment, Submission, SubmissionFile
+from apps.core.models import Assignment, Evaluation, Submission, SubmissionFile
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
@@ -63,6 +64,42 @@ class SubmissionViewTests(TestCase):
         saved_file = submission.files.get()
         self.assertEqual(saved_file.kind, SubmissionFile.Kind.PY)
         self.assertEqual(saved_file.file_name, "answer.PY")
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_filters_by_submission_status(self, _get_user_team):
+        submitted_assignment = self.assignment(title="제출한 과제")
+        self.assignment(title="미제출 과제")
+        Submission.objects.create(
+            assignment=submitted_assignment,
+            student_id=self.user.id,
+            team_id=None,
+        )
+
+        response = self.client.get(
+            reverse("student:assignment-list"),
+            {"submission": "submitted", "deadline": "all"},
+        )
+
+        self.assertContains(response, "제출한 과제")
+        self.assertNotContains(response, "미제출 과제")
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_combines_unsubmitted_and_open_filters(
+        self, _get_user_team
+    ):
+        self.assignment(title="진행 중 미제출")
+        self.assignment(
+            title="마감된 미제출",
+            due_at=timezone.now() - timedelta(minutes=1),
+        )
+
+        response = self.client.get(
+            reverse("student:assignment-list"),
+            {"submission": "unsubmitted", "deadline": "open"},
+        )
+
+        self.assertContains(response, "진행 중 미제출")
+        self.assertNotContains(response, "마감된 미제출")
 
     @patch("apps.student.views_submit.accounts.get_user_team")
     def test_team_member_can_submit_once_for_the_team(self, get_user_team):
@@ -137,6 +174,23 @@ class SubmissionViewTests(TestCase):
         self.assertRedirects(response, reverse("student:assignment-list"))
         self.assertFalse(Submission.objects.filter(assignment=assignment).exists())
 
+    def test_closed_assignment_is_blocked_even_if_late_submission_is_enabled(self):
+        assignment = self.assignment(
+            due_at=timezone.now() - timedelta(minutes=1),
+            allow_late=True,
+        )
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {
+                "description": "지각 제출 시도",
+                "file": SimpleUploadedFile("late.py", b"print('late')"),
+            },
+        )
+
+        self.assertRedirects(response, reverse("student:assignment-list"))
+        self.assertFalse(Submission.objects.filter(assignment=assignment).exists())
+
     def test_student_cannot_preview_another_students_submission(self):
         assignment = self.assignment()
         Submission.objects.create(
@@ -147,6 +201,77 @@ class SubmissionViewTests(TestCase):
 
         response = self.client.get(
             reverse("student:assignment-preview", args=[assignment.id])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_submission_preview_shows_tutor_feedback_after_deadline(self):
+        assignment = self.assignment(
+            due_at=timezone.now() - timedelta(minutes=1),
+        )
+        submission = Submission.objects.create(
+            assignment=assignment,
+            student_id=self.user.id,
+            team_id=None,
+        )
+        Evaluation.objects.create(
+            submission=submission,
+            score=93,
+            feedback="꼼꼼하게 잘했습니다.",
+        )
+
+        response = self.client.get(
+            reverse("student:assignment-preview", args=[assignment.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "93")
+        self.assertContains(response, "꼼꼼하게 잘했습니다.")
+
+    def test_student_can_download_own_submission_file(self):
+        assignment = self.assignment()
+        submission = Submission.objects.create(
+            assignment=assignment,
+            student_id=self.user.id,
+            team_id=None,
+        )
+        saved_name = default_storage.save(
+            "submissions/test/chapter16.ipynb",
+            SimpleUploadedFile("chapter16.ipynb", b'{"cells": []}'),
+        )
+        submission_file = SubmissionFile.objects.create(
+            submission=submission,
+            kind=SubmissionFile.Kind.IPYNB,
+            file_url=default_storage.url(saved_name),
+            file_name="chapter16.ipynb",
+            file_size=13,
+        )
+
+        response = self.client.get(
+            reverse("student:submission-file-download", args=[submission_file.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment", response.headers["Content-Disposition"])
+        self.assertIn("chapter16.ipynb", response.headers["Content-Disposition"])
+
+    def test_student_cannot_download_another_students_file(self):
+        assignment = self.assignment()
+        submission = Submission.objects.create(
+            assignment=assignment,
+            student_id=self.user.id + 100,
+            team_id=None,
+        )
+        submission_file = SubmissionFile.objects.create(
+            submission=submission,
+            kind=SubmissionFile.Kind.IPYNB,
+            file_url="/media/submissions/other/chapter16.ipynb",
+            file_name="chapter16.ipynb",
+            file_size=13,
+        )
+
+        response = self.client.get(
+            reverse("student:submission-file-download", args=[submission_file.id])
         )
 
         self.assertEqual(response.status_code, 404)

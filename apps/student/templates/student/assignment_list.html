@@ -1,7 +1,32 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}과제 목록 | AX 과제 시스템{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
+<style>
+  .assignment-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 24px; margin-bottom:14px; }
+  .assignment-list-summary { display:flex; align-items:center; gap:8px; }
+  .assignment-list-summary .student-section-title { font-size:18px; }
+  .assignment-list-summary .assignment-count { font-size:13px; }
+  .assignment-filters { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; margin-left:auto; padding:4px 0; background:transparent; }
+  .assignment-filter-group { display:flex; align-items:center; gap:10px; }
+  .assignment-filter-label { color:var(--color-text-muted); font-size:12px; font-weight:700; white-space:nowrap; }
+  .assignment-filter-options { display:flex; flex-wrap:wrap; gap:6px; }
+  .assignment-filter-chip { padding:5px 12px; border:1px solid #d8dee8; border-radius:999px; color:#687386; background:#fff; font-size:12px; font-weight:700; line-height:1.35; text-decoration:none; transition:transform .15s ease, box-shadow .15s ease, background .15s ease; }
+  .assignment-filter-chip:hover { color:#315dba; background:#f7f9ff; transform:translateY(-1px); box-shadow:0 3px 8px rgb(49 93 186 / 12%); }
+  .assignment-filter-chip.is-deadline-active { border-color:#b9d2ff; color:#2159b5; background:#eaf2ff; }
+  .assignment-filter-chip.is-submission-active { border-color:#bde8d4; color:#16734a; background:#e9f8f0; }
+  .assignment-row.is-open { background:var(--color-surface); }
+  .assignment-row.is-past { background:#f1f3f6; }
+  .deadline-state { display:inline-flex; align-items:center; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .deadline-open { color:#1858b8; background:#dceaff; }
+  .deadline-closed { color:#b42318; background:#fee4e2; }
+  @media (max-width: 575px) {
+    .assignment-filters { width:100%; margin-left:0; }
+    .assignment-filter-group { width:100%; justify-content:space-between; }
+  }
+</style>
+{% endblock %}
 {% block page_header %}
 <div class="page-header">
   <p class="student-eyebrow mb-1">AX 프로젝트 평가</p>
@@ -11,34 +36,51 @@
 {% endblock %}
 {% block content %}
 <section class="student-card" aria-labelledby="assignment-list-heading">
-  <div class="d-flex align-items-center gap-2 mb-3">
-    <span aria-hidden="true">📋</span>
-    <h2 id="assignment-list-heading" class="student-section-title mb-0">전체 과제</h2>
-    <span class="text-muted small">{{ rows|length }}개</span>
+  <div class="assignment-toolbar">
+    <div class="assignment-list-summary">
+      <span aria-hidden="true">📋</span>
+      <h2 id="assignment-list-heading" class="student-section-title mb-0">전체 과제</h2>
+      <span class="assignment-count text-muted">{{ rows|length }}개 / 전체 {{ total_count }}개</span>
+    </div>
+    <div class="assignment-filters" aria-label="과제 목록 필터">
+      <div class="assignment-filter-group deadline-filter">
+        <span class="assignment-filter-label">마감 상태</span>
+        <div class="assignment-filter-options" role="group" aria-label="마감 상태 선택">
+          <a class="assignment-filter-chip{% if deadline_filter == 'all' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=all">전체</a>
+          <a class="assignment-filter-chip{% if deadline_filter == 'open' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=open">진행 중</a>
+          <a class="assignment-filter-chip{% if deadline_filter == 'closed' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=closed">마감</a>
+        </div>
+      </div>
+      <div class="assignment-filter-group submission-filter">
+        <span class="assignment-filter-label">제출 상태</span>
+        <div class="assignment-filter-options" role="group" aria-label="제출 상태 선택">
+          <a class="assignment-filter-chip{% if submission_filter == 'all' %} is-submission-active{% endif %}" href="?submission=all&amp;deadline={{ deadline_filter }}">전체</a>
+          <a class="assignment-filter-chip{% if submission_filter == 'unsubmitted' %} is-submission-active{% endif %}" href="?submission=unsubmitted&amp;deadline={{ deadline_filter }}">미제출</a>
+          <a class="assignment-filter-chip{% if submission_filter == 'submitted' %} is-submission-active{% endif %}" href="?submission=submitted&amp;deadline={{ deadline_filter }}">제출완료</a>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="assignment-list">
     {% for row in rows %}
-      <article class="assignment-row{% if row.is_past %} is-past{% endif %}">
+      <article class="assignment-row{% if row.is_past %} is-past{% else %} is-open{% endif %}">
         <div class="flex-grow-1 min-width-0">
           <h3 class="assignment-title">{{ row.assignment.title }}</h3>
           <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="badge-soft {% if row.assignment.is_required %}badge-required{% else %}badge-optional{% endif %}">{% if row.assignment.is_required %}필수{% else %}선택{% endif %}</span>
             <span class="badge-soft {% if row.assignment.is_team %}badge-team{% else %}badge-personal{% endif %}">{% if row.assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}</span>
+            <span class="deadline-state {% if row.is_past %}deadline-closed{% else %}deadline-open{% endif %}">{% if row.is_past %}마감{% else %}진행 중{% endif %}</span>
             <span class="assignment-due">{{ row.assignment.due_at|date:"Y.m.d (D) H:i" }}</span>
           </div>
         </div>
         <span class="status-pill status-{{ row.status_class }}">{{ row.status }}</span>
         {% if row.submission %}
-          {% if row.is_past and not row.assignment.is_team %}
-            <a class="btn btn-outline-primary btn-sm" href="{% url 'student:submission-result' row.submission.id %}">결과 보기</a>
-          {% else %}
-            <a class="btn btn-outline-primary btn-sm" href="{% url 'student:assignment-preview' row.assignment.id %}">제출 보기</a>
-          {% endif %}
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'student:assignment-preview' row.assignment.id %}">제출 보기</a>
         {% elif row.can_submit %}
           <a class="btn btn-primary btn-sm" href="{% url 'student:assignment-submit' row.assignment.id %}">제출하기</a>
         {% endif %}
       </article>
-    {% empty %}<div class="empty-state">등록된 과제가 없습니다.</div>{% endfor %}
+    {% empty %}<div class="empty-state">선택한 조건에 맞는 과제가 없습니다.</div>{% endfor %}
   </div>
 </section>
 {% endblock %}
