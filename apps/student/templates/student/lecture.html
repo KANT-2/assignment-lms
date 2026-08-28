@@ -529,13 +529,7 @@
           </div>
           <h2 id="cur-title" class="lesson-title-lg">LangChain과 Gemini API를 활용한 RAG 에이전트 구축</h2>
           
-          <div class="lesson-actions">
-            <a id="cur-blog-btn" href="https://blog.example.com/rag-agents" target="_blank" class="btn btn-outline">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              블로그 이동
-            </a>
-            
-          </div>
+
         </div>
       </div>
 
@@ -804,14 +798,7 @@
       statusBadge.textContent = '수업 예정';
     }
 
-    // Blog Button
-    const blogBtn = document.getElementById('cur-blog-btn');
-    if (lesson.blogUrl) {
-      blogBtn.href = lesson.blogUrl;
-      blogBtn.style.display = 'inline-flex';
-    } else {
-      blogBtn.style.display = 'none';
-    }
+
 
     // Materials List
     const matCountEl = document.getElementById('material-count');
