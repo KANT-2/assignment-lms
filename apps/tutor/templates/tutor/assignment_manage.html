@@ -65,10 +65,9 @@
   .tt-scope .deleted-box{margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;}
   .tt-scope .deleted-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--text-faint);padding:6px 0;}
 
-  /* flags */
-  .tt-scope .flag{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;flex-shrink:0;border:1.5px solid currentColor;cursor:default;}
-  .tt-scope .flag.required{color:var(--red);}
-  .tt-scope .flag.help{color:var(--accent);font-size:10px;}
+  /* 필수 표시 / 도움말 */
+  .tt-scope .field-label .req{color:var(--red);font-weight:700;margin-left:1px;}
+  .tt-scope .field-hint{font-size:11px;color:var(--text-faint);margin-top:3px;line-height:1.5;}
 
   /* modal */
   .tt-modal{position:fixed;inset:0;background:rgba(17,22,38,.46);display:flex;align-items:flex-start;justify-content:center;padding:40px 18px;overflow-y:auto;z-index:1080;opacity:0;pointer-events:none;transition:opacity .16s;}
@@ -188,7 +187,7 @@
 <div class="tt-modal {% if form_mode == 'edit' or form.errors %}show{% endif %}" id="assignmentModal">
   <div class="tt-scope"><div class="tt-modal-card">
     <div class="tt-modal-head">
-      <div class="tt-modal-title"><span class="flag required">!</span>
+      <div class="tt-modal-title">
         {% if form_mode == 'edit' %}과제 수정{% else %}새 과제 등록{% endif %}
       </div>
       <button type="button" class="tt-modal-close" data-tt-close>✕</button>
@@ -201,52 +200,55 @@
       {% if form.non_field_errors %}<div class="static-note" style="color:var(--red);">{{ form.non_field_errors }}</div>{% endif %}
 
       <div class="field">
-        <label class="field-label" for="{{ form.title.id_for_label }}"><span class="flag required">!</span> 과제명</label>
+        <label class="field-label" for="{{ form.title.id_for_label }}">과제명 <span class="req">*</span></label>
         {% render_field form.title %}
         {{ form.title.errors }}
       </div>
 
       <div class="field">
-        <label class="field-label" for="{{ form.description.id_for_label }}"><span class="flag required">!</span> 과제 설명 (학생에게 표시됩니다)</label>
+        <label class="field-label" for="{{ form.description.id_for_label }}">과제 설명 (학생에게 표시됩니다) <span class="req">*</span></label>
         {% render_field form.description %}
         {{ form.description.errors }}
       </div>
 
       <div class="field">
-        <label class="field-label" for="{{ form.due_at.id_for_label }}"><span class="flag required">!</span> 제출 마감일시</label>
+        <label class="field-label" for="{{ form.due_at.id_for_label }}">제출 마감일시 <span class="req">*</span></label>
         {% render_field form.due_at %}
         {{ form.due_at.errors }}
       </div>
 
       {# 필수/선택 — is_required (bool) #}
       <div class="field">
-        <label class="field-label"><span class="flag help" title="라벨만 다르고 마감·제출방식·집계 방식은 동일합니다">?</span> 필수 여부</label>
+        <label class="field-label">필수 여부</label>
         <div class="seg-group" data-tt-seg="{{ form.is_required.html_name }}">
           <button type="button" class="seg-btn {% if form.is_required.value %}active{% endif %}" data-value="1">필수</button>
           <button type="button" class="seg-btn {% if not form.is_required.value %}active{% endif %}" data-value="0">선택</button>
         </div>
         <input type="hidden" name="{{ form.is_required.html_name }}" value="{% if form.is_required.value %}1{% endif %}">
+        <div class="field-hint">라벨만 다르고 마감·제출 방식·집계 방식은 동일합니다.</div>
       </div>
 
       {# 지각 제출 — allow_late (bool) #}
       <div class="field">
-        <label class="field-label"><span class="flag help" title="허용 시 마감 후 제출도 일반 제출과 동일하게 처리됩니다">?</span> 지각 제출</label>
+        <label class="field-label">지각 제출</label>
         <div class="seg-group semantic" data-tt-seg="{{ form.allow_late.html_name }}">
           <button type="button" class="seg-btn {% if form.allow_late.value %}active{% endif %}" data-value="1">허용</button>
           <button type="button" class="seg-btn {% if not form.allow_late.value %}active{% endif %}" data-value="0">불가</button>
         </div>
         <input type="hidden" name="{{ form.allow_late.html_name }}" value="{% if form.allow_late.value %}1{% endif %}">
+        <div class="field-hint">허용 시 마감 후 제출도 일반 제출과 동일하게 처리됩니다.</div>
       </div>
 
       {# 과제 구분 — is_team (bool). 제출물 있으면 잠금 #}
       <div class="field">
-        <label class="field-label"><span class="flag help" title="팀 과제는 팀원 누구나 팀을 대신해 제출할 수 있습니다">?</span> 과제 구분</label>
+        <label class="field-label">과제 구분</label>
         <div class="seg-group {% if form.has_submissions %}locked{% endif %}" data-tt-seg="{{ form.is_team.html_name }}"
              {% if form.has_submissions %}data-tt-locked="1"{% endif %}>
           <button type="button" class="seg-btn {% if not form.is_team.value %}active{% endif %}" data-value="0">개인 과제</button>
           <button type="button" class="seg-btn {% if form.is_team.value %}active{% endif %}" data-value="1">팀 과제</button>
         </div>
         <input type="hidden" name="{{ form.is_team.html_name }}" value="{% if form.is_team.value %}1{% endif %}">
+        <div class="field-hint">팀 과제는 팀원 누구나 팀을 대신해 제출할 수 있습니다.</div>
         <div class="team-note {% if form.is_team.value %}show{% endif %}" data-tt-team-note>팀원 중 한 명이 제출하면 팀 전체 제출로 처리됩니다. 피드백도 팀 전체에 동일하게 적용됩니다.</div>
         <div class="unit-lock-note {% if form.has_submissions %}show{% endif %}">이미 제출물이 있어 과제 구분(개인/팀)을 변경할 수 없습니다.</div>
         {{ form.is_team.errors }}

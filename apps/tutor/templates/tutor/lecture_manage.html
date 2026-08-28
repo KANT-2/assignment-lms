@@ -1,0 +1,1216 @@
+{% extends 'base.html' %}
+
+{% block title %}강의 및 교안 관리{% endblock %}
+
+{% block extra_head %}
+<style>
+
+  :root {
+    --bg: #eef1f8;
+    --surface: #ffffff;
+    --surface-muted: #f4f6fb;
+    --surface-sunken: #eef1f8;
+    --text: #1c2130;
+    --text-muted: #6b7280;
+    --text-faint: #9aa1b1;
+    --border: #e4e8f1;
+    --border-strong: #d5dbe8;
+    --accent: #4f6df5;
+    --accent-soft: #eaefff;
+    --accent-text: #3a56d4;
+    --green: #1fa971;
+    --green-soft: #e5f7ee;
+    --red: #ef4b4b;
+    --red-soft: #fdecec;
+    --amber: #c98a1a;
+    --amber-soft: #fbf0dd;
+    --purple: #7c4fd6;
+    --purple-soft: #f1e9ff;
+    --ai: #0f9488;
+    --ai-soft: #e3f7f3;
+    --shadow: 0 1px 2px rgba(24, 30, 51, 0.03), 0 1px 10px rgba(24, 30, 51, 0.03);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  
+  html, 
+
+  
+  body.modal-open { overflow: hidden; }
+
+  a { color: inherit; text-decoration: none; }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Navigation & Breadcrumb */
+  .nav-links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    width: fit-content;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+  }
+  .back-link:hover { color: var(--accent-text); }
+
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page-head-text { display: flex; flex-direction: column; gap: 6px; }
+  .breadcrumb { font-size: 12.5px; color: var(--text-faint); font-weight: 600; }
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1.page-title {
+    font-size: 21px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .page-sub { font-size: 13px; color: var(--text-muted); }
+
+  /* Sync Badge */
+  .sync-badge {
+    background: var(--green-soft);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-text); }
+  .btn-outline { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
+  .btn-outline:hover { background: var(--surface-muted); border-color: var(--accent); color: var(--accent-text); }
+  .btn-danger { background: var(--red-soft); color: var(--red); border-color: transparent; }
+  .btn-danger:hover { background: #fcd9d9; }
+  .btn-sm { padding: 5px 9px; font-size: 12px; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+  }
+
+  /* Summary Metrics Bar */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .stat-value { font-size: 20px; font-weight: 800; color: var(--text); }
+  .stat-value.highlight { color: var(--accent-text); }
+  .stat-value.pending { color: var(--amber); }
+
+  /* Filter and Toolbar */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .search-input-wrap {
+    position: relative;
+    width: 280px;
+  }
+  .search-input-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-faint);
+  }
+  .search-input {
+    width: 100%;
+    padding: 7px 10px 7px 32px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12.5px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  .filter-tabs { display: flex; gap: 6px; align-items: center; }
+  .tab-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { background: var(--surface-muted); color: var(--text); }
+  .tab-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  /* Table Style */
+  .table-responsive {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+  }
+  table.lesson-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+    background: var(--surface);
+  }
+  table.lesson-table th {
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-weight: 700;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  table.lesson-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  table.lesson-table tr:last-child td { border-bottom: none; }
+  table.lesson-table tr:hover td { background: #fafbff; }
+
+  /* Table Thumb Cell */
+  .video-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .table-thumb {
+    width: 60px;
+    aspect-ratio: 16 / 9;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #1e293b;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .table-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .table-thumb-none {
+    width: 60px;
+    aspect-ratio: 16 / 9;
+    border-radius: 4px;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  /* Badges */
+  .badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .badge.order { background: var(--surface-sunken); color: var(--text); }
+  .badge.video-ok { background: var(--green-soft); color: var(--green); }
+  .badge.video-wait { background: var(--amber-soft); color: var(--amber); }
+  .badge.video-none { background: var(--surface-sunken); color: var(--text-faint); }
+  .badge.mat-chip { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+
+  .action-group { display: flex; align-items: center; gap: 6px; }
+
+  /* Modal System */
+  .modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    padding: 20px;
+  }
+  .modal-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+  }
+  .modal-box {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.96) translateY(10px);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .modal-backdrop.show .modal-box {
+    transform: scale(1) translateY(0);
+  }
+  .modal-head {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-size: 16px; font-weight: 800; margin: 0; }
+  .modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .modal-close:hover { background: var(--surface-muted); color: var(--text); }
+  .modal-body {
+    padding: 22px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .modal-foot {
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    background: var(--surface-muted);
+  }
+
+  /* Form Controls */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .form-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .form-label .req { color: var(--red); margin-left: 2px; }
+  .form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+  }
+  .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .form-hint { font-size: 11.5px; color: var(--text-muted); }
+
+  /* Dynamic Material Items in Modal */
+  .material-builder {
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    background: var(--surface-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .material-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1.2fr 32px;
+    gap: 8px;
+    align-items: center;
+  }
+  .material-row-del {
+    border: none;
+    background: none;
+    color: var(--red);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .material-row-del:hover { background: var(--red-soft); }
+
+  /* Live Video Preview Box */
+  .video-preview-wrap {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px;
+  }
+  .thumb-info-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+  }
+  .thumb-info-badge {
+    background: var(--green-soft);
+    color: var(--green);
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .preview-media-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .preview-box {
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #000;
+    position: relative;
+  }
+  .preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .preview-box iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  /* Toast Notification & Undo */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #182230;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 2000;
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .toast-undo-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .toast-undo-btn:hover { background: #6884f7; }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <!-- Nav links -->
+  <div class="nav-links">
+    <a href="{% url 'tutor:assignment-list' %}" class="back-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      과제 관리로 이동
+    </a>
+    <a href="student-lecture.html" class="back-link" style="margin-left: 8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      학생용 화면으로 이동하여 연동 확인
+    </a>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-head">
+    <div class="page-head-text">
+      <div class="breadcrumb">
+        강의 관리 · FR-015
+        <span class="sync-badge" style="margin-left: 8px;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>
+          학생 강의 페이지와 실시간 연동중
+        </span>
+      </div>
+      <div class="title-row">
+        <h1 class="page-title">강의(차시) 및 교안 관리</h1>
+      </div>
+      <div class="page-sub">회차별 수업 정보, 교안 파일/링크 및 수업 후 다시보기 유튜브 영상을 등록·관리합니다. (등록 즉시 학생 화면에 반영)</div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn btn-outline" onclick="resetToDefaultData()" title="기본 8개 차시 샘플로 복원">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+        샘플 초기화
+      </button>
+      <button class="btn btn-primary" onclick="openCreateModal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        새 차시 등록
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Stats Bar Removed per user request -->
+
+  <!-- Main Content Card -->
+  <div class="card">
+    
+    <!-- Toolbar: Search & Filter Tabs -->
+    <div class="toolbar">
+      <div class="search-input-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="search-input" class="search-input" placeholder="차시 제목 또는 날짜 검색" oninput="filterLessons()">
+      </div>
+
+      <div class="filter-tabs">
+        <button class="tab-btn active" onclick="setTab('all', this)">전체 차시</button>
+        <button class="tab-btn" onclick="setTab('video-ok', this)" id="tab-btn-ok">영상 완료</button>
+        <button class="tab-btn" onclick="setTab('video-wait', this)" id="tab-btn-wait">영상 대기/미등록</button>
+      </div>
+    </div>
+
+    <!-- Lesson Table -->
+    <div class="table-responsive">
+      <table class="lesson-table">
+        <thead>
+          <tr>
+            <th style="width: 95px;">수업 일자</th>
+            <th style="width: 100px;">당일 교시</th>
+            <th>수업 제목</th>
+            <th style="width: 85px;">교안 자료</th>
+            <th style="width: 170px;">유튜브 영상</th>
+            <th style="width: 80px;">블로그</th>
+            <th style="width: 155px; text-align: right;">관리 액션</th>
+          </tr>
+        </thead>
+        <tbody id="lesson-table-body">
+          <!-- Rendered via JS -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- Modal 1: Create / Edit Lesson Full Modal   -->
+<!-- ========================================== -->
+<div id="lesson-modal" class="modal-backdrop" onclick="handleBackdropClick(event, 'lesson-modal')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title" id="modal-title">새 차시 등록</h3>
+      <button class="modal-close" onclick="closeModal('lesson-modal')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <input type="hidden" id="edit-lesson-id">
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">차시 번호<span class="req">*</span></label>
+          <input type="number" id="form-order" class="form-control" min="1" max="50" value="9">
+        </div>
+        <div class="form-group">
+          <label class="form-label">수업 일자<span class="req">*</span></label>
+          <input type="date" id="form-date" class="form-control" value="2026-09-05">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">수업 제목<span class="req">*</span></label>
+        <input type="text" id="form-title" class="form-control" placeholder="예: LangChain을 활용한 RAG 에이전트 구축">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">블로그 요약 링크 (URL)</label>
+        <input type="url" id="form-blog" class="form-control" placeholder="https://blog.example.com/...">
+        <span class="form-hint">수업 내용 정리 및 참고자료 블로그 포스팅 링크</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">유튜브 다시보기 영상 링크 (URL)</label>
+        <input type="url" id="form-video" class="form-control" placeholder="https://www.youtube.com/watch?v=..." oninput="updateVideoPreview()">
+        <span class="form-hint">URL 입력 시 썸네일이 자동 감지되고 학생 화면에 임베드 영상이 공개됩니다.</span>
+        
+        <!-- Live Preview -->
+        <div id="video-preview" class="video-preview-wrap">
+          <div class="thumb-info-bar">
+            <span class="thumb-info-badge">유튜브 썸네일 & 플레이어 자동 감지</span>
+            <span id="video-id-display" style="color:var(--text-muted); font-size:11px;"></span>
+          </div>
+          <div class="preview-media-container">
+            <div class="preview-box">
+              <img id="video-thumb-preview" src="" alt="유튜브 썸네일">
+            </div>
+            <div class="preview-box">
+              <iframe id="video-preview-iframe" src="" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+          <label class="form-label">수업 교안 및 실습 파일 (LessonMaterial)</label>
+          <button type="button" class="btn btn-outline btn-sm" onclick="addMaterialRow()">+ 자료 추가</button>
+        </div>
+        
+        <div class="material-builder" id="material-builder-list">
+          <!-- Dynamic Material Rows -->
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('lesson-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveLesson()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- Modal 2: Quick Video URL Modal             -->
+<!-- ========================================== -->
+<div id="quick-video-modal" class="modal-backdrop" onclick="handleBackdropClick(event, 'quick-video-modal')">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-head">
+      <h3 class="modal-title">유튜브 영상 링크 빠른 등록</h3>
+      <button class="modal-close" onclick="closeModal('quick-video-modal')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="quick-lesson-id">
+      <div id="quick-lesson-target" style="font-size: 13.5px; font-weight: 700; color: var(--accent-text); margin-bottom: 4px;"></div>
+      
+      <div class="form-group">
+        <label class="form-label">유튜브 다시보기 링크<span class="req">*</span></label>
+        <input type="url" id="quick-video-input" class="form-control" placeholder="https://www.youtube.com/watch?v=..." oninput="updateQuickPreview()">
+        <span class="form-hint">저장 즉시 썸네일과 영상이 생성되어 학생 화면에 노출됩니다.</span>
+      </div>
+
+      <div id="quick-video-preview" class="video-preview-wrap">
+        <div class="thumb-info-bar">
+          <span class="thumb-info-badge">자동 추출 썸네일</span>
+          <span id="quick-video-id" style="color:var(--text-muted); font-size:11px;"></span>
+        </div>
+        <div class="preview-box" style="width: 100%; aspect-ratio: 16/9;">
+          <img id="quick-thumb-preview" src="" alt="썸네일" style="width:100%; height:100%; object-fit:cover;">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('quick-video-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveQuickVideo()">영상 링크 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast">
+  <span id="toast-text">저장되었습니다.</span>
+  <button id="toast-undo" class="toast-undo-btn" style="display:none;" onclick="undoDelete()">실행취소</button>
+</div>
+
+
+
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+
+  let lessons = {{ lessons_json|safe }};
+const csrfToken = "{{ csrf_token }}";
+  let currentTab = 'all';
+  let deletedLessonBackup = null;
+
+  window.toggleRows = function(dateStr) {
+    const rows = document.querySelectorAll(`.child-row-${dateStr}`);
+    rows.forEach(r => {
+      if (r.style.display === 'none') {
+        r.style.display = 'table-row';
+      } else {
+        r.style.display = 'none';
+      }
+    });
+  };
+
+  function loadLessons() {
+    lessons.sort((a, b) => a.order - b.order);
+    renderTable();
+  }
+
+  function saveToStorage() {
+    fetch('/tutor/lecture/api/update/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({lessons: lessons})
+    }).then(res => res.json()).then(data => {
+      if(data.status !== 'success') console.error('Save failed', data);
+    }).catch(e => console.error('Error saving:', e));
+  }
+
+  
+
+  // Helper to extract YouTube ID & Thumbnail
+  function getYouTubeId(url) {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+    return match ? match[1] : null;
+  }
+
+  function getYouTubeThumbnail(url) {
+    const id = getYouTubeId(url);
+    return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('lesson-table-body');
+    tbody.innerHTML = '';
+
+    const query = document.getElementById('search-input').value.trim().toLowerCase();
+
+    const filtered = lessons.filter(l => {
+      // Tab filter
+      if (currentTab === 'video-ok' && !l.videoUrl) return false;
+      if (currentTab === 'video-wait' && l.videoUrl) return false;
+      // Search filter
+      if (query) {
+        return l.title.toLowerCase().includes(query) || l.date.includes(query) || `${l.order}회차`.includes(query);
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 36px; color: var(--text-muted);">조건에 맞는 차시가 없습니다.</td></tr>`;
+      return;
+    }
+
+    // Sort by date (descending), then by absolute order (ascending)
+    filtered.sort((a, b) => {
+      if (a.date === b.date) {
+        return a.order - b.order;
+      }
+      return new Date(b.date) - new Date(a.date);
+    });
+
+    const dateSpans = {};
+    filtered.forEach(lesson => {
+      dateSpans[lesson.date] = (dateSpans[lesson.date] || 0) + 1;
+    });
+
+    let renderedDates = {};
+    let dailyIndex = {};
+
+    filtered.forEach(lesson => {
+      const tr = document.createElement('tr');
+
+      // Video Status & Thumbnail
+      const thumbUrl = getYouTubeThumbnail(lesson.videoUrl);
+      let videoCellHtml = '';
+
+      if (thumbUrl) {
+        videoCellHtml = `
+          <div class="video-cell">
+            <div class="table-thumb" title="유튜브 썸네일">
+              <img src="${thumbUrl}" alt="썸네일" loading="lazy">
+            </div>
+            <span class="badge video-ok">등록 완료</span>
+          </div>
+        `;
+      } else {
+        videoCellHtml = `
+          <div class="video-cell">
+            <div class="table-thumb-none">미등록</div>
+            <span class="badge video-wait">영상 대기</span>
+          </div>
+        `;
+      }
+
+      // Blog status
+      const blogHtml = (lesson.blogUrl && lesson.blogUrl.trim())
+        ? `<a href="${lesson.blogUrl}" target="_blank" style="color:var(--accent-text); font-weight:600; text-decoration:underline;">링크</a>`
+        : `<span style="color:var(--text-faint);">-</span>`;
+
+      // Material chip
+      const matCount = lesson.materials ? lesson.materials.length : 0;
+      const matHtml = matCount > 0 
+        ? `<span class="badge mat-chip">${matCount}건</span>` 
+        : `<span style="color:var(--text-faint); font-size:12px;">없음</span>`;
+
+      let dateCellHtml = '';
+      const span = dateSpans[lesson.date];
+      
+      if (!renderedDates[lesson.date]) {
+         let toggleBtn = '';
+         if (span > 1) {
+            toggleBtn = `<br><button class="btn btn-sm btn-outline" style="margin-top: 8px; font-size: 11px; padding: 4px 8px; color: var(--accent-text);" onclick="toggleRows('${lesson.date}')">▼ ${span-1}개 더보기</button>`;
+         }
+         dateCellHtml = `<td style="color:var(--text); font-size:13px; font-weight:800; border-right:1px solid var(--border); text-align:center; vertical-align:middle; background:#f8fafc;">${lesson.date} ${toggleBtn}</td>`;
+         renderedDates[lesson.date] = true;
+         dailyIndex[lesson.date] = 1;
+      } else {
+         dailyIndex[lesson.date]++;
+         dateCellHtml = `<td style="border-right:1px solid var(--border); background:#fcfcfc; text-align:center;"><span style="color:var(--border-strong);">↳</span></td>`;
+      }
+      
+      const currentDailyIndex = dailyIndex[lesson.date];
+      
+      const rowClass = currentDailyIndex > 1 ? `child-row-${lesson.date}` : '';
+      const displayStyle = currentDailyIndex > 1 ? 'display: none;' : '';
+      
+      tr.className = rowClass;
+      tr.style.cssText = displayStyle;
+
+      tr.innerHTML = `
+        ${dateCellHtml}
+        <td><span class="badge order">${currentDailyIndex}교시 <span style="color:var(--text-faint); font-weight:500; font-size:10px; margin-left:4px;">(총 ${lesson.order}차시)</span></span></td>
+        <td>
+          <span style="font-weight:700; color:var(--text);">${lesson.title}</span>
+        </td>
+        <td>${matHtml}</td>
+        <td>${videoCellHtml}</td>
+        <td>${blogHtml}</td>
+        <td style="text-align: right;">
+          <div class="action-group" style="justify-content: flex-end;">
+            ${!lesson.videoUrl 
+              ? `<button class="btn btn-primary btn-sm" onclick="openQuickVideoModal(${lesson.id})">영상 등록</button>` 
+              : `<button class="btn btn-outline btn-sm" onclick="openQuickVideoModal(${lesson.id})">영상 변경</button>`
+            }
+            <button class="btn btn-outline btn-sm" onclick="openEditModal(${lesson.id})">수정</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteLesson(${lesson.id})">삭제</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateStats() {
+    const total = lessons.length;
+    const videoOk = lessons.filter(l => !!l.videoUrl).length;
+    const videoWait = lessons.filter(l => !l.videoUrl).length;
+    let totalMat = 0;
+    lessons.forEach(l => { totalMat += (l.materials ? l.materials.length : 0); });
+
+    document.getElementById('stat-total').textContent = `${total}개`;
+    document.getElementById('stat-video-ok').textContent = `${videoOk}개`;
+    document.getElementById('stat-video-wait').textContent = `${videoWait}개`;
+    document.getElementById('stat-materials').textContent = `${totalMat}건`;
+
+    document.getElementById('tab-btn-ok').textContent = `영상 완료 (${videoOk})`;
+    document.getElementById('tab-btn-wait').textContent = `영상 대기/미등록 (${videoWait})`;
+  }
+
+  function setTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+
+  function filterLessons() {
+    renderTable();
+  }
+
+  // Modal handlers
+  function openCreateModal() {
+    document.getElementById('modal-title').textContent = '새 차시 등록';
+    document.getElementById('edit-lesson-id').value = '';
+    document.getElementById('form-order').value = lessons.length + 1;
+    document.getElementById('form-date').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('form-title').value = '';
+    document.getElementById('form-blog').value = '';
+    document.getElementById('form-video').value = '';
+    document.getElementById('material-builder-list').innerHTML = '';
+    addMaterialRow('FILE', '', '');
+
+    updateVideoPreview();
+    openModal('lesson-modal');
+  }
+
+  function openEditModal(id) {
+    const lesson = lessons.find(l => l.id === id);
+    if (!lesson) return;
+
+    document.getElementById('modal-title').textContent = `${lesson.order}회차 수업 수정`;
+    document.getElementById('edit-lesson-id').value = lesson.id;
+    document.getElementById('form-order').value = lesson.order;
+    document.getElementById('form-date').value = lesson.date;
+    document.getElementById('form-title').value = lesson.title;
+    document.getElementById('form-blog').value = lesson.blogUrl || '';
+    document.getElementById('form-video').value = lesson.videoUrl || '';
+
+    const matList = document.getElementById('material-builder-list');
+    matList.innerHTML = '';
+    if (lesson.materials && lesson.materials.length > 0) {
+      lesson.materials.forEach(m => addMaterialRow(m.kind, m.title, m.url));
+    } else {
+      addMaterialRow('FILE', '', '');
+    }
+
+    updateVideoPreview();
+    openModal('lesson-modal');
+  }
+
+  function addMaterialRow(kind = 'FILE', title = '', url = '') {
+    const list = document.getElementById('material-builder-list');
+    const row = document.createElement('div');
+    row.className = 'material-row';
+    
+    // UUID for input ID matching
+    const rowId = 'mat-' + Math.random().toString(36).substr(2, 9);
+    
+    row.innerHTML = `
+      <select class="form-control mat-kind" style="padding: 6px 8px; font-size:12px;" onchange="toggleMaterialInput(this, '${rowId}')">
+        <option value="FILE" ${kind === 'FILE' ? 'selected' : ''}>내 PC 파일</option>
+        <option value="LINK" ${kind === 'LINK' ? 'selected' : ''}>외부 링크</option>
+      </select>
+      <input type="text" class="form-control mat-title" placeholder="자료명 (예: 1주차 교안)" value="${title}" style="padding: 6px 8px; font-size:12px;">
+      
+      <div id="wrap-file-${rowId}" style="display: ${kind === 'FILE' ? 'block' : 'none'};">
+        <input type="hidden" class="mat-existing-url" value="${kind === 'FILE' ? url : ''}">
+        <input type="file" class="form-control mat-file" style="padding: 4px 8px; font-size:12px;" ${kind === 'FILE' ? '' : 'disabled'}>
+        ${kind === 'FILE' && url ? `<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">현재 파일: ${url}</div>` : ''}
+      </div>
+      <div id="wrap-url-${rowId}" style="display: ${kind === 'LINK' ? 'block' : 'none'};">
+        <input type="text" class="form-control mat-url" placeholder="https://..." value="${url}" style="padding: 6px 8px; font-size:12px;" ${kind === 'LINK' ? '' : 'disabled'}>
+      </div>
+      
+      <button type="button" class="material-row-del" onclick="this.parentElement.remove()" title="삭제">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    `;
+    list.appendChild(row);
+  }
+
+  function toggleMaterialInput(selectEl, rowId) {
+    const kind = selectEl.value;
+    const wrapFile = document.getElementById('wrap-file-' + rowId);
+    const wrapUrl = document.getElementById('wrap-url-' + rowId);
+    const inputFile = wrapFile.querySelector('.mat-file');
+    const inputUrl = wrapUrl.querySelector('.mat-url');
+
+    if (kind === 'FILE') {
+      wrapFile.style.display = 'block';
+      wrapUrl.style.display = 'none';
+      inputFile.disabled = false;
+      inputUrl.disabled = true;
+    } else {
+      wrapFile.style.display = 'none';
+      wrapUrl.style.display = 'block';
+      inputFile.disabled = true;
+      inputUrl.disabled = false;
+    }
+  }
+
+  function updateVideoPreview() {
+    const url = document.getElementById('form-video').value.trim();
+    const box = document.getElementById('video-preview');
+    const iframe = document.getElementById('video-preview-iframe');
+    const thumbImg = document.getElementById('video-thumb-preview');
+    const idDisplay = document.getElementById('video-id-display');
+
+    const vId = getYouTubeId(url);
+
+    if (vId) {
+      box.style.display = 'flex';
+      const originParam = window.location.protocol === 'file:' ? '?origin=http://localhost' : `?origin=${encodeURIComponent(window.location.origin)}`;
+      iframe.src = `https://www.youtube-nocookie.com/embed/${vId}${originParam}`;
+      thumbImg.src = `https://img.youtube.com/vi/${vId}/mqdefault.jpg`;
+      idDisplay.textContent = `Video ID: ${vId}`;
+    } else {
+      box.style.display = 'none';
+      iframe.src = '';
+      thumbImg.src = '';
+    }
+  }
+
+  function saveLesson() {
+    const title = document.getElementById('form-title').value.trim();
+    const order = parseInt(document.getElementById('form-order').value) || 1;
+    const date = document.getElementById('form-date').value;
+    const blogUrl = document.getElementById('form-blog').value.trim() || null;
+    const videoUrl = document.getElementById('form-video').value.trim() || null;
+    const editId = document.getElementById('edit-lesson-id').value;
+
+    if (!title || !date) {
+      alert('수업 제목과 수업 일자를 입력해주세요.');
+      return;
+    }
+
+    // Collect materials
+    const materials = [];
+    document.querySelectorAll('#material-builder-list .material-row').forEach(row => {
+      const kind = row.querySelector('.mat-kind').value;
+      let matTitle = row.querySelector('.mat-title').value.trim();
+      let matUrl = '';
+      let matSize = '';
+      
+      if (kind === 'FILE') {
+        const fileInput = row.querySelector('.mat-file');
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          matUrl = file.name; // Use filename for mockup display
+          matSize = (file.size / 1024 / 1024).toFixed(1) + ' MB';
+          if (!matTitle) matTitle = file.name;
+        } else {
+          const existingUrlInput = row.querySelector('.mat-existing-url');
+          if (existingUrlInput && existingUrlInput.value) {
+            matUrl = existingUrlInput.value;
+            matSize = '기존 파일';
+            if (!matTitle) matTitle = matUrl;
+          } else {
+            matUrl = '#'; // Fallback
+          }
+        }
+      } else {
+        matUrl = row.querySelector('.mat-url').value.trim() || '#';
+        if (!matTitle && matUrl !== '#') matTitle = '외부 링크';
+      }
+
+      if (matTitle) {
+        materials.push({ kind, title: matTitle, url: matUrl, size: matSize });
+      }
+    });
+
+    if (editId) {
+      // Update
+      const idx = lessons.findIndex(l => l.id === parseInt(editId));
+      if (idx !== -1) {
+        lessons[idx] = {
+          ...lessons[idx],
+          order,
+          date,
+          title,
+          blogUrl,
+          videoUrl,
+          materials
+        };
+      }
+      showToast(`${order}회차 수업 정보가 수정되었습니다. (학생 화면 즉시 반영)`);
+    } else {
+      // Create
+      const newLesson = {
+        id: Date.now(),
+        order,
+        date,
+        title,
+        blogUrl,
+        videoUrl,
+        materials
+      };
+      lessons.push(newLesson);
+      showToast('새 차시가 등록되었습니다. (학생 화면 즉시 반영)');
+    }
+
+    lessons.sort((a, b) => a.order - b.order);
+    saveToStorage();
+    closeModal('lesson-modal');
+    renderTable();
+  }
+
+  // Quick Video Modal
+  function openQuickVideoModal(id) {
+    const lesson = lessons.find(l => l.id === id);
+    if (!lesson) return;
+
+    document.getElementById('quick-lesson-id').value = lesson.id;
+    document.getElementById('quick-lesson-target').textContent = `[${lesson.order}회차] ${lesson.title}`;
+    document.getElementById('quick-video-input').value = lesson.videoUrl || '';
+    updateQuickPreview();
+    openModal('quick-video-modal');
+  }
+
+  function updateQuickPreview() {
+    const url = document.getElementById('quick-video-input').value.trim();
+    const box = document.getElementById('quick-video-preview');
+    const thumbImg = document.getElementById('quick-thumb-preview');
+    const idDisplay = document.getElementById('quick-video-id');
+
+    const vId = getYouTubeId(url);
+
+    if (vId) {
+      box.style.display = 'flex';
+      thumbImg.src = `https://img.youtube.com/vi/${vId}/mqdefault.jpg`;
+      idDisplay.textContent = `Video ID: ${vId}`;
+    } else {
+      box.style.display = 'none';
+      thumbImg.src = '';
+    }
+  }
+
+  function saveQuickVideo() {
+    const id = parseInt(document.getElementById('quick-lesson-id').value);
+    const videoUrl = document.getElementById('quick-video-input').value.trim();
+
+    const idx = lessons.findIndex(l => l.id === id);
+    if (idx !== -1) {
+      lessons[idx].videoUrl = videoUrl || null;
+      saveToStorage();
+      showToast(`${lessons[idx].order}회차 유튜브 영상이 저장되었습니다. (학생 화면 즉시 반영)`);
+    }
+
+    closeModal('quick-video-modal');
+    renderTable();
+  }
+
+  // Delete & Undo
+  function deleteLesson(id) {
+    const idx = lessons.findIndex(l => l.id === id);
+    if (idx === -1) return;
+
+    deletedLessonBackup = { index: idx, data: lessons[idx] };
+    const order = lessons[idx].order;
+    lessons.splice(idx, 1);
+    saveToStorage();
+    renderTable();
+
+    showToast(`${order}회차가 삭제되었습니다.`, true);
+  }
+
+  function undoDelete() {
+    if (deletedLessonBackup) {
+      lessons.splice(deletedLessonBackup.index, 0, deletedLessonBackup.data);
+      lessons.sort((a, b) => a.order - b.order);
+      deletedLessonBackup = null;
+      saveToStorage();
+      renderTable();
+      showToast('삭제가 취소되었습니다.');
+    }
+  }
+
+  // Common Modal Controls
+  function openModal(id) {
+    document.getElementById(id).classList.add('show');
+    document.body.classList.add('modal-open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+    document.body.classList.remove('modal-open');
+  }
+
+  function handleBackdropClick(e, id) {
+    if (e.target.id === id) {
+      closeModal(id);
+    }
+  }
+
+  // Toast
+  let toastTimer = null;
+  function showToast(msg, canUndo = false) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = msg;
+    const undoBtn = document.getElementById('toast-undo');
+    undoBtn.style.display = canUndo ? 'inline-block' : 'none';
+
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3200);
+  }
+
+  // Real-time synchronization
+  
+
+  // Init
+  loadLessons();
+
+</script>
+{% endblock %}

@@ -1,0 +1,889 @@
+{% extends 'base.html' %}
+
+{% block title %}강의 및 교안{% endblock %}
+
+{% block extra_head %}
+<style>
+
+  :root {
+    --bg: #eef1f8;
+    --surface: #ffffff;
+    --surface-muted: #f4f6fb;
+    --surface-sunken: #eef1f8;
+    --text: #1c2130;
+    --text-muted: #6b7280;
+    --text-faint: #9aa1b1;
+    --border: #e4e8f1;
+    --border-strong: #d5dbe8;
+    --accent: #4f6df5;
+    --accent-soft: #eaefff;
+    --accent-text: #3a56d4;
+    --green: #1fa971;
+    --green-soft: #e5f7ee;
+    --red: #ef4b4b;
+    --red-soft: #fdecec;
+    --amber: #c98a1a;
+    --amber-soft: #fbf0dd;
+    --purple: #7c4fd6;
+    --purple-soft: #f1e9ff;
+    --ai: #0f9488;
+    --ai-soft: #e3f7f3;
+    --shadow: 0 1px 2px rgba(24, 30, 51, 0.03), 0 1px 10px rgba(24, 30, 51, 0.03);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  
+  html, 
+
+  
+
+  a { color: inherit; text-decoration: none; }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Navigation & Breadcrumb */
+  .nav-links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    width: fit-content;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+  }
+  .back-link:hover { color: var(--accent-text); }
+
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page-head-text { display: flex; flex-direction: column; gap: 6px; }
+  .breadcrumb { font-size: 12.5px; color: var(--text-faint); font-weight: 600; }
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1.page-title {
+    font-size: 21px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .page-sub { font-size: 13px; color: var(--text-muted); }
+
+  /* Badges */
+  .badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .badge.video-ok { background: var(--green-soft); color: var(--green); }
+  .badge.video-wait { background: var(--amber-soft); color: var(--amber); }
+  .badge.video-plan { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.mat-count { background: var(--accent-soft); color: var(--accent-text); }
+
+  /* Summary Banner */
+  .summary-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .summary-info { display: flex; align-items: center; gap: 12px; }
+  .course-tag {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-weight: 700;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .course-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .course-meta { font-size: 12.5px; color: var(--text-muted); }
+
+  .filter-group { display: flex; gap: 6px; align-items: center; }
+  .filter-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .filter-btn:hover { background: var(--surface-muted); color: var(--text); }
+  .filter-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* Main Split Layout: Player (Left) + Playlist (Right) */
+  .lecture-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .lecture-layout { grid-template-columns: 1fr; }
+  }
+
+  /* Left Panel */
+  .main-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+  }
+
+  /* Video Section */
+  .player-box {
+    background: #000;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  }
+  .player-box iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  .player-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #182230 0%, #0d1520 100%);
+    color: #fff;
+    text-align: center;
+    padding: 24px;
+    gap: 12px;
+  }
+  .placeholder-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--amber);
+  }
+  .placeholder-title { font-size: 16px; font-weight: 700; margin: 0; }
+  .placeholder-desc { font-size: 13px; color: #a1adbf; margin: 0; max-width: 380px; line-height: 1.5; }
+
+  /* Current Lesson Details */
+  .lesson-header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .lesson-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  .lesson-title-lg {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 0;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  
+  .lesson-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .btn-outline {
+    background: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+  .btn-outline:hover {
+    background: var(--surface-muted);
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent-text); }
+
+  /* Material Section */
+  .section-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px 0;
+    color: var(--text);
+  }
+  .material-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .material-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    gap: 12px;
+    transition: border-color 0.15s;
+  }
+  .material-item:hover { border-color: var(--accent); }
+  .material-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .material-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .material-icon.link {
+    background: var(--purple-soft);
+    color: var(--purple);
+  }
+  .material-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .material-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .material-meta {
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+  .material-btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    white-space: nowrap;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .material-btn:hover {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    border-color: var(--accent);
+  }
+
+  /* Right Playlist Panel */
+  .playlist-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .playlist-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .playlist-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .playlist-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .playlist-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 640px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .playlist-items::-webkit-scrollbar { width: 5px; }
+  .playlist-items::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+  .playlist-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .playlist-item:hover {
+    background: #edf3ff;
+    border-color: var(--accent);
+  }
+  .playlist-item.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .playlist-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .playlist-item-order {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent-text);
+  }
+  .playlist-item.active .playlist-item-order {
+    color: var(--accent-text);
+  }
+  .playlist-item-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .playlist-item-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Toast Notification */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #182230;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-size: 13.5px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* Mini Calendar (Reduced Size) */
+  .mini-calendar { padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; display: flex; flex-direction: column; gap: 6px; }
+  .cal-header { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 800; padding: 0 4px; }
+  .cal-header button { background: var(--surface-muted); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 10px; color: var(--text-muted); padding: 3px 6px; transition: all 0.15s; }
+  .cal-header button:hover { background: var(--surface); color: var(--accent); border-color: var(--accent); }
+  .cal-days-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: -2px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; border-radius: 6px; cursor: pointer; position: relative; transition: all 0.15s; color: var(--text); }
+  .cal-day.empty { background: transparent; cursor: default; }
+  .cal-day.has-lesson { background: var(--surface); border: 1px solid var(--border); font-weight: 700; color: var(--accent); }
+  .cal-day.has-lesson:hover { border-color: var(--accent); background: var(--surface-muted); }
+  .cal-day.has-lesson.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .playlist-item-order { color: var(--accent); font-weight: 800; font-size: 12px; margin-right: 6px; }
+
+  
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <!-- Nav links -->
+  <div class="nav-links">
+    <a href="{% url 'student:dashboard' %}" class="back-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      학생 대시보드로 이동
+    </a>
+    <a href="{% url 'student:dashboard' %}" class="back-link" style="margin-left: 8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+      과제 확인·제출
+    </a>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-head">
+    <div class="page-head-text">
+      <div class="breadcrumb">강의 학습 · FR-016</div>
+      <div class="title-row">
+        <h1 class="page-title">강의 및 교안</h1>
+      </div>
+      <div class="page-sub">회차별 수업 교안, 블로그 요약 링크 및 다시보기 영상을 열람할 수 있습니다.</div>
+    </div>
+  </div>
+
+  <!-- Summary Banner -->
+  <div class="summary-banner">
+    <div class="summary-info">
+      <span class="course-tag">정규 강좌</span>
+      <div>
+        <span class="course-name">AX 실무 프로젝트 집중 과정</span>
+        <span class="course-meta"> · 총 8회차 (영상 5개 제공중)</span>
+      </div>
+    </div>
+    <div class="filter-group">
+      <button class="filter-btn active" onclick="filterLessons('all', this)">전체 회차</button>
+      <button class="filter-btn" onclick="filterLessons('video', this)">영상 시청 가능</button>
+      <button class="filter-btn" onclick="filterLessons('material', this)">교안 제공</button>
+    </div>
+  </div>
+
+  <!-- Main Grid Layout -->
+  <div class="lecture-layout">
+    
+    <!-- Left: Player & Details -->
+    <div class="main-panel">
+      
+      <!-- Video Container Card -->
+      <div class="card" style="padding: 16px;">
+        <div id="player-container" class="player-box">
+          <!-- Dynamic Iframe or Placeholder -->
+        </div>
+
+        <div class="lesson-header">
+          <div class="lesson-meta-row">
+            <span id="cur-order-badge" class="badge mat-count">4회차</span>
+            <span id="cur-date">2026.08.20 (수)</span>
+            <span id="cur-status-badge" class="badge video-ok">영상 시청 가능</span>
+          </div>
+          <h2 id="cur-title" class="lesson-title-lg">LangChain과 Gemini API를 활용한 RAG 에이전트 구축</h2>
+          
+          <div class="lesson-actions">
+            <a id="cur-blog-btn" href="https://blog.example.com/rag-agents" target="_blank" class="btn btn-outline">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              블로그 이동
+            </a>
+            
+          </div>
+        </div>
+      </div>
+
+      <!-- Materials Section Card -->
+      <div class="card">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          수업 교안 및 실습 자료 (<span id="material-count">3</span>건)
+        </h3>
+
+        <div id="material-list-container" class="material-list">
+          <!-- Dynamic Materials -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Playlist Navigation -->
+    <div class="playlist-card">
+      <div class="playlist-head">
+        <h3 class="playlist-title">회차 목록</h3>
+        <span class="playlist-count" id="list-total-count">총 8개 차시</span>
+      </div>
+
+      
+        <!-- Mini Calendar -->
+        <div class="mini-calendar" style="margin-top: 10px;">
+          <div class="cal-header">
+            <button onclick="changeMonth(-1)">&lt;</button>
+            <span id="cal-month-year">2026. 08</span>
+            <button onclick="changeMonth(1)">&gt;</button>
+          </div>
+          <div class="cal-days-header">
+            <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+
+        <div class="playlist-items" id="playlist-container">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" class="toast">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+  <span id="toast-msg">다운로드를 시작합니다.</span>
+</div>
+
+
+
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+
+  // Dummy data according to ERD (Lecture -> Lesson -> LessonMaterial)
+  
+  const defaultLessonsData = [
+      { id: 1, order: 1, title: "오리엔테이션 및 생성형 AI 모델 아키텍처 개론", date: "2026-08-08", blogUrl: "https://blog.example.com/ax-intro", videoUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "01_orientation_ai_intro.pdf", size: "14.2 MB", url: "#" }] },
+      { id: 2, order: 1, title: "프롬프트 엔지니어링 1부: 기초", date: "2026-08-12", blogUrl: "https://blog.example.com/prompt-engineering", videoUrl: "https://www.youtube-nocookie.com/embed/jC4v5AS4RIM", materials: [{ kind: "FILE", title: "02_prompt_engineering_1.pdf", size: "8.7 MB", url: "#" }] },
+      { id: 3, order: 2, title: "프롬프트 엔지니어링 2부: 심화 실무 튜닝", date: "2026-08-12", blogUrl: "https://blog.example.com/prompt-engineering-2", videoUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "prompt_templates_sample.ipynb", size: "2.1 MB", url: "#" }] },
+      { id: 4, order: 1, title: "함수 호출(Function Calling) 개념", date: "2026-08-15", blogUrl: "https://blog.example.com/function-calling", videoUrl: "https://www.youtube-nocookie.com/embed/jC4v5AS4RIM", materials: [{ kind: "FILE", title: "03_function_calling_intro.pdf", size: "11.3 MB", url: "#" }] },
+      { id: 5, order: 2, title: "외부 API Tool 연동 실습", date: "2026-08-15", blogUrl: "https://blog.example.com/function-calling-practice", videoUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "tool_calling_demo.py", size: "45 KB", url: "#" }] },
+      { id: 6, order: 1, title: "LangChain과 Gemini API를 활용한 RAG 에이전트 구축", date: "2026-08-20", blogUrl: "https://blog.example.com/rag-agents", videoUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE", materials: [{ kind: "FILE", title: "04_rag_agent_hands_on.pdf", size: "12.4 MB", url: "#" }, { kind: "FILE", title: "gemini_rag_starter.zip", size: "2.8 MB", url: "#" }] }
+  ];
+
+  const lessonsData = {{ lessons_json|safe }};
+  let currentLessonId = null;
+  let selectedDateStr = null;
+  let currentCalDate = new Date();
+
+  function loadLessons() {
+    if (lessonsData.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get('date');
+
+    if (dateParam && lessonsData.some(l => l.date === dateParam)) {
+        selectedDateStr = dateParam;
+    } else {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const hasToday = lessonsData.some(l => l.date === todayStr);
+        if (hasToday) {
+            selectedDateStr = todayStr;
+        } else {
+            selectedDateStr = lessonsData[0].date;
+        }
+    }
+
+    renderCalendar();
+    renderPlaylist();
+    
+    const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
+    if (dayLessons.length > 0) {
+        selectLesson(dayLessons[0].id);
+    }
+  }
+
+  function renderPlaylist() {
+    const totalCountSpan = document.getElementById('list-total-count');
+    const container = document.getElementById('playlist-container');
+    container.innerHTML = '';
+    
+    const filteredLessons = lessonsData.filter(l => l.date === selectedDateStr);
+    filteredLessons.sort((a, b) => a.order - b.order); // Ascending order
+    
+    totalCountSpan.textContent = `해당 일자 총 ${filteredLessons.length}개`;
+
+    if (filteredLessons.length === 0) {
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-faint); font-size: 13px;">해당 일자에 등록된 영상이 없습니다.</div>';
+        return;
+    }
+
+    filteredLessons.forEach((lesson, index) => {
+      const vId = getYouTubeId(lesson.videoUrl);
+      const thumbHtml = vId 
+        ? `<div class="playlist-item-thumb"><img src="https://img.youtube.com/vi/${vId}/mqdefault.jpg" alt="thumb"></div>`
+        : `<div class="playlist-item-thumb" style="background:var(--surface-muted);display:flex;align-items:center;justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`;
+
+      const item = document.createElement('div');
+      item.className = 'playlist-item' + (lesson.id === currentLessonId ? ' active' : '');
+      item.onclick = () => selectLesson(lesson.id);
+      
+      const sessionLabel = (index + 1) + '교시';
+
+      item.innerHTML = `
+        ${thumbHtml}
+        <div class="playlist-info">
+          <div class="playlist-item-top">
+            <span class="playlist-item-order" style="font-size: 12px;">${lesson.date}</span>
+            <span style="font-size:11.5px; color:var(--text-muted); font-weight: 600;">${sessionLabel} (총 ${lesson.order}차시)</span>
+          </div>
+          <div class="playlist-item-title">${lesson.title}</div>
+          <div class="playlist-item-meta">
+            <span>교안 ${lesson.materials ? lesson.materials.length : 0}건</span>
+            <span class="status-indicator">영상 시청</span>
+          </div>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  function renderCalendar() {
+    if (selectedDateStr) {
+       const [y, m, d] = selectedDateStr.split('-');
+       currentCalDate = new Date(y, parseInt(m)-1, 1);
+    }
+    
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth();
+    
+    document.getElementById('cal-month-year').textContent = `${year}. ${String(month + 1).padStart(2, '0')}`;
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = '';
+    
+    for(let i = 0; i < firstDay; i++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day empty';
+      grid.appendChild(el);
+    }
+    
+    for(let d = 1; d <= daysInMonth; d++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day';
+      el.textContent = d;
+      
+      const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const lessonsOnDay = lessonsData.filter(l => l.date === dateStr);
+      
+      if(lessonsOnDay.length > 0) {
+        el.classList.add('has-lesson');
+        if(dateStr === selectedDateStr) el.classList.add('active');
+        
+        el.onclick = () => {
+          selectedDateStr = dateStr;
+          renderCalendar();
+          renderPlaylist();
+          selectLesson(lessonsOnDay[0].id);
+        };
+      } else {
+        el.onclick = () => showToast('해당 날짜에는 예정된 강의가 없습니다.');
+      }
+      grid.appendChild(el);
+    }
+  }
+
+  function changeMonth(diff) {
+    currentCalDate.setMonth(currentCalDate.getMonth() + diff);
+    renderCalendar();
+  }
+
+  function downloadMockFile(filename) {
+    const blob = new Blob(["이것은 테스트용 강의교안 파일입니다."], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "material.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function selectLesson(id) {
+    currentLessonId = id;
+    const lesson = lessonsData.find(l => l.id === id);
+    if (!lesson) return;
+
+
+    
+    // Update Player
+    const playerContainer = document.getElementById('player-container');
+    if (lesson.videoUrl) {
+      const vId = getYouTubeId(lesson.videoUrl);
+      const embedUrl = vId ? `https://www.youtube-nocookie.com/embed/${vId}` : lesson.videoUrl;
+      playerContainer.innerHTML = `
+        <iframe src="${embedUrl}" title="${lesson.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      `;
+    } else {
+
+      playerContainer.innerHTML = `
+        <div class="player-placeholder">
+          <div class="placeholder-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+          </div>
+          <h4 class="placeholder-title">강의 영상 준비중</h4>
+          <p class="placeholder-desc">${lesson.statusNote || '수업 종료 후 다시보기 영상 링크가 이 곳에 업로드됩니다.'}</p>
+        </div>
+      `;
+    }
+
+    // Update Details
+    
+    // Calculate daily index for cur-order-badge
+    const filteredLessons = lessonsData.filter(l => l.date === lesson.date);
+    const dailyIndex = filteredLessons.findIndex(l => l.id === lesson.id) + 1;
+    document.getElementById('cur-order-badge').textContent = `${dailyIndex}교시`;
+    document.getElementById('cur-date').textContent = lesson.date;
+    document.getElementById('cur-title').textContent = lesson.title;
+
+    const statusBadge = document.getElementById('cur-status-badge');
+    if (lesson.videoUrl) {
+      statusBadge.className = 'badge video-ok';
+      statusBadge.textContent = '영상 시청 가능';
+    } else if (true) {
+      statusBadge.className = 'badge video-wait';
+      statusBadge.textContent = '영상 준비중';
+    } else {
+      statusBadge.className = 'badge video-plan';
+      statusBadge.textContent = '수업 예정';
+    }
+
+    // Blog Button
+    const blogBtn = document.getElementById('cur-blog-btn');
+    if (lesson.blogUrl) {
+      blogBtn.href = lesson.blogUrl;
+      blogBtn.style.display = 'inline-flex';
+    } else {
+      blogBtn.style.display = 'none';
+    }
+
+    // Materials List
+    const matCountEl = document.getElementById('material-count');
+    const matListContainer = document.getElementById('material-list-container');
+    matCountEl.textContent = lesson.materials.length;
+    matListContainer.innerHTML = '';
+
+    if (lesson.materials.length === 0) {
+      matListContainer.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">등록된 교안 자료가 없습니다.</div>';
+    } else {
+      lesson.materials.forEach(mat => {
+        const isFile = mat.kind === 'FILE';
+        const item = document.createElement('div');
+        item.className = 'material-item';
+        item.innerHTML = `
+          <div class="material-left">
+            <div class="material-icon ${isFile ? '' : 'link'}">
+              ${isFile 
+                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>'
+                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>'
+              }
+            </div>
+            <div class="material-info">
+              <div class="material-name">${mat.title}</div>
+              <div class="material-meta">${isFile ? `파일 첨부 · ${mat.size}` : '외부 참고 링크'}</div>
+            </div>
+          </div>
+          ${isFile 
+            ? `<button class="material-btn" onclick="downloadMockFile('${mat.title}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> 다운로드</button>`
+            : `<a href="${mat.url}" target="_blank" class="material-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> 링크 열기</a>`
+          }
+        `;
+        matListContainer.appendChild(item);
+      });
+    }
+
+    renderPlaylist();
+  }
+
+  function filterLessons(filterType, btn) {
+    currentFilter = filterType;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderPlaylist();
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2400);
+  }
+
+  // Initial load
+  loadLessons();
+
+  function getYouTubeId(url) {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=))([^"&?\/\s]{11})/i);
+    return match ? match[1] : null;
+  }
+
+</script>
+{% endblock %}

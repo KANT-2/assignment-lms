@@ -1,15 +1,3 @@
-"""
-apps/student/urls.py
-학생팀 — student 앱 URL 라우팅 (config/urls.py 에서 include).
-
-담당 매핑 (뷰는 아직 미구현 — 스텁):
-  ""|dashboard/                  -> 대시보드 (dashboard.html)
-  assignments/                   -> 학생A: 과제 목록      (FR-003)  views_submit
-  assignments/<id>/submit/       -> 학생A: 과제 제출      (FR-004)  views_submit
-  assignments/<id>/preview/      -> 학생A: 제출 미리보기  (FR-005)  views_submit
-  submissions/<id>/resubmit/     -> 학생B: 재제출         (FR-006)  views_result
-  submissions/<id>/result/       -> 학생B: 평가 결과      (FR-014)  views_result
-"""
 from django.urls import path
 
 from . import views_dashboard, views_result, views_submit
