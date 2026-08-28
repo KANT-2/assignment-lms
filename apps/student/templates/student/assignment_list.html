@@ -1,3 +1,44 @@
-{# apps/student/templates/student/assignment_list.html #}
-{# 학생A — FR-003 과제 목록 #}
-{# base.html 상속. 과제명 / 마감일 / 제출상태(미제출·제출완료·평가완료) / 제출 버튼 #}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}과제 목록 | AX 과제 시스템{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <p class="student-eyebrow mb-1">AX 프로젝트 평가</p>
+  <h1 class="student-page-title">과제 목록</h1>
+  <p class="text-muted mb-0">진행 중인 과제와 마감된 과제를 한눈에 확인하세요.</p>
+</div>
+{% endblock %}
+{% block content %}
+<section class="student-card" aria-labelledby="assignment-list-heading">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <span aria-hidden="true">📋</span>
+    <h2 id="assignment-list-heading" class="student-section-title mb-0">전체 과제</h2>
+    <span class="text-muted small">{{ rows|length }}개</span>
+  </div>
+  <div class="assignment-list">
+    {% for row in rows %}
+      <article class="assignment-row{% if row.is_past %} is-past{% endif %}">
+        <div class="flex-grow-1 min-width-0">
+          <h3 class="assignment-title">{{ row.assignment.title }}</h3>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="badge-soft {% if row.assignment.is_required %}badge-required{% else %}badge-optional{% endif %}">{% if row.assignment.is_required %}필수{% else %}선택{% endif %}</span>
+            <span class="badge-soft {% if row.assignment.is_team %}badge-team{% else %}badge-personal{% endif %}">{% if row.assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}</span>
+            <span class="assignment-due">{{ row.assignment.due_at|date:"Y.m.d (D) H:i" }}</span>
+          </div>
+        </div>
+        <span class="status-pill status-{{ row.status_class }}">{{ row.status }}</span>
+        {% if row.submission %}
+          {% if row.is_past %}
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'student:submission-result' row.submission.id %}">결과 보기</a>
+          {% else %}
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'student:assignment-preview' row.assignment.id %}">제출 보기</a>
+          {% endif %}
+        {% elif row.can_submit %}
+          <a class="btn btn-primary btn-sm" href="{% url 'student:assignment-submit' row.assignment.id %}">제출하기</a>
+        {% endif %}
+      </article>
+    {% empty %}<div class="empty-state">등록된 과제가 없습니다.</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}

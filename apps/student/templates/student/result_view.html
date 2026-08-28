@@ -1,3 +1,37 @@
-{# apps/student/templates/student/result_view.html #}
-{# 학생B — FR-014 평가 결과 확인 / FR-006 재제출 진입 #}
-{# base.html 상속. 점수 / 피드백 / 통과여부 / 제출 이력(차수별) / 재제출 버튼 #}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ assignment.title }} 평가 결과 | AX 과제 시스템{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <a class="student-back-link" href="{% url 'student:assignment-list' %}">‹ 과제 목록으로 돌아가기</a>
+  <p class="student-eyebrow mt-3 mb-1">AX 프로젝트 평가 · 평가 결과</p>
+  <h1 class="student-page-title">{{ assignment.title }}</h1>
+  <p class="text-muted mb-0">제출 시각: {{ submission.submitted_at|date:"Y.m.d (D) H:i" }}</p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="student-form-stack">
+  <section class="student-card">
+    <h2 class="student-section-title">🏆 공식 평가</h2>
+    {% if evaluation %}
+      <div class="result-score">{{ evaluation.score }}<span>/100</span></div>
+      <div class="result-feedback">{{ evaluation.feedback|default:"등록된 피드백이 없습니다."|linebreaksbr }}</div>
+    {% else %}<div class="result-pending">평가 대기 중입니다. 튜터 평가가 등록되면 결과가 표시됩니다.</div>{% endif %}
+  </section>
+  <section class="student-card">
+    <h2 class="student-section-title">🤖 AI 평가</h2>
+    {% if ai_evaluation %}
+      <div class="result-score result-score-ai">{{ ai_evaluation.score }}<span>/100</span></div>
+      <div class="result-feedback result-feedback-ai">{{ ai_evaluation.comment|default:"등록된 AI 코멘트가 없습니다."|linebreaksbr }}</div>
+    {% else %}<div class="result-pending">아직 AI 평가가 등록되지 않았습니다.</div>{% endif %}
+  </section>
+  <section class="student-card">
+    <h2 class="student-section-title">📄 내 제출물</h2>
+    {% for preview in previews %}
+      <div class="file-meta{% if not forloop.last %} mb-2{% endif %}"><strong>{{ preview.file.file_name }}</strong><span>{{ preview.file.file_size|filesizeformat }}</span></div>
+    {% empty %}<div class="empty-state">첨부 파일이 없습니다.</div>{% endfor %}
+    <div class="description-view mt-3">{{ submission.description|default:"작성한 설명이 없습니다."|linebreaksbr }}</div>
+  </section>
+</div>
+{% endblock %}
