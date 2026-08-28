@@ -4,9 +4,7 @@ from . import views_dashboard, views_lecture, views_result, views_submit
 
 app_name = "student"
 
-urlpatterns: list[path] = [
-    # 학생 메인 대시보드 (PRD 7장) — 학생 A/B 담당과 별개
-
+urlpatterns = [
     path("", views_dashboard.dashboard, name="dashboard"),
     path("", views_dashboard.home, name="home"),
     path("dashboard/", views_dashboard.dashboard, name="dashboard"),
@@ -19,4 +17,5 @@ urlpatterns: list[path] = [
     path("assignments/<int:assignment_id>/preview/", views_submit.assignment_preview, name="assignment-preview"),
     path("submissions/<int:submission_id>/resubmit/", views_result.resubmit, name="submission-resubmit"),
     path("submissions/<int:submission_id>/result/", views_result.result, name="submission-result"),
+    path("lecture/", views_lecture.student_lecture_view, name="lecture"),
 ]
