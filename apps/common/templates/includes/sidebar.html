@@ -10,8 +10,10 @@ role(nav_role: TUTOR|STUDENT)?메뉴 분기. active ?시??url_namespace 기?.
       <div class="nav-group-label">튜터</div>
       <a href="{% url 'tutor:dashboard' %}"
          class="{% if url_namespace == 'tutor' and url_name == 'dashboard' or url_namespace == 'tutor' and url_name == 'dashboard-alt' %}active{% endif %}">대시보드</a>
+      <a href="{% url 'tutor:student-list' %}"
+         class="{% if url_namespace == 'tutor' and url_name == 'student-list' or url_namespace == 'tutor' and url_name == 'student-detail' %}active{% endif %}">학생 관리</a>
       <a href="{% url 'tutor:assignment-list' %}"
-         class="{% if url_namespace == 'tutor' and url_name != 'lecture' and url_name != 'dashboard' and url_name != 'dashboard-alt' %}active{% endif %}">과제 관리</a>
+         class="{% if url_namespace == 'tutor' and url_name != 'lecture' and url_name != 'dashboard' and url_name != 'dashboard-alt' and url_name != 'student-list' and url_name != 'student-detail' %}active{% endif %}">과제 관리</a>
       <a href="{% url 'tutor:lecture' %}"
          class="{% if url_namespace == 'tutor' and url_name == 'lecture' %}active{% endif %}">강의 및 교안 관리</a>
     {% elif nav_role == "STUDENT" %}

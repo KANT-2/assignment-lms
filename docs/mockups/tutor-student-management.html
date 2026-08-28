@@ -1,0 +1,338 @@
+<title>AX 프로젝트 학생 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#eef1f8; --surface:#fff; --surface-muted:#f4f6fb; --surface-sunken:#eef1f8;
+    --text:#1c2130; --text-muted:#6b7280; --text-faint:#9aa1b1;
+    --border:#e4e8f1; --border-strong:#d5dbe8;
+    --accent:#4f6df5; --accent-soft:#eaefff; --accent-text:#3a56d4;
+    --green:#1fa971; --green-soft:#e5f7ee; --red:#ef4b4b; --red-soft:#fdecec;
+    --amber:#c98a1a; --amber-soft:#fbf0dd; --purple:#7c4fd6; --purple-soft:#f1e9ff;
+    --sidebar:#1c2130; --sidebar-muted:#9aa1b1;
+    --shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
+    --radius-lg:16px; --radius-md:12px; --radius-sm:8px;
+  }
+  /* 단일 라이트 룩 고정. 실제 구현은 DESIGN.md/LAYOUT.md(Bootstrap 5.3) 기준으로 다시 만든다.
+     사이드바는 공통 shell 에 이미 있음 — 배치 참고용. */
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text);
+    font-family:"Noto Sans KR","Pretendard",-apple-system,"Malgun Gothic",sans-serif;
+    font-feature-settings:"tnum" 1; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; text-decoration:none; }
+
+  .app { display:flex; min-height:100vh; }
+
+  /* sidebar */
+  .sidebar { width:232px; flex-shrink:0; background:var(--sidebar); color:#fff;
+    display:flex; flex-direction:column; padding:20px 14px; position:sticky; top:0; height:100vh; }
+  .brand { display:flex; align-items:center; gap:9px; font-size:15px; font-weight:800; padding:6px 10px 18px; }
+  .brand .logo { width:26px; height:26px; border-radius:7px; background:var(--accent);
+    display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .nav-group-label { font-size:10.5px; font-weight:700; color:var(--sidebar-muted); letter-spacing:.04em; padding:14px 12px 6px; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:var(--radius-sm);
+    font-size:13px; font-weight:600; color:var(--sidebar-muted); cursor:pointer; }
+  .nav-item .ico { font-size:15px; width:18px; text-align:center; }
+  .nav-item:hover { background:rgba(255,255,255,.06); color:#fff; }
+  .nav-item.active { background:var(--accent); color:#fff; }
+  .sidebar-foot { margin-top:auto; padding-top:14px; }
+  .sidebar-user { display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:var(--radius-sm); background:rgba(255,255,255,.05); }
+  .sidebar-user .u-avatar { width:28px; height:28px; border-radius:50%; flex-shrink:0; background:var(--accent-soft);
+    color:var(--accent-text); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; }
+  .sidebar-user .u-name { font-size:12px; font-weight:700; }
+  .sidebar-user .u-role { font-size:10.5px; color:var(--sidebar-muted); }
+
+  /* main */
+  .main { flex:1; min-width:0; padding:26px 32px 60px; }
+  .content { max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+  @media (min-width:1500px){ .main { padding-left:56px; padding-right:56px; } }
+
+  .page-head { display:flex; flex-direction:column; gap:6px; }
+  .breadcrumb { font-size:12.5px; color:var(--text-faint); font-weight:600; }
+  h1.page-title { font-size:21px; font-weight:800; margin:0; letter-spacing:-.01em; }
+  .back-link { font-size:12.5px; color:var(--text-muted); font-weight:600; width:fit-content; }
+  .back-link:hover { color:var(--accent-text); }
+
+  .summary-line { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; font-size:12.5px; color:var(--text-muted); margin-top:2px; }
+  .summary-line b { color:var(--text); font-weight:800; }
+  .summary-line .s-alert b { color:var(--red); }
+  .summary-line .sep { color:var(--border-strong); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); padding:16px 18px 18px; }
+  .card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .card-title { font-size:14px; font-weight:700; display:flex; align-items:center; gap:7px; }
+  .muted { color:var(--text-muted); font-weight:600; }
+
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .search { position:relative; flex:1; min-width:180px; max-width:280px; }
+  .search input { width:100%; border:1px solid var(--border-strong); background:var(--surface-sunken);
+    border-radius:20px; padding:8px 12px 8px 30px; font-size:12.5px; color:var(--text); font-family:inherit; outline:none; }
+  .search input:focus { border-color:var(--accent); background:var(--surface); }
+  .search .ico { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:12px; }
+  select.sort { border:1px solid var(--border-strong); background:var(--surface); border-radius:20px;
+    padding:7px 12px; font-size:12px; color:var(--text-muted); font-weight:600; font-family:inherit; cursor:pointer; }
+
+  .scroll-x { overflow:auto; }
+  table.tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .tbl thead th { position:sticky; top:0; z-index:1; background:var(--surface); text-align:left;
+    font-size:11px; color:var(--text-faint); font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border); }
+  .tbl td { padding:11px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .tbl tbody tr { cursor:pointer; }
+  .tbl tbody tr:hover { background:var(--surface-muted); }
+  .tbl tr:last-child td { border-bottom:0; }
+
+  .stu { display:flex; align-items:center; gap:10px; }
+  .avatar { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:var(--accent-soft);
+    color:var(--accent-text); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+  .stu .s-name { font-weight:700; }
+  .stu .s-email { font-size:10.5px; color:var(--text-faint); }
+
+  .bar-wrap { display:flex; align-items:center; gap:8px; min-width:120px; }
+  .bar-track { flex:1; height:7px; border-radius:20px; background:var(--surface-sunken); overflow:hidden; }
+  .bar-fill { height:100%; border-radius:20px; background:var(--accent); }
+  .bar-fill.opt { background:var(--purple); }
+  .bar-fill.low { background:var(--red); }
+  .bar-num { font-size:11.5px; color:var(--text-muted); font-weight:600; white-space:nowrap; }
+
+  .badge { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .badge.req { background:var(--accent-soft); color:var(--accent-text); }
+  .badge.opt { background:var(--surface-sunken); color:var(--text-muted); }
+  .badge.unit { background:var(--surface-sunken); color:var(--text-muted); }
+  .badge.unit.team { background:var(--purple-soft); color:var(--purple); }
+  .badge.st-done { background:var(--green-soft); color:#147a52; }
+  .badge.st-late { background:var(--amber-soft); color:var(--amber); }
+  .badge.st-none { background:var(--red-soft); color:var(--red); }
+  .badge.st-open { background:var(--surface-sunken); color:var(--text-faint); }
+  .pending-pill { background:var(--surface-sunken); color:var(--text-faint); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .dash-val { color:var(--text-faint); font-weight:700; }
+
+  .stat-tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:760px){ .stat-tiles { grid-template-columns:repeat(2,1fr); } }
+  .tile { border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; display:flex; flex-direction:column; gap:4px; }
+  .tile .t-label { font-size:11px; color:var(--text-muted); font-weight:600; }
+  .tile .t-value { font-size:17px; font-weight:800; }
+  .tile .t-value small { font-size:11px; color:var(--text-faint); font-weight:700; }
+
+  .detail-head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .detail-head .avatar { width:44px; height:44px; font-size:16px; }
+  .detail-head .d-name { font-size:17px; font-weight:800; }
+  .detail-head .d-meta { font-size:12px; color:var(--text-muted); }
+
+  .note { font-size:11px; color:var(--text-faint); margin-top:12px; line-height:1.6; }
+  .hidden { display:none; }
+</style>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">🎓</span> AX 평가 콘솔</div>
+    <div class="nav-group-label">튜터</div>
+    <a class="nav-item" href="tutor-dashboard.html"><span class="ico">📊</span> 대시보드</a>
+    <a class="nav-item" href="tutor-lecture.html"><span class="ico">📚</span> 강의안 관리</a>
+    <a class="nav-item" href="tutor-assign-management.html"><span class="ico">📝</span> 과제 관리</a>
+    <a class="nav-item" href="tutor-assign-management.html"><span class="ico">📥</span> 제출 현황</a>
+    <a class="nav-item active"><span class="ico">👥</span> 학생 관리</a>
+    <div class="sidebar-foot">
+      <a class="nav-item"><span class="ico">⚙️</span> 설정 · 연동</a>
+      <div class="sidebar-user">
+        <span class="u-avatar">김</span>
+        <span><span class="u-name">김튜터</span><br><span class="u-role">튜터</span></span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============ SCREEN A : 학생 목록 ============ -->
+    <div class="content" id="screen-list">
+      <div class="page-head">
+        <div class="breadcrumb">튜터 · 학생 관리</div>
+        <h1 class="page-title">학생 관리</h1>
+        <div class="summary-line">
+          <span>학생 <b>24명</b></span>
+          <span class="sep">·</span>
+          <span>평균 필수 제출률 <b>76%</b></span>
+          <span class="sep">·</span>
+          <span class="s-alert">이번 주 미제출 <b>8명</b></span>
+          <span class="sep">·</span>
+          <span>팀 정보 <b>미연동</b></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <span class="search"><span class="ico">🔍</span><input type="text" placeholder="학생 이름 검색"></span>
+            <select class="sort">
+              <option>필수 제출률 낮은 순</option>
+              <option>이름순</option>
+              <option>마지막 활동 오래된 순</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>학생</th><th>팀</th>
+                <th style="min-width:150px;">필수 과제 제출률</th>
+                <th style="min-width:150px;">선택 과제 제출률</th>
+                <th>성적</th><th>마지막 활동</th><th>체류 시간</th>
+              </tr>
+            </thead>
+            <tbody id="stu-rows">
+              <!-- rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <p class="note">
+          · <b>팀</b> — 라운드(프로젝트)마다 팀이 재편성되며, 팀 명단은 별도 테이블에서 관리됩니다. 아직 연동 전이라 "미연동"으로 표시됩니다.<br>
+          · <b>성적</b> — 평가 집계 방식이 확정되지 않아 컬럼 자리만 잡아 두었습니다.<br>
+          · <b>제출률</b> — 현재는 전체 과제 기준입니다. 프로젝트별 제출률은 과제–프로젝트 연결 후 제공됩니다.<br>
+          · <b>체류 시간</b> — 학습 활동 추적이 아직 없어 값이 비어 있습니다.
+        </p>
+      </div>
+    </div>
+
+    <!-- ============ SCREEN B : 학생 상세 ============ -->
+    <div class="content hidden" id="screen-detail">
+      <a class="back-link" id="back-to-list">← 학생 목록</a>
+
+      <div class="card">
+        <div class="detail-head">
+          <span class="avatar" id="d-avatar">홍</span>
+          <div>
+            <div class="d-name" id="d-name">홍길동</div>
+            <div class="d-meta"><span id="d-email">hong@example.com</span> · 팀 <span class="pending-pill">미연동</span> · 성적 <span class="dash-val">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-tiles">
+        <div class="tile"><span class="t-label">필수 과제 제출률</span><span class="t-value" id="d-req">82<small>%</small></span></div>
+        <div class="tile"><span class="t-label">선택 과제 제출률</span><span class="t-value" id="d-opt">40<small>%</small></span></div>
+        <div class="tile"><span class="t-label">마지막 활동</span><span class="t-value" id="d-last">2일 전<small></small></span></div>
+        <div class="tile"><span class="t-label">체류 시간</span><span class="t-value dash-val">—</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">🗂️ 과제별 제출 이력</div><span class="muted">전체 12개</span></div>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>과제명</th><th>유형</th><th>마감</th><th>상태</th><th>제출 일시</th><th>점수</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:700;">Python 클래스 실습</td>
+                <td><span class="badge req">필수</span> <span class="badge unit">개인</span></td>
+                <td>05.20</td>
+                <td><span class="badge st-done">제출완료</span></td>
+                <td>05.19 14:30</td>
+                <td class="dash-val">—</td>
+                <td><a class="muted" href="#">제출물 보기 ›</a></td>
+              </tr>
+              <tr>
+                <td style="font-weight:700;">함수와 모듈 과제</td>
+                <td><span class="badge req">필수</span> <span class="badge unit">개인</span></td>
+                <td>05.13</td>
+                <td><span class="badge st-late">지각 제출</span></td>
+                <td>05.14 09:02</td>
+                <td class="dash-val">—</td>
+                <td><a class="muted" href="#">제출물 보기 ›</a></td>
+              </tr>
+              <tr>
+                <td style="font-weight:700;">팀 프로젝트 — 미니 크롤러</td>
+                <td><span class="badge req">필수</span> <span class="badge unit team">팀</span></td>
+                <td>06.02</td>
+                <td><span class="badge st-open">마감 전</span></td>
+                <td class="dash-val">—</td>
+                <td class="dash-val">—</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td style="font-weight:700;">알고리즘 심화 (선택)</td>
+                <td><span class="badge opt">선택</span> <span class="badge unit">개인</span></td>
+                <td>05.10</td>
+                <td><span class="badge st-none">미제출</span></td>
+                <td class="dash-val">—</td>
+                <td class="dash-val">—</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td style="font-weight:700;">SQL 기본 쿼리 실습</td>
+                <td><span class="badge req">필수</span> <span class="badge unit">개인</span></td>
+                <td>05.06</td>
+                <td><span class="badge st-done">제출완료</span></td>
+                <td>05.05 22:10</td>
+                <td class="dash-val">—</td>
+                <td><a class="muted" href="#">제출물 보기 ›</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">상태 = 제출완료 / 지각 제출(마감 후·지각 허용) / 미제출 / 마감 전. 점수·성적은 평가 집계 방식 확정 후 채워집니다.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  // 더미 데이터
+  var STUDENTS = [
+    { name:"홍길동", email:"hong@example.com", req:[9,11], opt:[2,5], last:"2일 전" },
+    { name:"김민수", email:"kim@example.com", req:[11,11], opt:[4,5], last:"오늘" },
+    { name:"이서연", email:"lee@example.com", req:[4,11], opt:[0,5], last:"9일 전" },
+    { name:"박도윤", email:"park@example.com", req:[10,11], opt:[3,5], last:"1일 전" },
+    { name:"정하은", email:"jung@example.com", req:[7,11], opt:[1,5], last:"4일 전" },
+    { name:"강민재", email:"kang@example.com", req:[3,11], opt:[0,5], last:"12일 전" },
+    { name:"윤채원", email:"yoon@example.com", req:[11,11], opt:[5,5], last:"오늘" },
+    { name:"임준호", email:"lim@example.com", req:[8,11], opt:[2,5], last:"3일 전" }
+  ];
+
+  var pct = function (a) { return Math.round(a[0] / a[1] * 100); };
+  var bar = function (a, cls) {
+    var p = pct(a);
+    var low = p < 60 ? " low" : "";
+    return '<div class="bar-wrap"><div class="bar-track"><div class="bar-fill ' + cls + low +
+      '" style="width:' + p + '%"></div></div><span class="bar-num">' + a[0] + '/' + a[1] + '</span></div>';
+  };
+
+  var tbody = document.getElementById("stu-rows");
+  STUDENTS.forEach(function (s, i) {
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td><div class="stu"><span class="avatar">' + s.name.slice(0,1) + '</span>' +
+        '<span><span class="s-name">' + s.name + '</span><br><span class="s-email">' + s.email + '</span></span></div></td>' +
+      '<td><span class="pending-pill">미연동</span></td>' +
+      '<td>' + bar(s.req, "") + '</td>' +
+      '<td>' + bar(s.opt, "opt") + '</td>' +
+      '<td class="dash-val">—</td>' +
+      '<td class="muted">' + s.last + '</td>' +
+      '<td class="dash-val">—</td>';
+    tr.addEventListener("click", function () { openDetail(s); });
+    tbody.appendChild(tr);
+  });
+
+  function openDetail(s) {
+    document.getElementById("d-avatar").textContent = s.name.slice(0,1);
+    document.getElementById("d-name").textContent = s.name;
+    document.getElementById("d-email").textContent = s.email;
+    document.getElementById("d-req").innerHTML = pct(s.req) + '<small>%</small>';
+    document.getElementById("d-opt").innerHTML = pct(s.opt) + '<small>%</small>';
+    document.getElementById("d-last").innerHTML = s.last + '<small></small>';
+    document.getElementById("screen-list").classList.add("hidden");
+    document.getElementById("screen-detail").classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+  document.getElementById("back-to-list").addEventListener("click", function () {
+    document.getElementById("screen-detail").classList.add("hidden");
+    document.getElementById("screen-list").classList.remove("hidden");
+  });
+})();
+</script>

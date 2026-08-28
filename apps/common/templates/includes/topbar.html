@@ -8,7 +8,6 @@ apps/common/templates/includes/topbar.html — 공통 담당 전담 (LAYOUT.md �
   </div>
   <div class="utils">
 
-
     {% if user.is_authenticated %}
       <span>{{ user.get_username }}{% if nav_role %} · {{ nav_role }}{% endif %}</span>
       <form method="post" action="{% url 'logout' %}" class="d-inline">
