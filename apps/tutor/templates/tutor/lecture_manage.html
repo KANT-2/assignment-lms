@@ -711,6 +711,7 @@
 <script>
 
   let lessons = {{ lessons_json|safe }};
+  let lectureRevision = "{{ revision|escapejs }}";
 const csrfToken = "{{ csrf_token }}";
   let currentTab = 'all';
   let deletedLessonBackup = null;
@@ -732,16 +733,34 @@ const csrfToken = "{{ csrf_token }}";
   }
 
   function saveToStorage() {
-    fetch('/tutor/lecture/api/update/', {
+    return fetch('/tutor/lecture/api/update/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': csrfToken
       },
-      body: JSON.stringify({lessons: lessons})
-    }).then(res => res.json()).then(data => {
-      if(data.status !== 'success') console.error('Save failed', data);
-    }).catch(e => console.error('Error saving:', e));
+      body: JSON.stringify({lessons: lessons, base_revision: lectureRevision})
+    }).then(res => res.json().then(data => ({status: res.status, data})))
+      .then(({status, data}) => {
+        if (data.status === 'success') {
+          // 서버가 매긴 정식 id·순서로 클라이언트 상태를 교체 → 다음 저장에 임시 id가 안 섞인다
+          lessons = data.lessons;
+          lectureRevision = data.revision;
+          renderTable();
+          return true;
+        }
+        if (status === 409 || data.status === 'stale') {
+          lessons = data.lessons || lessons;
+          lectureRevision = data.revision || lectureRevision;
+          renderTable();
+          showToast(data.detail || '다른 곳에서 변경되어 최신 내용으로 되돌렸습니다.');
+          return false;
+        }
+        console.error('Save failed', data);
+        showToast('저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        return false;
+      })
+      .catch(e => { console.error('Error saving:', e); showToast('저장 중 오류가 발생했습니다.'); return false; });
   }
 
   

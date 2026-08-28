@@ -32,6 +32,17 @@ class Lecture(models.Model):
     def __str__(self):
         return self.title
 
+    DEFAULT_TITLE = "AX 실무 프로젝트 집중 과정"
+
+    @classmethod
+    def get_singleton(cls):
+        """BR-001 단일 강의. 읽기·쓰기가 항상 같은 행을 가리키도록 이 헬퍼만 사용한다.
+        (제목으로 조회하면 제목이 바뀔 때 유령 행이 생긴다 — id 순 최솟값 고정.)"""
+        lecture = cls.objects.order_by("id").first()
+        if lecture is None:
+            lecture = cls.objects.create(title=cls.DEFAULT_TITLE)
+        return lecture
+
 
 class Lesson(models.Model):
     """
@@ -44,6 +55,7 @@ class Lesson(models.Model):
     blog_link = models.URLField(blank=True, null=True)
     video_url = models.URLField(blank=True, null=True, help_text="수업 종료 후 튜터가 추가, nullable")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "lesson"
