@@ -1,0 +1,23 @@
+{# 튜터B — 튜터 평가 입력/수정 폼 (review_panel.html 에서 include) #}
+{# 점수·피드백 둘 다 필수. 저장 시 signals.py 가 Submission.final_score/is_locked 처리 #}
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="q" value="{{ request.GET.q }}">
+  <input type="hidden" name="status" value="{{ request.GET.status }}">
+  <input type="hidden" name="sort" value="{{ request.GET.sort }}">
+
+  {% if form.non_field_errors %}<ul class="errorlist">{{ form.non_field_errors }}</ul>{% endif %}
+
+  <div class="field">
+    <label for="{{ form.score.id_for_label }}">{{ form.score.label }} <span style="color:var(--red)">*</span></label>
+    {{ form.score }}
+    {{ form.score.errors }}
+  </div>
+  <div class="field">
+    <label for="{{ form.feedback.id_for_label }}">{{ form.feedback.label }} <span style="color:var(--red)">*</span></label>
+    {{ form.feedback }}
+    {{ form.feedback.errors }}
+  </div>
+
+  <button type="submit" class="btn">{% if evaluation %}수정 저장{% else %}평가 저장{% endif %}</button>
+</form>

@@ -1,3 +1,211 @@
 {# apps/tutor/templates/tutor/review_panel.html #}
-{# 튜터B — FR-011 평가 입력 / FR-012 평가 수정 / FR-013 평가 목록·필터 #}
-{# base.html 상속. 제출물 내용 + 평가 폼(점수·피드백·통과여부) + 평가 목록 #}
+{# 튜터B — FR-011 제출물 검토 / FR-012 AI 1차 평가 / FR-013 튜터 평가 #}
+{# 목업(AX 프로젝트 과제 관리) Screen C. base.html 상속. #}
+{# 최종 점수(튜터:AI 8:2) 표기는 ERD v6 §4.3 폐기안이라 넣지 않음 — AI/튜터 점수 각각만. #}
+{% extends "base.html" %}
+
+{% block title %}제출물 검토 — {{ unit_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .tt-scope{
+    --surface:#fff; --surface-muted:#f4f6fb; --surface-sunken:#eef1f8;
+    --text:#1c2130; --text-muted:#6b7280; --text-faint:#9aa1b1;
+    --border:#e4e8f1; --border-strong:#d5dbe8;
+    --accent:#4f6df5; --accent-soft:#eaefff; --accent-text:#3a56d4;
+    --green:#1fa971; --green-soft:#e5f7ee; --red:#ef4b4b; --red-soft:#fdecec;
+    --amber:#c98a1a; --amber-soft:#fbf0dd; --ai:#0f9488; --ai-soft:#e3f7f3;
+    --radius-lg:16px; --radius-md:12px; --radius-sm:8px;
+    --shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
+    color:var(--text);
+  }
+  .tt-scope .back-link{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-muted);text-decoration:none;margin-bottom:8px;}
+  .tt-scope .back-link:hover{color:var(--accent-text);}
+  .tt-scope .review-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .tt-scope .review-nav{display:flex;align-items:center;gap:8px;}
+  .tt-scope .review-pos{font-size:12px;color:var(--text-muted);font-weight:600;padding:0 4px;}
+  .tt-scope h1.page-title{font-size:20px;font-weight:800;margin:.15rem 0;}
+  .tt-scope .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .tt-scope .page-sub{font-size:12.5px;color:var(--text-muted);}
+
+  .tt-scope .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:18px 20px 20px;margin-bottom:14px;}
+  .tt-scope .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .tt-scope .card-title{font-size:14px;font-weight:700;}
+
+  .tt-scope .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .tt-scope .badge.submitted{background:var(--green-soft);color:#147a52;}
+  .tt-scope .badge.late{background:var(--amber-soft);color:var(--amber);}
+  .tt-scope .badge.team{background:#f1e9ff;color:#7c4fd6;}
+
+  .tt-scope .btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:var(--radius-sm);padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--accent);color:#fff;text-decoration:none;}
+  .tt-scope .btn:hover{filter:brightness(1.06);}
+  .tt-scope .btn[disabled],.tt-scope .btn.disabled{background:var(--border-strong);color:var(--text-faint);cursor:not-allowed;filter:none;pointer-events:none;}
+  .tt-scope .btn-ghost{background:var(--surface);color:var(--text-muted);border:1px solid var(--border-strong);}
+  .tt-scope .btn-ghost:hover{background:var(--surface-muted);filter:none;}
+  .tt-scope .btn-ai{background:var(--ai);}
+  .tt-scope .btn-sm{padding:7px 12px;font-size:12px;}
+
+  .tt-scope .info-line{display:flex;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--border);}
+  .tt-scope .info-line:last-child{border-bottom:none;}
+  .tt-scope .info-line .k{flex-shrink:0;width:80px;color:var(--text-muted);font-weight:600;}
+  .tt-scope .member-chip{display:inline-block;font-size:11.5px;color:var(--text-muted);background:var(--surface-sunken);padding:3px 9px;border-radius:20px;margin:2px 4px 2px 0;}
+
+  .tt-scope .desc-view{font-size:13px;line-height:1.7;white-space:pre-wrap;background:var(--surface-sunken);border-radius:var(--radius-sm);padding:12px 14px;}
+  .tt-scope .desc-view.empty{color:var(--text-faint);}
+
+  {# 미리보기 — 데이터는 apps/common/preview._preview() 공용. 마크업/스타일은 앱별 #}
+  .tt-scope .preview-panel{overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:12px;}
+  .tt-scope .preview-panel:last-child{margin-bottom:0;}
+  .tt-scope .preview-file-name,.tt-scope .cell-label{padding:8px 12px;color:var(--text-faint);background:var(--surface-sunken);font-size:11px;font-weight:700;}
+  .tt-scope .code-preview,.tt-scope .text-preview{margin:0;padding:14px;overflow:auto;max-height:420px;white-space:pre;}
+  .tt-scope .code-preview{color:#f1f4ff;background:#1e2433;font:12.5px/1.7 Consolas,"SFMono-Regular",monospace;}
+  .tt-scope .text-preview{color:var(--text);background:var(--surface);font:13px/1.7 var(--font-sans);white-space:pre-wrap;}
+  .tt-scope .notebook-preview{display:flex;flex-direction:column;gap:12px;padding:12px;}
+  .tt-scope .notebook-cell{overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .tt-scope .cell-output{padding:10px 14px;border-top:1px solid var(--border);background:#fafafa;}
+  .tt-scope .cell-output span{color:var(--text-faint);font-size:10px;font-weight:700;text-transform:uppercase;}
+  .tt-scope .cell-output pre{margin:6px 0 0;white-space:pre-wrap;}
+  .tt-scope .preview-message{margin:0;padding:16px;color:var(--text-muted);background:var(--surface-sunken);font-size:12.5px;}
+  .tt-scope .file-meta{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--surface-sunken);font-size:13px;}
+  .tt-scope .file-meta span{color:var(--text-muted);font-size:12px;}
+
+  .tt-scope .ai-score{font-size:13px;font-weight:800;padding:4px 11px;border-radius:20px;background:var(--ai-soft);color:var(--ai);}
+  .tt-scope .ai-text{font-size:13px;line-height:1.7;background:var(--ai-soft);border-radius:var(--radius-sm);padding:12px 14px;}
+  .tt-scope .ai-note{font-size:11px;color:var(--text-faint);margin-top:8px;}
+
+  .tt-scope .lock-banner{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border:1px solid #d3ddff;border-radius:var(--radius-md);padding:12px 14px;margin-bottom:12px;font-size:12.5px;color:var(--accent-text);}
+  .tt-scope .saved-score{font-size:14px;font-weight:800;margin-bottom:6px;}
+  .tt-scope .saved-feedback{font-size:13px;line-height:1.7;white-space:pre-wrap;background:var(--surface-sunken);border-radius:var(--radius-sm);padding:12px 14px;}
+
+  .tt-scope .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .tt-scope .field label{font-size:12.5px;font-weight:700;}
+  .tt-scope .field .form-control{width:100%;border:1px solid var(--border-strong);background:var(--surface-sunken);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--text);font-family:inherit;line-height:1.5;}
+  .tt-scope .field input.form-control{max-width:140px;}
+  .tt-scope .field .form-control:focus{outline:none;border-color:var(--accent);background:var(--surface);}
+  .tt-scope .field .errorlist{list-style:none;margin:0;padding:0;font-size:11.5px;color:var(--red);}
+  .tt-scope details > summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--accent-text);}
+  .tt-scope details[open] > summary{margin-bottom:12px;}
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="tt-scope">
+  <a class="back-link" href="{% url 'tutor:submission-dashboard' assignment.pk %}{% if carry_qs %}?{{ carry_qs }}{% endif %}">‹ 제출 현황으로</a>
+
+  <div class="review-topbar">
+    <div class="title-row">
+      <h1 class="page-title">{{ unit_name }}</h1>
+      {% if is_late %}<span class="badge late">지각 제출</span>{% else %}<span class="badge submitted">제출 완료</span>{% endif %}
+      {% if assignment.is_team %}<span class="badge team">팀 과제</span>{% endif %}
+    </div>
+    <div class="review-nav">
+      {% if prev_pk %}
+        <a class="btn btn-ghost btn-sm" href="{% url 'tutor:submission-review' prev_pk %}{% if carry_qs %}?{{ carry_qs }}{% endif %}">◀ 이전</a>
+      {% else %}
+        <span class="btn btn-ghost btn-sm disabled">◀ 이전</span>
+      {% endif %}
+      <span class="review-pos">{% if position %}{{ position.0 }} / {{ position.1 }}{% else %}–{% endif %}</span>
+      {% if next_pk %}
+        <a class="btn btn-ghost btn-sm" href="{% url 'tutor:submission-review' next_pk %}{% if carry_qs %}?{{ carry_qs }}{% endif %}">다음 ▶</a>
+      {% else %}
+        <span class="btn btn-ghost btn-sm disabled">다음 ▶</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="page-sub">{{ assignment.title }} · 제출 {{ submission.submitted_at|date:"Y.m.d (D) H:i" }}</div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="tt-scope">
+
+  {# 제출 정보 #}
+  <div class="card">
+    <div class="card-title" style="margin-bottom:10px;">제출 정보</div>
+    <div class="info-line"><div class="k">제출 대상</div><div>{{ unit_name }}{% if assignment.is_team %} (팀){% endif %}</div></div>
+    <div class="info-line"><div class="k">제출 일시</div><div>{{ submission.submitted_at|date:"Y.m.d (D) H:i" }}{% if is_late %} · 지각{% endif %}</div></div>
+    {% if assignment.is_team %}
+      <div class="info-line"><div class="k">팀원</div><div>{% for m in member_names %}<span class="member-chip">{{ m }}</span>{% empty %}<span class="preview-fallback">팀원 정보 없음</span>{% endfor %}</div></div>
+    {% endif %}
+  </div>
+
+  {# 제출 파일 미리보기 + AI 트리거 #}
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🔍 제출 파일 미리보기</div>
+      <form method="post" action="{% url 'tutor:submission-ai-eval' submission.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="q" value="{{ request.GET.q }}">
+        <input type="hidden" name="status" value="{{ request.GET.status }}">
+        <input type="hidden" name="sort" value="{{ request.GET.sort }}">
+        <button type="submit" class="btn btn-ai btn-sm">{% if ai %}✨ AI 다시 채점{% else %}✨ AI 채점{% endif %}</button>
+      </form>
+    </div>
+    {% for preview in previews %}
+      <div class="preview-panel">
+        <div class="preview-file-name">{{ preview.file.file_name }}</div>
+        {% if preview.kind == "PY" %}
+          {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% else %}<pre class="code-preview"><code>{{ preview.highlighted }}</code></pre>{% endif %}
+        {% elif preview.kind == "IPYNB" %}
+          {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% endif %}
+          {% if preview.cells %}
+            <div class="notebook-preview">
+              {% for cell in preview.cells %}
+                <article class="notebook-cell">
+                  <div class="cell-label">{{ cell.type|upper }} CELL</div>
+                  <pre class="{% if cell.type == 'code' %}code-preview{% else %}text-preview{% endif %}"><code>{{ cell.source }}</code></pre>
+                  {% for output in cell.outputs %}<div class="cell-output"><span>Output</span><pre>{{ output }}</pre></div>{% endfor %}
+                </article>
+              {% empty %}<p class="preview-message">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
+            </div>
+          {% elif preview.raw_text %}<pre class="text-preview">{{ preview.raw_text }}</pre>{% endif %}
+        {% else %}
+          <div class="file-meta"><strong>{{ preview.file.file_name }}</strong><span>{{ preview.file.file_size|filesizeformat }} · 미리보기 미지원</span></div>
+        {% endif %}
+      </div>
+    {% empty %}<div class="preview-message">첨부된 파일이 없습니다.</div>{% endfor %}
+  </div>
+
+  {# 학생 설명 #}
+  <div class="card">
+    <div class="card-title" style="margin-bottom:10px;">📝 학생이 작성한 설명</div>
+    <div class="desc-view{% if not submission.description %} empty{% endif %}">{{ submission.description|default:"작성된 설명이 없습니다." }}</div>
+  </div>
+
+  {# AI 1차 평가 (있을 때만, 튜터 평가란보다 위) #}
+  {% if ai %}
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🤖 AI 1차 평가</div>
+      <span class="ai-score">{{ ai.score }} / 100</span>
+    </div>
+    <div class="ai-text">{{ ai.comment|default:"(코멘트 없음)" }}</div>
+    <div class="ai-note">
+      참고용 1차 평가입니다 (현재 시뮬레이션 · Gemini 연동 예정). 공식 결과는 아래 튜터 평가 기준입니다.
+      · 마지막 생성 {{ ai.updated_at|date:"Y.m.d H:i" }}
+    </div>
+  </div>
+  {% endif %}
+
+  {# 튜터 평가 (FR-013) #}
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px;">✍️ 튜터 평가</div>
+
+    {% if evaluation %}
+      <div class="lock-banner">
+        🔒 평가가 등록되어 제출물이 잠겼습니다 (재제출 불가).{% if assignment.is_team %} 팀원 전체에 동일 적용.{% endif %} 아래에서 수정할 수 있습니다.
+      </div>
+      <div class="saved-score">튜터 점수 {{ evaluation.score }} / 100</div>
+      <div class="saved-feedback">{{ evaluation.feedback }}</div>
+
+      <details style="margin-top:14px;">
+        <summary>평가 수정</summary>
+        {% include "tutor/_evaluation_form.html" %}
+      </details>
+    {% else %}
+      {% include "tutor/_evaluation_form.html" %}
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
