@@ -1,5 +1,6 @@
 import tempfile
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -52,6 +53,67 @@ class SubmissionResultTests(TestCase):
         )
         return submission
 
+    def make_team_submission(self, *, due_at=None, team_id=42):
+        assignment = Assignment.objects.create(
+            title="팀 과제 테스트",
+            due_at=due_at or timezone.now() + timedelta(days=1),
+            is_team=True,
+            allow_late=True,
+            created_by=1,
+        )
+        submission = Submission.objects.create(
+            assignment=assignment,
+            student_id=None,
+            team_id=team_id,
+            description="팀 기존 설명",
+        )
+        SubmissionFile.objects.create(
+            submission=submission,
+            kind=SubmissionFile.Kind.OTHER,
+            file_url="/media/submissions/team-old.txt",
+            file_name="team-old.txt",
+            file_size=3,
+        )
+        return submission
+
+    def test_team_member_can_resubmit_team_submission(self):
+        submission = self.make_team_submission(team_id=42)
+
+        with patch(
+            "apps.student.views_result.accounts.get_user_team",
+            return_value=SimpleNamespace(id=42),
+        ):
+            response = self.client.post(
+                reverse("student:submission-resubmit", args=[submission.id]),
+                {
+                    "description": "팀 새 설명",
+                    "file": SimpleUploadedFile("team-new.ipynb", b'{"cells": []}'),
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Submission.objects.count(), 1)
+        submission.refresh_from_db()
+        self.assertEqual(submission.description, "팀 새 설명")
+        self.assertEqual(submission.files.get().file_name, "team-new.ipynb")
+        self.assertIsNone(submission.student_id)
+        self.assertEqual(submission.team_id, 42)
+        self.assertEqual(submission.last_editor_id, self.user.id)
+
+    def test_resubmit_denied_for_non_member_of_team(self):
+        submission = self.make_team_submission(team_id=42)
+
+        with patch(
+            "apps.student.views_result.accounts.get_user_team",
+            return_value=SimpleNamespace(id=99),
+        ):
+            response = self.client.get(
+                reverse("student:submission-resubmit", args=[submission.id])
+            )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(submission.files.get().file_name, "team-old.txt")
+
     def test_resubmission_overwrites_final_submission(self):
         submission = self.make_submission()
 
@@ -67,6 +129,7 @@ class SubmissionResultTests(TestCase):
         self.assertEqual(Submission.objects.count(), 1)
         submission.refresh_from_db()
         self.assertEqual(submission.description, "새 설명")
+        self.assertEqual(submission.last_editor_id, self.user.id)
         self.assertEqual(submission.files.count(), 1)
         self.assertEqual(submission.files.get().kind, SubmissionFile.Kind.IPYNB)
         self.assertEqual(submission.files.get().file_name, "new.ipynb")
