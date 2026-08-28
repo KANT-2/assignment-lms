@@ -36,6 +36,16 @@ NOTICES = [
 UPCOMING_LIMIT = 5
 
 
+@login_required
+def home(request):
+    """Send users from the site root to the dashboard for their role."""
+    if accounts.is_tutor(request.user.id):
+        return redirect("tutor:assignment-list")
+    if accounts.is_student(request.user.id):
+        return redirect("student:dashboard")
+    raise PermissionDenied("접근 가능한 역할이 없습니다.")
+
+
 def student_required(view_func):
     """로그인 + role=STUDENT (accounts.is_student)."""
 

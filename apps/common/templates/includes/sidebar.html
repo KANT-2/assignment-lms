@@ -14,10 +14,13 @@ role(nav_role: TUTOR|STUDENT)?메뉴 분기. active ?시??url_namespace 기?.
          class="{% if url_name == 'lecture' %}active{% endif %}">강의 및 교안 관리</a>
     {% elif nav_role == "STUDENT" %}
       <div class="nav-group-label">학생</div>
-      <a href="{% url 'student:dashboard' %}" 
-         class="{% if url_namespace == 'student' and url_name != 'lecture' %}active{% endif %}">학생 대시보드</a>
+      <a href="{% url 'student:dashboard' %}"
+         class="{% if url_name == 'dashboard' or url_name == 'home' %}active{% endif %}">대시보드</a>
       <a href="{% url 'student:lecture' %}"
          class="{% if url_name == 'lecture' %}active{% endif %}">강의 및 교안 학습</a>
+      <a href="{% url 'student:assignment-list' %}"
+         class="{% if url_name == 'assignment-list' or url_name == 'assignment-submit' or url_name == 'assignment-preview' or url_name == 'submission-resubmit' or url_name == 'submission-result' %}active{% endif %}">과제 제출</a>
+
     {% else %}
       <a href="/admin/">관리자</a>
     {% endif %}

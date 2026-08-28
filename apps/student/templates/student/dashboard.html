@@ -208,20 +208,20 @@
           </div>
           {% if day_lectures %}
             <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
-              <span class="chip b"></span>
-              <span class="t">강의 보러가기</span>
-              <span class="stag b" style="margin-left:auto;">강의 {{ day_lectures|length }}개</span>
+              <span class="chip g"></span>
+              <span class="t">오늘의 강의 보러가기</span>
+              <span class="stag g" style="margin-left:auto;">강의 {{ day_lectures|length }}개</span>
               <span style="color:var(--d-tfaint);">›</span>
             </a>
           {% endif %}
-          {% for it in day_assignments %}
-            <div class="sched-item" style="margin-bottom:6px;">
-              <span class="chip {% if it.done %}g{% else %}r{% endif %}"></span>
-              <span class="t">{{ it.title }}</span>
-              <span class="stag {% if it.done %}done{% else %}miss{% endif %}">{% if it.done %}제출 완료{% else %}미제출{% endif %}</span>
-              {% if it.time %}<span class="time">{{ it.time }}</span>{% endif %}
-            </div>
-          {% endfor %}
+          {% if day_assignments %}
+            <a href="{% url 'student:assignment-list' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+              <span class="chip r"></span>
+              <span class="t">오늘의 과제 하러가기</span>
+              <span class="stag r" style="margin-left:auto;">과제 {{ day_assignments|length }}개</span>
+              <span style="color:var(--d-tfaint);">›</span>
+            </a>
+          {% endif %}
           {% if not day_lectures and not day_assignments %}
             <div class="day-empty">등록된 일정이 없습니다.</div>
           {% endif %}
@@ -250,15 +250,13 @@
           {% empty %}
             <div class="day-empty">다가오는 마감이 없습니다. 👍</div>
           {% endfor %}
-          <a class="see-all" href="#" title="준비 중 (학생 A 과제 페이지)">
+          <a class="see-all" href="{% url 'student:assignment-list' %}">
             전체 과제 보기 <span aria-hidden="true">→</span>
-            <span class="soon">학생 A 페이지 완성 후 연결</span>
           </a>
-          <div class="day-cap">날짜를 누르면 그날 일정(강의·과제)으로 바뀝니다.</div>
+          <div class="day-cap">날짜를 누르면 그날 일정(강의·과제)으로 바뀝니다. · 개수는 개인 과제 전체{% if team %} + 내 팀 과제{% endif %} 기준</div>
         {% endif %}
       </div>
     </div>
-
   </div>
 
   {# ── 오른쪽 ── #}
