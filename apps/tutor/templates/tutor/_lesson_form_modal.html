@@ -1,0 +1,75 @@
+{% comment %} 차시 등록/수정 모달 — lecture_manage.html 에서 include {% endcomment %}
+<div id="lesson-modal" class="modal-backdrop" onclick="handleBackdropClick(event, 'lesson-modal')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title" id="modal-title">새 차시 등록</h3>
+      <button class="modal-close" onclick="closeModal('lesson-modal')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <input type="hidden" id="edit-lesson-id">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">차시 번호<span class="req">*</span></label>
+          <input type="number" id="form-order" class="form-control" min="1" max="50" value="9">
+        </div>
+        <div class="form-group">
+          <label class="form-label">수업 일자<span class="req">*</span></label>
+          <input type="date" id="form-date" class="form-control" value="2026-09-05">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">수업 제목<span class="req">*</span></label>
+        <input type="text" id="form-title" class="form-control" placeholder="예: LangChain을 활용한 RAG 에이전트 구축">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">블로그 요약 링크 (URL)</label>
+        <input type="url" id="form-blog" class="form-control" placeholder="https://blog.example.com/...">
+        <span class="form-hint">수업 내용 정리 및 참고자료 블로그 포스팅 링크</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">유튜브 다시보기 영상 링크 (URL)</label>
+        <input type="url" id="form-video" class="form-control" placeholder="https://www.youtube.com/watch?v=..." oninput="updateVideoPreview()">
+        <span class="form-hint">URL 입력 시 썸네일이 자동 감지되고 학생 화면에 임베드 영상이 공개됩니다.</span>
+
+        <!-- Live Preview -->
+        <div id="video-preview" class="video-preview-wrap">
+          <div class="thumb-info-bar">
+            <span class="thumb-info-badge">유튜브 썸네일 &amp; 플레이어 자동 감지</span>
+            <span id="video-id-display" style="color:var(--text-muted); font-size:11px;"></span>
+          </div>
+          <div class="preview-media-container">
+            <div class="preview-box">
+              <img id="video-thumb-preview" src="" alt="유튜브 썸네일">
+            </div>
+            <div class="preview-box">
+              <iframe id="video-preview-iframe" src="" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+          <label class="form-label">수업 교안 및 실습 파일 (LessonMaterial)</label>
+          <button type="button" class="btn btn-outline btn-sm" onclick="addMaterialRow()">+ 자료 추가</button>
+        </div>
+
+        <div class="material-builder" id="material-builder-list">
+          <!-- Dynamic Material Rows -->
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('lesson-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveLesson()">저장하기</button>
+    </div>
+  </div>
+</div>

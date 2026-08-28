@@ -49,7 +49,8 @@ def tutor_lecture_manage_view(request):
     lecture = Lecture.get_singleton()
     return render(request, "tutor/lecture_manage.html", {
         "lecture": lecture,
-        "lessons_json": json.dumps(_serialize_lessons(lecture)),
+        # 템플릿에서 {{ lessons|json_script:"lecture-lessons-data" }} 로 렌더 → 외부 JS가 파싱
+        "lessons": _serialize_lessons(lecture),
         "revision": _revision(lecture),
     })
 
