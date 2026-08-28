@@ -1,10 +1,33 @@
-# apps/student/forms.py
-# 학생팀 — 제출/재제출 폼
-#
-# 여기에 들어갈 것:
-# - SubmissionForm       : 본문(text), 첨부파일(file) — 학생A (FR-004)
-# 나는 안중섭이다
-# - ResubmissionForm     : 재제출용 (이전 내용 초기값) — 학생B (FR-006)
-# - 파일 확장자/용량 검증, 마감일 검증은 뷰 또는 clean() 에서
+"""학생 제출 폼."""
 
-# 이거 바꿀게요
+from django import forms
+
+MAX_UPLOAD_SIZE = 30 * 1024 * 1024
+
+
+class SubmissionForm(forms.Form):
+    description = forms.CharField(
+        label="과제 설명",
+        required=False,
+        max_length=2000,
+        widget=forms.Textarea(attrs={
+            "class": "form-control",
+            "rows": 5,
+            "placeholder": "제출물에 대한 간단한 설명을 작성해 주세요.",
+        }),
+    )
+    file = forms.FileField(
+        label="제출 파일",
+        required=True,
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
+    )
+
+    def clean_file(self):
+        uploaded_file = self.cleaned_data["file"]
+        if uploaded_file.size > MAX_UPLOAD_SIZE:
+            raise forms.ValidationError("파일 크기는 30MB를 초과할 수 없습니다.")
+        return uploaded_file
+
+
+class ResubmissionForm(SubmissionForm):
+    """기존 최종 제출본을 덮어쓰기 위한 학생 B 재제출 폼."""
