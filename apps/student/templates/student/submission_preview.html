@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ assignment.title }} 미리보기 | AX 과제 시스템{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <a class="student-back-link" href="{% url 'student:assignment-list' %}">‹ 과제 목록으로 돌아가기</a>
+  <p class="student-eyebrow mt-3 mb-1">AX 프로젝트 평가 · 내 제출물</p>
+  <h1 class="student-page-title">{{ assignment.title }}</h1>
+  <p class="text-muted mb-0">제출 시각: {{ submission.submitted_at|date:"Y.m.d (D) H:i" }}</p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="student-form-stack">
+  <section class="student-card">
+    <h2 class="student-section-title">📄 내 제출 정보</h2>
+    {% for preview in previews %}<div class="file-meta"><strong>{{ preview.file.file_name }}</strong><span>{{ preview.file.file_size|filesizeformat }}</span></div>{% endfor %}
+  </section>
+  <section class="student-card">
+    <h2 class="student-section-title">🔍 제출 파일 미리보기</h2>
+    {% for preview in previews %}
+      <div class="preview-panel">
+        <div class="preview-file-name">{{ preview.file.file_name }}</div>
+        {% if preview.kind == "PY" %}
+          {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% else %}<pre class="code-preview"><code>{{ preview.highlighted }}</code></pre>{% endif %}
+        {% elif preview.kind == "IPYNB" %}
+          {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% endif %}
+          {% if preview.cells %}
+            <div class="notebook-preview">
+              {% for cell in preview.cells %}
+                <article class="notebook-cell">
+                  <div class="cell-label">{{ cell.type|upper }} CELL</div>
+                  <pre class="{% if cell.type == 'code' %}code-preview{% else %}text-preview{% endif %}"><code>{{ cell.source }}</code></pre>
+                  {% for output in cell.outputs %}<div class="cell-output"><span>Output</span><pre>{{ output }}</pre></div>{% endfor %}
+                </article>
+              {% empty %}<p class="text-muted mb-0">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
+            </div>
+          {% elif preview.raw_text %}<pre class="text-preview">{{ preview.raw_text }}</pre>{% endif %}
+        {% else %}<div class="preview-message">📁 이 파일 형식은 미리보기를 지원하지 않습니다. 파일명과 크기만 표시됩니다.</div>{% endif %}
+      </div>
+    {% empty %}<div class="empty-state">첨부된 파일이 없습니다.</div>{% endfor %}
+  </section>
+  <section class="student-card">
+    <h2 class="student-section-title">📝 내가 작성한 설명</h2>
+    <div class="description-view">{{ submission.description|default:"작성한 설명이 없습니다."|linebreaksbr }}</div>
+  </section>
+  {% if can_resubmit %}
+    <div class="d-flex justify-content-end">
+      <a class="btn btn-primary" href="{% url 'student:submission-resubmit' submission.id %}">재제출하기</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

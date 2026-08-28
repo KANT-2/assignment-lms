@@ -1,190 +1,122 @@
 {% extends "base.html" %}
-
-{% block title %}과제 제출{% endblock %}
-
-{% block extra_head %}
-<style>
-  .submission-page {
-    --surface: #ffffff;
-    --surface-muted: #f9fafb;
-    --border: #e5e7eb;
-    --border-strong: #d1d5db;
-    --text: #111827;
-    --text-muted: #6b7280;
-    --text-faint: #9ca3af;
-    --accent: #4f46e5;
-    --accent-hover: #4338ca;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    color: var(--text);
-  }
-  .back-link {
-    display: inline-block;
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 14px;
-    margin-bottom: 20px;
-  }
-  .back-link:hover { color: var(--text); }
-  
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-    margin-bottom: 24px;
-  }
-  
-  .assignment-title {
-    font-size: 20px;
-    font-weight: 800;
-    margin: 0 0 16px 0;
-  }
-  .assignment-meta {
-    font-size: 13.5px;
-    color: var(--text-muted);
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  
-  .form-group {
-    margin-bottom: 20px;
-  }
-  .form-label {
-    display: block;
-    font-size: 14px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-  .form-control {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-family: inherit;
-  }
-  .form-control:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-  textarea.form-control {
-    min-height: 150px;
-    resize: vertical;
-  }
-  
-  .btn-submit {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    padding: 12px 24px;
-    border-radius: var(--radius-md);
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-    width: 100%;
-    transition: opacity 0.2s;
-  }
-  .btn-submit:hover { opacity: 0.9; }
-  .btn-submit:disabled {
-    background: #d1d5db;
-    cursor: not-allowed;
-  }
-  
-  .alert {
-    padding: 12px 16px;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    margin-bottom: 20px;
-  }
-  .alert-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-  .alert-success { background: #dcfce3; color: #166534; border: 1px solid #bbf7d0; }
-  .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-  
-  .submitted-content {
-    background: var(--surface-muted);
-    padding: 16px;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    border: 1px solid var(--border);
-  }
-</style>
+{% load static %}
+{% block title %}{{ assignment.title }} 제출 | AX 과제 시스템{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <a class="student-back-link" href="{% url 'student:assignment-list' %}">‹ 과제 목록으로 돌아가기</a>
+  <p class="student-eyebrow mt-3 mb-1">AX 프로젝트 평가 · 개인 과제</p>
+  <div class="d-flex align-items-center flex-wrap gap-2">
+    <h1 class="student-page-title">{{ assignment.title }}</h1>
+    <span class="badge-soft {% if assignment.is_required %}badge-required{% else %}badge-optional{% endif %}">{% if assignment.is_required %}필수{% else %}선택{% endif %}</span>
+  </div>
+  <p class="text-muted mb-0">제출 마감: {{ assignment.due_at|date:"Y.m.d (D) H:i" }}</p>
+</div>
+{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="student-form-stack" novalidate>
+  {% csrf_token %}
+  <section class="student-card">
+    <h2 class="student-section-title">📌 과제 안내</h2>
+    <div class="description-view">{{ assignment.description|default:"등록된 과제 설명이 없습니다."|linebreaksbr }}</div>
+  </section>
+  <section class="student-card">
+    <h2 class="student-section-title">📤 제출 파일 <span class="required-mark">필수</span></h2>
+    <label class="form-label" for="{{ form.file.id_for_label }}">파일 선택</label>
+    {{ form.file }}
+    <div class="form-text">.py, .ipynb 파일은 제출 후 자동 미리보기가 제공됩니다. 파일당 최대 30MB입니다.</div>
+    {% for error in form.file.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    <div id="upload-preview" class="upload-preview mt-3" hidden aria-live="polite">
+      <div class="preview-file-name" id="upload-preview-name"></div>
+      <div id="upload-preview-body"></div>
+    </div>
+  </section>
+  <section class="student-card">
+    <h2 class="student-section-title">📝 과제 설명</h2>
+    <label class="form-label" for="{{ form.description.id_for_label }}">간단한 설명</label>
+    {{ form.description }}
+    {% for error in form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </section>
+  {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+  <div class="d-flex justify-content-end gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'student:assignment-list' %}">취소</a>
+    <button class="btn btn-primary px-4" type="submit">과제 제출</button>
+  </div>
+</form>
 {% endblock %}
 
-{% block content %}
-<div class="submission-page">
-  <a href="{% url 'student:assignment-list' %}" class="back-link">← 목록으로 돌아가기</a>
-  
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
+{% block extra_script %}
+<script>
+(() => {
+  const input = document.getElementById("{{ form.file.id_for_label }}");
+  const preview = document.getElementById("upload-preview");
+  const name = document.getElementById("upload-preview-name");
+  const body = document.getElementById("upload-preview-body");
+  if (!input || !preview || !name || !body) return;
 
-  <div class="card">
-    <h1 class="assignment-title">{{ assignment.title }}</h1>
-    <div class="assignment-meta">
-      <div>마감일: <strong>{{ assignment.due_at|date:"Y-m-d H:i" }}</strong> 
-        {% if is_late %}<span style="color: #dc2626;">(기한 경과)</span>{% endif %}
-      </div>
-      <div>유형: {% if assignment.is_team %}팀 과제 ({{ team.name|default:"팀 없음" }}){% else %}개인 과제{% endif %}</div>
-    </div>
-    
-    {% if assignment.description %}
-      <div style="margin-bottom:24px; font-size:14px; line-height:1.6; white-space:pre-wrap;">{{ assignment.description }}</div>
-    {% endif %}
+  const addPre = (text, className) => {
+    const pre = document.createElement("pre");
+    pre.className = className;
+    const code = document.createElement("code");
+    code.textContent = text;
+    pre.appendChild(code);
+    return pre;
+  };
 
-    {% if submission %}
-      <div class="alert alert-success">
-        <strong>제출 완료:</strong> {{ submission.submitted_at|date:"Y-m-d H:i" }}에 제출하셨습니다.
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label">제출한 내용</label>
-        <div class="submitted-content">{{ submission.description|default:"(내용 없음)" }}</div>
-      </div>
-      
-      {% if submission.final_score is not None %}
-        <div class="alert alert-success" style="margin-top: 20px;">
-          <strong>평가 완료:</strong> 튜터 평가가 완료되었습니다. (결과 보기에서 확인 가능)
-        </div>
-      {% endif %}
-      
-    {% else %}
-      {% if not can_submit %}
-        <div class="alert alert-error">
-          제출 기간이 만료되어 더 이상 제출할 수 없습니다.
-        </div>
-      {% else %}
-        <form method="post" enctype="multipart/form-data">
-          {% csrf_token %}
-          <div class="form-group">
-            <label class="form-label" for="description">과제 내용 입력</label>
-            <textarea name="description" id="description" class="form-control" placeholder="과제 내용을 입력하거나, 첨부 파일에 대한 설명을 적어주세요." required></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label" for="files">파일 첨부</label>
-            <input type="file" name="files" id="files" class="form-control" multiple>
-            <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
-              * 다중 파일 첨부가 가능합니다.
-            </div>
-          </div>
-          
-          <button type="submit" class="btn-submit">과제 제출하기</button>
-        </form>
-      {% endif %}
-    {% endif %}
-  </div>
-</div>
+  const showNotebook = (text) => {
+    let notebook;
+    try { notebook = JSON.parse(text); }
+    catch (_error) { body.appendChild(addPre(text, "text-preview")); return; }
+    const wrapper = document.createElement("div");
+    wrapper.className = "notebook-preview";
+    (notebook.cells || []).forEach((cell) => {
+      const article = document.createElement("article");
+      article.className = "notebook-cell";
+      const label = document.createElement("div");
+      label.className = "cell-label";
+      label.textContent = `${String(cell.cell_type || "raw").toUpperCase()} CELL`;
+      article.appendChild(label);
+      const source = Array.isArray(cell.source) ? cell.source.join("") : String(cell.source || "");
+      article.appendChild(addPre(source, cell.cell_type === "code" ? "code-preview" : "text-preview"));
+      wrapper.appendChild(article);
+    });
+    if (!wrapper.childElementCount) {
+      const empty = document.createElement("p");
+      empty.className = "preview-message";
+      empty.textContent = "노트북에 표시할 셀이 없습니다.";
+      wrapper.appendChild(empty);
+    }
+    body.appendChild(wrapper);
+  };
+
+  input.addEventListener("change", () => {
+    const file = input.files && input.files[0];
+    body.replaceChildren();
+    if (!file) { preview.hidden = true; return; }
+    name.textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
+    preview.hidden = false;
+    const extension = file.name.split(".").pop().toLowerCase();
+    if (extension !== "py" && extension !== "ipynb") {
+      const message = document.createElement("div");
+      message.className = "preview-message";
+      message.textContent = "이 파일 형식은 미리보기를 지원하지 않습니다. 파일명과 크기만 표시됩니다.";
+      body.appendChild(message);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || "");
+      if (extension === "ipynb") showNotebook(text);
+      else body.appendChild(addPre(text, "code-preview"));
+    };
+    reader.onerror = () => {
+      const message = document.createElement("div");
+      message.className = "preview-message";
+      message.textContent = "파일 내용을 읽을 수 없습니다.";
+      body.appendChild(message);
+    };
+    reader.readAsText(file, "utf-8");
+  });
+})();
+</script>
 {% endblock %}
