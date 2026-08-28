@@ -184,9 +184,9 @@ def assignment_preview(request, assignment_id):
         "assignment": assignment,
         "submission": submission,
         "previews": [_preview(file) for file in submission.files.all()],
+        # 팀 과제도 재제출 허용 — 제출물이 팀당 1행이라 팀원 누구나 고치면 전원 반영.
         "can_resubmit": (
-            not assignment.is_team
-            and timezone.now() < assignment.due_at
+            timezone.now() < assignment.due_at
             and not submission.is_locked
         ),
     })

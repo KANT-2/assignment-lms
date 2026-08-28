@@ -18,21 +18,22 @@ from .identity import external_student_id
 from .views_submit import _preview, _storage_name, _submission_kind, student_required
 
 
-def _owned_submission(submission_id, student_id, *, for_update=False):
+def _resubmittable_submission(request, submission_id, *, for_update=False):
+    """재제출 대상 제출물 — 개인 과제는 본인 것, 팀 과제는 소속 팀 것.
+
+    팀 제출물은 팀당 1행(team_id만 채움)이라, 팀원 누구나 재제출하면 전원에게 반영된다.
+    """
     queryset = Submission.objects.select_related("assignment").prefetch_related("files")
     if for_update:
         queryset = queryset.select_for_update()
-    return get_object_or_404(
-        queryset,
-        pk=submission_id,
-        student_id=student_id,
-        team_id__isnull=True,
-    )
+    owner_filter = Q(student_id=request.user.id, team_id__isnull=True)
+    team = accounts.get_user_team(external_student_id(request))
+    if team:
+        owner_filter |= Q(student_id__isnull=True, team_id=team.id)
+    return get_object_or_404(queryset, owner_filter, pk=submission_id)
 
 
 def _resubmission_block_reason(submission):
-    if submission.assignment.is_team:
-        return "팀 과제는 개인 재제출 화면에서 처리할 수 없습니다."
     if timezone.now() >= submission.assignment.due_at:
         return "재제출은 과제 마감 전까지만 가능합니다."
     if submission.is_locked or hasattr(submission, "evaluation"):
@@ -100,7 +101,7 @@ def result_list(request):
 
 @student_required
 def resubmit(request, submission_id):
-    submission = _owned_submission(submission_id, request.user.id)
+    submission = _resubmittable_submission(request, submission_id)
     block_reason = _resubmission_block_reason(submission)
     if block_reason:
         messages.error(request, block_reason)
@@ -119,8 +120,8 @@ def resubmit(request, submission_id):
         old_storage_names = []
         try:
             with transaction.atomic():
-                locked = _owned_submission(
-                    submission_id, request.user.id, for_update=True
+                locked = _resubmittable_submission(
+                    request, submission_id, for_update=True
                 )
                 block_reason = _resubmission_block_reason(locked)
                 if block_reason:
