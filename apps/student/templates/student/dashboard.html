@@ -112,6 +112,10 @@
   .dash .todo-input input:focus { outline:none; border-color:var(--d-accent); background:var(--d-surface); }
   .dash .todo-input button { border:none; background:var(--d-accent); color:#fff; width:36px; border-radius:var(--d-r-sm);
     font-size:17px; cursor:pointer; flex-shrink:0; }
+  .dash .todo-list { max-height:288px; overflow-y:auto; margin:0 -4px; padding:0 4px; }
+  .dash .todo-list::-webkit-scrollbar { width:8px; }
+  .dash .todo-list::-webkit-scrollbar-thumb { background:var(--d-bstrong); border-radius:20px; }
+  .dash .todo-list::-webkit-scrollbar-track { background:transparent; }
   .dash .todo-item { display:flex; align-items:center; gap:10px; padding:8px 6px; border-radius:8px; }
   .dash .todo-item:hover { background:var(--d-muted); }
   .dash .todo-item .chk { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--d-bstrong); background:none;
@@ -294,6 +298,7 @@
                placeholder="{% if todo_is_today %}오늘{% else %}{{ todo_date|date:'n/j' }}에{% endif %} 할 일 추가" required>
         <button type="submit" aria-label="추가">+</button>
       </form>
+      <div class="todo-list">
       {% for t in todos %}
         <div class="todo-item {% if t.is_done %}done{% endif %}">
           <form method="post" action="{% url 'student:todo-toggle' t.pk %}">
@@ -309,6 +314,7 @@
       {% empty %}
         <div class="todo-empty">{% if todo_is_today %}오늘{% else %}이 날{% endif %} 할 일이 없습니다.</div>
       {% endfor %}
+      </div>
       {% if todos %}<div class="todo-foot">{{ todo_done }} / {{ todos|length }} 완료</div>{% endif %}
       <div class="day-cap" style="margin-top:8px;">달력에서 날짜를 누르면 그 날의 할 일을 보고 추가할 수 있어요.</div>
     </div>
