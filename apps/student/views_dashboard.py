@@ -42,7 +42,7 @@ UPCOMING_LIMIT = 5
 def home(request):
     """Send users from the site root to the dashboard for their role."""
     if accounts.is_tutor(request.user.id):
-        return redirect("tutor:assignment-list")
+        return redirect("tutor:dashboard")
     if accounts.is_student(request.user.id):
         return redirect("student:dashboard")
     raise PermissionDenied("접근 가능한 역할이 없습니다.")

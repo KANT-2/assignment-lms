@@ -1,0 +1,301 @@
+{# apps/tutor/templates/tutor/dashboard.html #}
+{# 튜터 메인 대시보드. 목업: docs/mockups/tutor-dashboard.html #}
+{# base.html(공통 shell) 상속. 페이지 스타일은 .tdash 스코프로 자체완결. #}
+{% extends "base.html" %}
+
+{% block title %}튜터 대시보드{% endblock %}
+
+{% block extra_head %}
+<style>
+  .tdash {
+    --t-surface:#fff; --t-sunken:#eef1f8; --t-muted:#f4f6fb;
+    --t-text:#1c2130; --t-tmuted:#6b7280; --t-tfaint:#9aa1b1;
+    --t-border:#e4e8f1; --t-bstrong:#d5dbe8;
+    --t-accent:#4f6df5; --t-accent-soft:#eaefff; --t-accent-text:#3a56d4;
+    --t-green:#1fa971; --t-green-soft:#e5f7ee; --t-red:#ef4b4b; --t-red-soft:#fdecec;
+    --t-amber:#b7791f; --t-amber-soft:#fbf0dd; --t-purple:#7c4fd6; --t-purple-soft:#f1e9ff;
+    --t-slack:#611f69; --t-slack-soft:#f3e8f5;
+    --t-r-lg:16px; --t-r-md:12px; --t-r-sm:8px;
+    --t-shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
+    color:var(--t-text);
+  }
+  .tdash .page-head { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+  .tdash .breadcrumb { font-size:12.5px; color:var(--t-tfaint); font-weight:600; }
+  .tdash h1.tdash-title { font-size:21px; font-weight:800; margin:0; letter-spacing:-.01em; }
+
+  .tdash .summary-line { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px;
+    font-size:12.5px; color:var(--t-tmuted); margin-top:4px; }
+  .tdash .summary-line b { color:var(--t-text); font-weight:800; }
+  .tdash .summary-line .s-alert b { color:var(--t-red); }
+  .tdash .summary-line .sep { color:var(--t-bstrong); }
+
+  .tdash .col-stack { display:flex; flex-direction:column; gap:16px; }
+  .tdash .card { background:var(--t-surface); border:1px solid var(--t-border); border-radius:var(--t-r-lg);
+    box-shadow:var(--t-shadow); padding:18px 20px 20px; }
+  .tdash .card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .tdash .card-title { font-size:14px; font-weight:700; display:flex; align-items:center; gap:7px; }
+  .tdash .card-link { font-size:12px; color:var(--t-tmuted); font-weight:600; text-decoration:none; }
+  .tdash .card-link:hover { color:var(--t-accent-text); }
+  .tdash .muted { color:var(--t-tmuted); font-weight:600; }
+
+  .tdash .list-scroll { max-height:328px; overflow-y:auto; margin:0 -6px; padding:0 6px; }
+  .tdash .list-scroll.compact { max-height:214px; }
+  .tdash .list-scroll::-webkit-scrollbar { width:8px; }
+  .tdash .list-scroll::-webkit-scrollbar-thumb { background:var(--t-bstrong); border-radius:20px; }
+
+  .tdash .bar-wrap { display:flex; align-items:center; gap:8px; min-width:128px; }
+  .tdash .bar-track { flex:1; height:7px; border-radius:20px; background:var(--t-sunken); overflow:hidden; }
+  .tdash .bar-fill { height:100%; border-radius:20px; background:var(--t-accent); }
+  .tdash .bar-fill.fb { background:var(--t-purple); }
+  .tdash .bar-num { font-size:11.5px; color:var(--t-tmuted); font-weight:600; white-space:nowrap; }
+
+  .tdash .scroll-x { overflow:auto; max-height:380px; }
+  .tdash table.tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .tdash .tbl thead th { position:sticky; top:0; z-index:1; background:var(--t-surface);
+    text-align:left; font-size:11px; color:var(--t-tfaint); font-weight:700; padding:6px 10px 8px; border-bottom:1px solid var(--t-border); }
+  .tdash .tbl td { padding:11px 10px; border-bottom:1px solid var(--t-border); vertical-align:middle; }
+  .tdash .tbl tr:last-child td { border-bottom:0; }
+  .tdash .tbl tbody tr { cursor:pointer; }
+  .tdash .tbl tbody tr:hover { background:var(--t-muted); }
+  .tdash .tbl a.row-link { color:inherit; text-decoration:none; font-weight:700; display:block; }
+  .tdash .tbl .dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--t-accent); margin-right:6px; }
+
+  .tdash .badge { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .tdash .badge.unit { background:var(--t-sunken); color:var(--t-tmuted); }
+  .tdash .badge.unit.team { background:var(--t-purple-soft); color:var(--t-purple); }
+  .tdash .badge.dday { background:var(--t-sunken); color:var(--t-tmuted); }
+  .tdash .badge.dday.soon { background:var(--t-red-soft); color:var(--t-red); }
+  .tdash .badge.st-imminent { background:var(--t-amber-soft); color:var(--t-amber); }
+  .tdash .badge.st-open { background:var(--t-green-soft); color:#147a52; }
+  .tdash .badge.st-done { background:var(--t-accent-soft); color:var(--t-accent-text); }
+  .tdash .badge.st-closed { background:var(--t-sunken); color:var(--t-tfaint); }
+
+  .tdash .fq-row, .tdash .ns-row, .tdash .lc-row { display:flex; align-items:center; gap:11px;
+    padding:9px 4px; border-bottom:1px solid var(--t-border); }
+  .tdash .fq-row:last-child, .tdash .ns-row:last-child, .tdash .lc-row:last-child { border-bottom:0; }
+  .tdash .fq-row { text-decoration:none; color:inherit; }
+  .tdash .fq-row:hover, .tdash .lc-row:hover { background:var(--t-muted); }
+  .tdash .avatar { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:var(--t-accent-soft);
+    color:var(--t-accent-text); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+  .tdash .avatar.team { background:var(--t-purple-soft); color:var(--t-purple); }
+  .tdash .fq-main { flex:1; min-width:0; }
+  .tdash .fq-main .fq-who { font-size:12.5px; font-weight:700; }
+  .tdash .fq-main .fq-what { font-size:11px; color:var(--t-tmuted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tdash .fq-time { font-size:11px; color:var(--t-tfaint); white-space:nowrap; }
+  .tdash .fq-go { font-size:12px; font-weight:700; color:var(--t-accent-text); white-space:nowrap; }
+
+  .tdash .ns-row { flex-wrap:wrap; padding:10px 4px; }
+  .tdash .ns-main { flex:1; min-width:150px; }
+  .tdash .ns-main .ns-title { font-size:12.5px; font-weight:700; }
+  .tdash .ns-main .ns-title a { color:inherit; text-decoration:none; }
+  .tdash .ns-main .ns-title a:hover { color:var(--t-accent-text); }
+  .tdash .ns-main .ns-meta { font-size:11px; color:var(--t-tfaint); }
+  .tdash .ns-count { font-size:13px; font-weight:800; color:var(--t-red); white-space:nowrap; }
+  .tdash .ns-count small { font-size:10.5px; color:var(--t-tfaint); font-weight:600; }
+
+  .tdash .lc-row { flex-wrap:wrap; padding:11px 4px; }
+  .tdash .lc-date { width:52px; flex-shrink:0; text-align:center; font-size:11px; font-weight:700;
+    color:var(--t-tmuted); background:var(--t-sunken); border-radius:var(--t-r-sm); padding:5px 0; }
+  .tdash .lc-main { flex:1; min-width:150px; }
+  .tdash .lc-main .lc-title { font-size:12.5px; font-weight:700; }
+  .tdash .lc-main .lc-meta { font-size:11px; color:var(--t-tfaint); }
+  .tdash .lc-status { display:flex; gap:6px; flex-wrap:wrap; }
+  .tdash .st-chip { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px;
+    background:var(--t-sunken); color:var(--t-tfaint); white-space:nowrap; }
+  .tdash .st-chip.ok { background:var(--t-green-soft); color:#147a52; }
+  .tdash .st-chip.warn { background:var(--t-amber-soft); color:var(--t-amber); }
+
+  .tdash .btn { border:none; border-radius:var(--t-r-sm); padding:7px 13px; font-size:12px;
+    font-weight:700; cursor:pointer; white-space:nowrap; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  .tdash .btn-primary { background:var(--t-accent); color:#fff; }
+  .tdash .btn-primary:hover { filter:brightness(1.06); }
+  .tdash .btn-ghost { background:var(--t-surface); color:var(--t-tmuted); border:1px solid var(--t-bstrong); }
+  .tdash .btn-ghost:hover { background:var(--t-muted); }
+  .tdash .btn-slack { background:var(--t-slack); color:#fff; }
+  .tdash .btn-slack.is-disabled { background:var(--t-slack-soft); color:var(--t-slack); cursor:not-allowed; opacity:.75; }
+
+  .tdash .note { font-size:11px; color:var(--t-tfaint); margin-top:12px; line-height:1.5; }
+  .tdash .empty { text-align:center; color:var(--t-tfaint); font-size:12.5px; padding:22px 0; }
+
+  .tdash .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  @media (max-width:900px){ .tdash .cols { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="tdash">
+  <div class="page-head">
+    <div class="breadcrumb">튜터 · 대시보드</div>
+    <h1 class="tdash-title">오늘도 수고 많으세요 👋</h1>
+    <div class="summary-line">
+      <span>진행 중 과제 <b>{{ summary.ongoing }}</b></span>
+      <span class="sep">·</span>
+      <span class="s-alert">피드백 대기 <b>{{ summary.pending }}건</b></span>
+      <span class="sep">·</span>
+      <span class="s-alert">마감 임박(D-3) <b>{{ summary.imminent }}</b></span>
+      <span class="sep">·</span>
+      <span>오늘 신규 제출 <b>{{ summary.new_today }}</b></span>
+      <span class="sep">·</span>
+      <span>강의안 <b>{{ summary.lessons }}차시</b></span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="tdash">
+<div class="col-stack">
+
+  {# ── 진행 중인 과제 ── #}
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🗂️ 진행 중인 과제</div>
+      <a class="card-link" href="{% url 'tutor:assignment-list' %}">전체 보기 →</a>
+    </div>
+    {% if ongoing_rows %}
+    <div class="scroll-x">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>과제명</th><th>대상</th><th>마감</th>
+            <th style="min-width:150px;">제출</th><th style="min-width:150px;">피드백</th><th>상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in ongoing_rows %}
+          <tr onclick="location.href='{% url 'tutor:submission-dashboard' r.obj.id %}'">
+            <td>
+              <a class="row-link" href="{% url 'tutor:submission-dashboard' r.obj.id %}">
+                <span class="dot"></span>{{ r.obj.title }}
+              </a>
+            </td>
+            <td><span class="badge unit {% if r.obj.is_team %}team{% endif %}">{% if r.obj.is_team %}팀{% else %}개인{% endif %}</span></td>
+            <td>
+              <span class="badge dday {% if not r.is_past and r.dday <= 3 %}soon{% endif %}">
+                {% if r.is_past %}마감됨{% elif r.dday == 0 %}오늘{% else %}D-{{ r.dday }}{% endif %}
+              </span>
+            </td>
+            <td>
+              <div class="bar-wrap">
+                <div class="bar-track"><div class="bar-fill" style="width:{{ r.sub_pct }}%"></div></div>
+                <span class="bar-num">{{ r.sub_count }}/{{ r.unit_total }}{% if r.obj.is_team %} 팀{% endif %}</span>
+              </div>
+            </td>
+            <td>
+              <div class="bar-wrap">
+                <div class="bar-track"><div class="bar-fill fb" style="width:{{ r.fb_pct }}%"></div></div>
+                <span class="bar-num">{{ r.fb_count }}/{{ r.sub_count }}</span>
+              </div>
+            </td>
+            <td><span class="badge st-{{ r.status_class }}">{{ r.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="empty">등록된 과제가 없습니다.</div>
+    {% endif %}
+  </div>
+
+  {# ── 2-col: 피드백 대기 / 미제출 현황 ── #}
+  <div class="cols">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">⏳ 피드백 대기 목록 <span class="muted">{{ feedback_pending_count }}건</span></div>
+        <a class="card-link" href="{% url 'tutor:assignment-list' %}">전체 보기 →</a>
+      </div>
+      {% if feedback_queue %}
+      <div class="list-scroll compact">
+        {% for f in feedback_queue %}
+        <a class="fq-row" href="{% url 'tutor:submission-review' f.submission_id %}">
+          <span class="avatar {% if f.is_team %}team{% endif %}">{{ f.who|slice:":1" }}</span>
+          <span class="fq-main">
+            <span class="fq-who">{{ f.who }}</span>
+            <span class="fq-what">{{ f.assignment_title }}{% if f.is_locked %} · 재제출{% endif %}</span>
+          </span>
+          <span class="fq-time">{{ f.submitted_at|date:"n/j H:i" }}</span>
+          <span class="fq-go">검토하기 →</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+        <div class="empty">검토할 제출물이 없습니다. 👍</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">🚨 미제출 학생 현황</div>
+        <span class="btn btn-slack is-disabled" title="Slack 연동이 필요합니다 (설정 예정)">🔔 전체 독려</span>
+      </div>
+      {% if not_submitted %}
+      <div class="list-scroll">
+        {% for n in not_submitted %}
+        <div class="ns-row">
+          <div class="ns-main">
+            <div class="ns-title">
+              <a href="{% url 'tutor:submission-dashboard' n.assignment_id %}">{{ n.title }}</a>
+            </div>
+            <div class="ns-meta">
+              마감 {{ n.due|date:"Y.m.d" }} · {% if n.dday == 0 %}오늘{% else %}D-{{ n.dday }}{% endif %}{% if n.is_team %} · 팀 과제{% endif %}
+            </div>
+          </div>
+          <span class="ns-count">{{ n.missing }}{{ n.unit_label }} <small>미제출</small></span>
+          <span class="btn btn-slack is-disabled" title="Slack 연동이 필요합니다 (설정 예정)">🔔 Slack 독려</span>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="note">
+        Slack 독려 알림은 워크스페이스 연동 후 사용할 수 있습니다. (설정 · 연동 — 준비 중)
+      </p>
+      {% else %}
+        <div class="empty">마감 전 과제에 미제출자가 없습니다.</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# ── 강의안 준비 현황 ── #}
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">
+        📚 강의안 준비 현황 <span class="muted">차시 {{ lesson_total }}개{% if lesson_prep_needed %} · 정리 필요 {{ lesson_prep_needed }}{% endif %}</span>
+      </div>
+      <a class="card-link" href="{% url 'tutor:lecture' %}">강의안 관리 →</a>
+    </div>
+    {% if lesson_rows %}
+    <p class="note" style="margin:0 0 6px;">차시별 영상·교안 등록 상태입니다. 교안 첨부는 선택이에요 — 필요한 차시에만 올리면 됩니다.</p>
+    <div class="list-scroll">
+      {% for l in lesson_rows %}
+      <a class="lc-row" href="{% url 'tutor:lecture' %}">
+        <span class="lc-date">{{ l.date|date:"n/j" }}</span>
+        <div class="lc-main">
+          <div class="lc-title">{{ l.title }}</div>
+          <div class="lc-meta">
+            {% if l.needs_attention %}지난 수업 · 아직 아무것도 등록 안 됨
+            {% elif l.has_video and l.mat_count %}영상 + 교안 {{ l.mat_count }}개 등록 완료
+            {% elif l.has_video %}영상만 등록
+            {% elif l.mat_count %}교안 {{ l.mat_count }}개 등록 · 영상 링크 없음
+            {% else %}준비 중{% endif %}
+          </div>
+        </div>
+        <div class="lc-status">
+          <span class="st-chip {% if l.has_video %}ok{% elif l.needs_attention %}warn{% endif %}">{% if l.has_video %}영상 ✓{% else %}영상 미등록{% endif %}</span>
+          <span class="st-chip {% if l.mat_count %}ok{% elif l.needs_attention %}warn{% endif %}">{% if l.mat_count %}교안 {{ l.mat_count }}{% else %}교안 없음{% endif %}</span>
+        </div>
+        <span class="btn {% if l.needs_attention %}btn-primary{% else %}btn-ghost{% endif %}">
+          {% if l.needs_attention %}강의안 올리기{% else %}관리{% endif %}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="empty">등록된 차시가 없습니다. <a href="{% url 'tutor:lecture' %}">강의안 관리에서 추가</a></div>
+    {% endif %}
+  </div>
+
+</div>
+</div>
+{% endblock %}
