@@ -139,6 +139,7 @@ def assignment_list(request):
                 and submission is None
                 and (assignment.allow_late or assignment.due_at >= now)
             ),
+            "due_date_str": timezone.localtime(assignment.due_at).strftime('%Y-%m-%d'),
         })
     return render(request, "student/assignment_list.html", {"rows": rows})
 
