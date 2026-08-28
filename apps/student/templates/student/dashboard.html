@@ -47,7 +47,7 @@
   .dash .cal-nav a:hover { background:var(--d-muted); color:var(--d-text); }
   .dash .legend { display:flex; gap:12px; font-size:11px; color:var(--d-tfaint); margin-bottom:8px; flex-wrap:wrap; }
   .dash .legend i { width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:4px; }
-  .dash .legend i.b { background:#2f74c0; } .dash .legend i.g { background:var(--d-green); } .dash .legend i.r { background:var(--d-red); }
+  .dash .legend i.b { background:#2f74c0; } .dash .legend i.g { background:var(--d-green); } .dash .legend i.r { background:var(--d-red); } .dash .legend i.p { background:#7c4fd6; }
   .dash .cal-grid-head, .dash .cal-week { display:grid; grid-template-columns:repeat(7,1fr); }
   .dash .cal-grid-head { text-align:center; font-size:11px; color:var(--d-tfaint); font-weight:600; margin-bottom:4px; }
   .dash .cal-grid-head span:first-child { color:#e2837e; } .dash .cal-grid-head span:last-child { color:#7f9bdb; }
@@ -62,7 +62,7 @@
   .dash .cal-cell .num { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
   .dash .cal-cell .dots { display:flex; gap:2px; height:4px; }
   .dash .cal-cell .dots i { width:4px; height:4px; border-radius:50%; }
-  .dash .cal-cell .dots i.b { background:#2f74c0; } .dash .cal-cell .dots i.g { background:var(--d-green); } .dash .cal-cell .dots i.r { background:var(--d-red); }
+  .dash .cal-cell .dots i.b { background:#2f74c0; } .dash .cal-cell .dots i.g { background:var(--d-green); } .dash .cal-cell .dots i.r { background:var(--d-red); } .dash .cal-cell .dots i.p { background:#7c4fd6; }
 
   .dash .day-panel { margin-top:12px; padding-top:10px; border-top:1px dashed var(--d-bstrong); }
   .dash .day-panel-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
@@ -175,6 +175,7 @@
         <span><i class="b"></i>강의</span>
         <span><i class="r"></i>미제출 과제</span>
         <span><i class="g"></i>제출 완료</span>
+        <span><i class="p"></i>할 일</span>
       </div>
       <div class="cal-grid-head">
         <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
@@ -190,6 +191,7 @@
                   {% if c.has_lecture %}<i class="b"></i>{% endif %}
                   {% if c.has_pending %}<i class="r"></i>{% endif %}
                   {% if c.has_done %}<i class="g"></i>{% endif %}
+                  {% if c.has_todo %}<i class="p"></i>{% endif %}
                 </span>
               </a>
             {% else %}
@@ -241,6 +243,9 @@
           {% if not day_lectures and not day_assignments %}
             <div class="day-empty">등록된 일정이 없습니다.</div>
           {% endif %}
+          <div class="day-cap" style="margin-top:8px;">
+            {% if todos %}✅ 이 날 할 일 <b>{{ todo_done }}/{{ todos|length }}</b> 완료 · 오른쪽 TODO에서 편집{% else %}오른쪽 TODO에서 이 날 할 일을 추가할 수 있어요{% endif %}
+          </div>
         {% else %}
           {# 평소 → 다가오는 마감 (미제출 · 마감 전 과제) + 내 과제 현황 #}
           <div class="day-panel-head">
@@ -278,10 +283,15 @@
   {# ── 오른쪽 ── #}
   <div class="col">
     <div class="card">
-      <div class="card-head"><div class="card-title">📝 TODO</div></div>
+      <div class="card-head">
+        <div class="card-title">📝 {% if todo_is_today %}오늘{% else %}{{ todo_date|date:"n월 j일" }}{% endif %} 할 일</div>
+        {% if not todo_is_today %}<a class="card-sub" href="?y={{ cal.year }}&m={{ cal.month }}&d={{ today|date:'Y-m-d' }}" style="text-decoration:none;">오늘로</a>{% endif %}
+      </div>
       <form class="todo-input" method="post" action="{% url 'student:todo-add' %}">
         {% csrf_token %}
-        <input type="text" name="content" maxlength="80" placeholder="할 일을 입력하고 추가" required>
+        <input type="hidden" name="date" value="{{ todo_date|date:'Y-m-d' }}">
+        <input type="text" name="content" maxlength="80"
+               placeholder="{% if todo_is_today %}오늘{% else %}{{ todo_date|date:'n/j' }}에{% endif %} 할 일 추가" required>
         <button type="submit" aria-label="추가">+</button>
       </form>
       {% for t in todos %}
@@ -297,9 +307,10 @@
           </form>
         </div>
       {% empty %}
-        <div class="todo-empty">할 일을 추가해보세요.</div>
+        <div class="todo-empty">{% if todo_is_today %}오늘{% else %}이 날{% endif %} 할 일이 없습니다.</div>
       {% endfor %}
       {% if todos %}<div class="todo-foot">{{ todo_done }} / {{ todos|length }} 완료</div>{% endif %}
+      <div class="day-cap" style="margin-top:8px;">달력에서 날짜를 누르면 그 날의 할 일을 보고 추가할 수 있어요.</div>
     </div>
 
     <div class="card">
