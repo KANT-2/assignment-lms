@@ -1118,9 +1118,15 @@ const csrfToken = "{{ csrf_token }}";
     }
 
     lessons.sort((a, b) => a.order - b.order);
-    saveToStorage();
-    closeModal('lesson-modal');
+    
+    // UI 우선 반영
     renderTable();
+    closeModal('lesson-modal');
+    
+    // 서버 저장 및 DB ID로 갱신
+    saveToStorage().catch(e => {
+      alert('저장에 실패했습니다.');
+    });
   }
 
   // Quick Video Modal
@@ -1158,14 +1164,16 @@ const csrfToken = "{{ csrf_token }}";
     const videoUrl = document.getElementById('quick-video-input').value.trim();
 
     const idx = lessons.findIndex(l => l.id === id);
-    if (idx !== -1) {
+    if(idx > -1) {
       lessons[idx].videoUrl = videoUrl || null;
-      saveToStorage();
       showToast(`${lessons[idx].order}회차 유튜브 영상이 저장되었습니다. (학생 화면 즉시 반영)`);
     }
 
-    closeModal('quick-video-modal');
     renderTable();
+    closeModal('quick-video-modal');
+    saveToStorage().catch(e => {
+      alert('저장에 실패했습니다.');
+    });
   }
 
   // Delete & Undo
@@ -1176,8 +1184,8 @@ const csrfToken = "{{ csrf_token }}";
     deletedLessonBackup = { index: idx, data: lessons[idx] };
     const order = lessons[idx].order;
     lessons.splice(idx, 1);
-    saveToStorage();
     renderTable();
+    saveToStorage().catch(e => alert('삭제 저장에 실패했습니다.'));
 
     showToast(`${order}회차가 삭제되었습니다.`, true);
   }
@@ -1187,8 +1195,8 @@ const csrfToken = "{{ csrf_token }}";
       lessons.splice(deletedLessonBackup.index, 0, deletedLessonBackup.data);
       lessons.sort((a, b) => a.order - b.order);
       deletedLessonBackup = null;
-      saveToStorage();
       renderTable();
+      saveToStorage().catch(e => alert('복구 저장에 실패했습니다.'));
       showToast('삭제가 취소되었습니다.');
     }
   }
