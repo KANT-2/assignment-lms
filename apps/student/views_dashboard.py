@@ -2,15 +2,16 @@
 # 🧑‍🎓 학생 메인 대시보드 (PRD 7장 "학생 대시보드").
 # 학생 A(과제 목록/제출)·학생 B(재제출/결과)와 별개 — 이 파일은 홈 대시보드 전용.
 #
-# 목업: docs/mockups/student-dashboard.html — 아래는 목업에서 바꾼 부분:
-#   - 평가 진행률 카드 → "내 과제 현황"으로 대체 (현재 시스템은 과제 제출)
+# 목업: docs/mockups/student-dashboard.html — 바꾼 부분:
+#   - 평가 진행률 카드 → "내 과제 현황"(진행률 + 개수 + 전체 과제 링크)
 #   - 최근 공개 결과 → 100점 만점 기준 (5점 척도·가중합산은 ERD §4.3 폐기안)
 #   - 공지 배너 → 정적 플레이스홀더 (공지 모델 없음)
-#   - 캘린더 = Assignment.due_at + Lesson.lesson_date
+#   - 캘린더 = Assignment.due_at + Lesson.lesson_date, 점은 제출 상태별 색(미제출/제출완료)
+#   - 캘린더 아래 패널 = 평소엔 "다가오는 마감"(미제출 과제 D-day순),
+#     날짜를 누르면(?d=) 그날 일정으로 전환
 #
 # 외부 계정/팀 데이터는 apps/accounts_client/services.py 헬퍼로만 접근.
-# 사용자 role / 네비게이션은 apps/common/context_processors.py 가 처리하므로
-# 여기서 nav_role 등을 넘기지 않는다.
+# 사용자 role / 네비게이션은 apps/common/context_processors.py 가 처리 → nav_role 안 넘김.
 
 import calendar as _calendar
 import datetime as dt
@@ -32,6 +33,7 @@ NOTICES = [
     "[안내] 팀 과제는 팀원 누구나 팀을 대신해 제출할 수 있습니다.",
     "[안내] 튜터 평가가 등록되면 해당 제출물은 재제출이 제한됩니다.",
 ]
+UPCOMING_LIMIT = 5
 
 
 def student_required(view_func):
@@ -55,16 +57,7 @@ def student_required(view_func):
 def dashboard(request):
     uid = request.user.id
     today = timezone.localdate()
-
-    year, month = _resolve_month(request, today)
-    selected = _resolve_selected_day(request, year, month, today)
-
-    by_day = _calendar_events(year, month)
-    weeks = _month_weeks(year, month, today, selected, by_day)
-
-    day_bucket = by_day.get(selected, {})
-    day_lectures = day_bucket.get("lecture", [])
-    day_assignments = day_bucket.get("assignment", [])
+    now = timezone.now()
 
     # 내 팀 (없으면 None)
     team = accounts.get_user_team(uid)
@@ -74,12 +67,44 @@ def dashboard(request):
     mine = Q(student_id=uid)
     if team:
         mine |= Q(team_id=team.id)
-
-    # 내 과제 현황 (개인 과제 전체 + 팀 과제는 팀이 있을 때)
     my_subs = {s.assignment_id: s for s in Submission.objects.filter(mine)}
+
+    # 학생에게 유효한 과제만 (개인 과제 전체 + 팀 과제는 팀이 있을 때)
+    def _applies(a):
+        return not (a.is_team and not team)
+
+    # ── 캘린더 ──
+    year, month = _resolve_month(request, today)
+    selected = _resolve_selected_day(request, year, month, today)
+    by_day = _calendar_events(year, month, my_subs, _applies)
+    weeks = _month_weeks(year, month, today, selected, by_day)
+
+    day_selected = bool(request.GET.get("d"))
+    day_bucket = by_day.get(selected, {})
+    day_lectures = day_bucket.get("lecture", [])
+    day_assignments = day_bucket.get("assignment", [])
+
+    # ── 다가오는 마감 (미제출 과제, 마감 임박순) ──
+    upcoming = []
+    for a in Assignment.objects.order_by("due_at"):
+        if not _applies(a) or a.id in my_subs:
+            continue
+        due_local = timezone.localtime(a.due_at)
+        upcoming.append({
+            "id": a.id,
+            "title": a.title,
+            "due": due_local,
+            "dday": (due_local.date() - today).days,
+            "overdue": now > a.due_at,
+            "allow_late": a.allow_late,
+            "is_team": a.is_team,
+        })
+    upcoming = upcoming[:UPCOMING_LIMIT]
+
+    # ── 내 과제 현황 ──
     total = submitted = graded = 0
     for a in Assignment.objects.all():
-        if a.is_team and not team:
+        if not _applies(a):
             continue
         total += 1
         s = my_subs.get(a.id)
@@ -89,7 +114,7 @@ def dashboard(request):
                 graded += 1
     progress_pct = round(submitted / total * 100) if total else 0
 
-    # 최근 공개 결과 (튜터 평가 완료된 내 제출물 중 최신)
+    # ── 최근 공개 결과 ──
     recent = (
         Submission.objects.filter(mine, final_score__isnull=False)
         .select_related("assignment")
@@ -113,8 +138,10 @@ def dashboard(request):
                 "next": {"y": next_y, "m": next_m},
             },
             "selected": selected,
+            "day_selected": day_selected,
             "day_lectures": day_lectures,
             "day_assignments": day_assignments,
+            "upcoming": upcoming,
             "assign_stats": {
                 "total": total, "submitted": submitted, "graded": graded,
                 "todo": total - submitted, "pct": progress_pct,
@@ -149,14 +176,21 @@ def _resolve_selected_day(request, year, month, today):
     return dt.date(year, month, 1)
 
 
-def _calendar_events(year, month):
-    """해당 월의 {date: {"assignment": [...], "lecture": [...]}}."""
+def _calendar_events(year, month, my_subs, applies):
+    """해당 월의 {date: {"assignment": [...], "lecture": [...]}}.
+    과제 항목엔 done(내가 제출했는지) 플래그가 붙는다."""
     by_day = {}
     for a in Assignment.objects.filter(due_at__year=year, due_at__month=month):
+        if not applies(a):
+            continue
         local = timezone.localtime(a.due_at)
-        by_day.setdefault(local.date(), {}).setdefault("assignment", []).append(
-            {"kind": "assignment", "title": a.title, "time": local.strftime("%H:%M"), "id": a.id}
-        )
+        by_day.setdefault(local.date(), {}).setdefault("assignment", []).append({
+            "kind": "assignment",
+            "title": a.title,
+            "time": local.strftime("%H:%M"),
+            "id": a.id,
+            "done": a.id in my_subs,
+        })
     for lesson in Lesson.objects.filter(lesson_date__year=year, lesson_date__month=month):
         by_day.setdefault(lesson.lesson_date, {}).setdefault("lecture", []).append(
             {"kind": "lecture", "title": lesson.title, "time": "", "id": lesson.id}
@@ -171,6 +205,7 @@ def _month_weeks(year, month, today, selected, by_day):
         row = []
         for d in week:
             bucket = by_day.get(d, {})
+            assigns = bucket.get("assignment", [])
             row.append({
                 "date": d,
                 "day": d.day,
@@ -178,7 +213,8 @@ def _month_weeks(year, month, today, selected, by_day):
                 "is_today": d == today,
                 "is_selected": d == selected,
                 "has_lecture": bool(bucket.get("lecture")),
-                "has_assignment": bool(bucket.get("assignment")),
+                "has_pending": any(not x["done"] for x in assigns),
+                "has_done": any(x["done"] for x in assigns),
             })
         weeks.append(row)
     return weeks

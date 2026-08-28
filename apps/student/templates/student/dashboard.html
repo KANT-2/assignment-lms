@@ -13,6 +13,7 @@
     --d-border:#e4e8f1; --d-bstrong:#d5dbe8;
     --d-accent:#4f6df5; --d-accent-soft:#eaefff; --d-accent-text:#3a56d4;
     --d-green:#1fa971; --d-green-soft:#e5f7ee; --d-red:#ef4b4b; --d-red-soft:#fdecec;
+    --d-amber:#b7791f; --d-amber-soft:#fbf0dd;
     --d-r-lg:16px; --d-r-md:12px; --d-r-sm:8px;
     --d-shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
     color:var(--d-text);
@@ -44,9 +45,9 @@
   .dash .cal-nav a { border:1px solid var(--d-border); background:var(--d-surface); color:var(--d-tmuted);
     width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
   .dash .cal-nav a:hover { background:var(--d-muted); color:var(--d-text); }
-  .dash .legend { display:flex; gap:12px; font-size:11px; color:var(--d-tfaint); margin-bottom:8px; }
+  .dash .legend { display:flex; gap:12px; font-size:11px; color:var(--d-tfaint); margin-bottom:8px; flex-wrap:wrap; }
   .dash .legend i { width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:4px; }
-  .dash .legend i.g { background:var(--d-green); } .dash .legend i.r { background:var(--d-red); }
+  .dash .legend i.b { background:#2f74c0; } .dash .legend i.g { background:var(--d-green); } .dash .legend i.r { background:var(--d-red); }
   .dash .cal-grid-head, .dash .cal-week { display:grid; grid-template-columns:repeat(7,1fr); }
   .dash .cal-grid-head { text-align:center; font-size:11px; color:var(--d-tfaint); font-weight:600; margin-bottom:4px; }
   .dash .cal-grid-head span:first-child { color:#e2837e; } .dash .cal-grid-head span:last-child { color:#7f9bdb; }
@@ -55,13 +56,13 @@
     align-items:center; padding-top:5px; gap:3px; font-size:12px; color:var(--d-text); text-decoration:none; }
   .dash .cal-cell.blank { visibility:hidden; }
   .dash .cal-cell.pick:hover { background:var(--d-muted); }
-  .dash .cal-cell.today { border-color:var(--d-green); }
-  .dash .cal-cell.today .num { color:var(--d-green); font-weight:700; }
+  .dash .cal-cell.today { border-color:var(--d-accent); }
+  .dash .cal-cell.today .num { color:var(--d-accent-text); font-weight:700; }
   .dash .cal-cell.sel { border-color:var(--d-accent); background:var(--d-accent-soft); }
   .dash .cal-cell .num { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
   .dash .cal-cell .dots { display:flex; gap:2px; height:4px; }
   .dash .cal-cell .dots i { width:4px; height:4px; border-radius:50%; }
-  .dash .cal-cell .dots i.g { background:var(--d-green); } .dash .cal-cell .dots i.r { background:var(--d-red); }
+  .dash .cal-cell .dots i.b { background:#2f74c0; } .dash .cal-cell .dots i.g { background:var(--d-green); } .dash .cal-cell .dots i.r { background:var(--d-red); }
 
   .dash .day-panel { margin-top:12px; padding-top:10px; border-top:1px dashed var(--d-bstrong); }
   .dash .day-panel-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
@@ -70,26 +71,40 @@
   .dash .sched-item { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:10px; }
   .dash .sched-item:hover { background:var(--d-muted); }
   .dash .sched-item .chip { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .dash .sched-item .chip.g { background:var(--d-green); } .dash .sched-item .chip.r { background:var(--d-red); }
+  .dash .sched-item .chip.b { background:#2f74c0; } .dash .sched-item .chip.g { background:var(--d-green); } .dash .sched-item .chip.r { background:var(--d-red); }
   .dash .sched-item .t { flex:1; font-size:13px; font-weight:600; }
   .dash .sched-item .stag { font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:5px; }
+  .dash .sched-item .stag.b { background:#e7f0fa; color:#2f74c0; }
   .dash .sched-item .stag.g { background:var(--d-green-soft); color:var(--d-green); }
   .dash .sched-item .stag.r { background:var(--d-red-soft); color:var(--d-red); }
   .dash .sched-item .time { font-size:11.5px; color:var(--d-tmuted); }
+  .dash .sched-item .stag.done { background:var(--d-green-soft); color:var(--d-green); }
+  .dash .sched-item .stag.miss { background:var(--d-red-soft); color:var(--d-red); }
   .dash .day-empty { padding:14px 0; text-align:center; color:var(--d-tfaint); font-size:12.5px; }
+
+  /* 다가오는 마감 */
+  .dash .due-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--d-border); }
+  .dash .due-row:last-of-type { border-bottom:0; }
+  .dash .dday { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; flex-shrink:0; min-width:58px; text-align:center;
+    background:var(--d-sunken); color:var(--d-tmuted); }
+  .dash .dday.over { background:var(--d-red-soft); color:var(--d-red); }
+  .dash .dday.soon { background:var(--d-amber-soft); color:var(--d-amber); }
+  .dash .due-row .dt { flex:1; font-size:13px; }
+  .dash .due-row .dt small { color:var(--d-tfaint); font-size:11.5px; }
+  .dash .day-cap { font-size:11px; color:var(--d-tfaint); margin-top:10px; }
 
   .dash .prog-top { display:flex; align-items:center; gap:10px; font-size:12.5px; margin-bottom:8px; }
   .dash .prog-top .status { color:var(--d-green); font-weight:700; }
   .dash .prog-track { height:6px; border-radius:4px; background:var(--d-sunken); overflow:hidden; margin-bottom:6px; }
   .dash .prog-fill { height:100%; background:linear-gradient(90deg,var(--d-accent),#8aa2ff); border-radius:4px; }
   .dash .prog-pct { font-size:12px; color:var(--d-tmuted); font-weight:700; text-align:right; margin-bottom:12px; }
-  .dash .task-row { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--d-border);
-    border-radius:var(--d-r-md); background:var(--d-surface); text-decoration:none; color:inherit; }
-  .dash .task-row:hover { background:var(--d-muted); }
-  .dash .task-row .ico { width:30px; height:30px; border-radius:9px; background:var(--d-accent-soft); color:var(--d-accent-text);
-    display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-  .dash .task-row .lbl { flex:1; font-size:13.5px; font-weight:600; }
-  .dash .prog-note { margin-top:12px; font-size:11.5px; color:var(--d-tfaint); }
+  .dash .stat-counts { display:flex; gap:16px; font-size:13px; margin-top:4px; }
+  .dash .stat-counts b { font-weight:800; }
+  .dash .stat-counts .miss { color:var(--d-red); }
+  .dash .stat-counts .grd { color:var(--d-accent-text); }
+  .dash .see-all { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--d-tmuted);
+    margin-top:14px; padding-top:12px; border-top:1px solid var(--d-border); text-decoration:none; }
+  .dash .see-all .soon { margin-left:auto; font-size:11px; color:var(--d-tfaint); }
 
   .dash .todo-input { display:flex; gap:8px; margin-bottom:12px; }
   .dash .todo-input input { flex:1; border:1px solid var(--d-bstrong); background:var(--d-sunken); border-radius:var(--d-r-sm);
@@ -156,7 +171,11 @@
           <a href="?y={{ cal.next.y }}&m={{ cal.next.m }}" aria-label="다음 달">›</a>
         </div>
       </div>
-      <div class="legend"><span><i class="g"></i>온라인 강의</span><span><i class="r"></i>과제 마감</span></div>
+      <div class="legend">
+        <span><i class="b"></i>강의</span>
+        <span><i class="r"></i>미제출 과제</span>
+        <span><i class="g"></i>제출 완료</span>
+      </div>
       <div class="cal-grid-head">
         <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
       </div>
@@ -168,8 +187,9 @@
                  href="?y={{ cal.year }}&m={{ cal.month }}&d={{ c.date|date:'Y-m-d' }}">
                 <span class="num">{{ c.day }}</span>
                 <span class="dots">
-                  {% if c.has_lecture %}<i class="g"></i>{% endif %}
-                  {% if c.has_assignment %}<i class="r"></i>{% endif %}
+                  {% if c.has_lecture %}<i class="b"></i>{% endif %}
+                  {% if c.has_pending %}<i class="r"></i>{% endif %}
+                  {% if c.has_done %}<i class="g"></i>{% endif %}
                 </span>
               </a>
             {% else %}
@@ -180,30 +200,49 @@
       {% endfor %}
 
       <div class="day-panel">
-        <div class="day-panel-head">
-          <span class="label">{{ selected|date:"n월 j일" }} 일정</span>
-        </div>
-        
-        {% if day_lectures %}
-          <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
-            <span class="chip g"></span>
-            <span class="t">오늘의 강의 보러가기</span>
-            <span class="stag g" style="margin-left:auto;">강의 {{ day_lectures|length }}개</span>
-            <span style="color:var(--d-tfaint);">›</span>
-          </a>
-        {% endif %}
-
-        {% for it in day_assignments %}
-          <div class="sched-item" style="margin-bottom:6px;">
-            <span class="chip r"></span>
-            <span class="t">{{ it.title }}</span>
-            <span class="stag r">과제</span>
-            {% if it.time %}<span class="time">{{ it.time }}</span>{% endif %}
+        {% if day_selected %}
+          {# 특정 날짜 클릭 → 그날 일정 #}
+          <div class="day-panel-head">
+            <span class="label">{{ selected|date:"n월 j일" }} 일정</span>
           </div>
-        {% endfor %}
-
-        {% if not day_lectures and not day_assignments %}
-          <div class="day-empty">등록된 일정이 없습니다.</div>
+          {% if day_lectures %}
+            <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+              <span class="chip b"></span>
+              <span class="t">강의 보러가기</span>
+              <span class="stag b" style="margin-left:auto;">강의 {{ day_lectures|length }}개</span>
+              <span style="color:var(--d-tfaint);">›</span>
+            </a>
+          {% endif %}
+          {% for it in day_assignments %}
+            <div class="sched-item" style="margin-bottom:6px;">
+              <span class="chip {% if it.done %}g{% else %}r{% endif %}"></span>
+              <span class="t">{{ it.title }}</span>
+              <span class="stag {% if it.done %}done{% else %}miss{% endif %}">{% if it.done %}제출 완료{% else %}미제출{% endif %}</span>
+              {% if it.time %}<span class="time">{{ it.time }}</span>{% endif %}
+            </div>
+          {% endfor %}
+          {% if not day_lectures and not day_assignments %}
+            <div class="day-empty">등록된 일정이 없습니다.</div>
+          {% endif %}
+        {% else %}
+          {# 평소 → 다가오는 마감 (미제출 과제) #}
+          <div class="day-panel-head">
+            <span class="label">⏰ 다가오는 마감</span>
+          </div>
+          {% for u in upcoming %}
+            <div class="due-row">
+              <span class="dday {% if u.overdue %}over{% elif u.dday <= 3 %}soon{% endif %}">
+                {% if u.overdue %}마감 지남{% elif u.dday == 0 %}오늘{% else %}D-{{ u.dday }}{% endif %}
+              </span>
+              <span class="dt">
+                {{ u.title }}
+                <small>· {{ u.due|date:"n/j" }}{% if u.is_team %} · 팀{% endif %}{% if not u.allow_late %} · 지각 불가{% endif %}</small>
+              </span>
+            </div>
+          {% empty %}
+            <div class="day-empty">제출할 과제가 없습니다. 👍</div>
+          {% endfor %}
+          <div class="day-cap">날짜를 누르면 그날 일정(강의·과제)으로 바뀝니다.</div>
         {% endif %}
       </div>
     </div>
@@ -213,21 +252,19 @@
         <div class="card-title">🔵 내 과제 현황</div>
         <div class="card-sub">{{ assign_stats.submitted }} / {{ assign_stats.total }} 제출</div>
       </div>
-      <div class="prog-top">
-        <span class="status">진행 중</span>
-        {% if assign_stats.todo %}<span style="margin-left:auto;color:var(--d-red);font-weight:700;">미제출 {{ assign_stats.todo }}건</span>{% endif %}
-      </div>
       <div class="prog-track"><div class="prog-fill" style="width:{{ assign_stats.pct }}%"></div></div>
       <div class="prog-pct">{{ assign_stats.pct }}%</div>
 
-      <a class="task-row" href="#" title="준비 중 (학생 A 과제 페이지)">
-        <span class="ico">📄</span>
-        <span class="lbl">과제 목록으로 이동</span>
-        <span class="pill">제출 {{ assign_stats.submitted }}/{{ assign_stats.total }}</span>
-        <span class="pill accent">평가완료 {{ assign_stats.graded }}</span>
-        <span style="color:var(--d-tfaint);">›</span>
+      <div class="stat-counts">
+        <span class="miss">미제출 <b>{{ assign_stats.todo }}</b></span>
+        <span>제출 <b>{{ assign_stats.submitted }}</b></span>
+        <span class="grd">평가완료 <b>{{ assign_stats.graded }}</b></span>
+      </div>
+
+      <a class="see-all" href="#" title="준비 중 (학생 A 과제 페이지)">
+        전체 과제 보기 <span aria-hidden="true">→</span>
+        <span class="soon">학생 A 페이지 완성 후 연결</span>
       </a>
-      <div class="prog-note">ℹ️ 미제출·제출·평가완료 개수는 개인 과제 전체{% if team %} + 내 팀 과제{% endif %} 기준입니다.</div>
     </div>
   </div>
 
