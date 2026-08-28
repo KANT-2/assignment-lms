@@ -117,6 +117,13 @@ DATABASE_ROUTERS = ["config.routers.AccountsRouter"]
 AX_ROUND_ID = env("AX_ROUND_ID", None)
 
 # --- 인증 ---
+# 실제 로그인: ax_evaluation.accounts_user 이메일+비번 (AxPasswordBackend).
+# ModelBackend 는 dev 유저(DevAutoLoginMiddleware가 만든 로컬 계정)용으로 남겨둔다.
+AUTHENTICATION_BACKENDS = [
+    "apps.accounts_client.backends.AxPasswordBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -128,13 +135,14 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "login"
 
-# --- 개발 전용: 로그인 우회 ---
-# 인증 방식(PRD 9장)이 확정되기 전까지, DEV_SKIP_AUTH=True 이면
-#   1) apps.common.middleware.DevAutoLoginMiddleware 가 모든 요청을 고정 dev 유저로 인증 처리
-#   2) apps.accounts_client.services 가 외부 accounts DB 대신 가짜 데이터를 반환
-# 하여 로그인 화면 없이 화면을 볼 수 있다. prod(config.settings.prod)에서는 절대 켜지 말 것.
+# --- 개발 전용: 로그인 우회 (오프라인 / 자동테스트 폴백) ---
+# 평소엔 False (실제 로그인). DEV_SKIP_AUTH=True 이면
+#   1) apps.common.middleware.DevAutoLoginMiddleware 가 요청을 고정 dev 유저로 인증
+#   2) apps.accounts_client.services 가 ax_evaluation DB 대신 가짜 데이터를 반환
+# 하여 네트워크/DB 없이 화면·테스트가 가능하다. prod 에서는 절대 켜지 말 것.
 DEV_SKIP_AUTH = env_bool("DEV_SKIP_AUTH", False)
 DEV_ROLE = (env("DEV_ROLE", "TUTOR") or "TUTOR").upper()  # TUTOR | STUDENT — 볼 화면 선택
+DEV_USER_ID = 999999  # dev 유저 로컬 id (실제 accounts_user id 와 안 겹치게)
 
 # --- 국제화 ---
 LANGUAGE_CODE = "ko-kr"
