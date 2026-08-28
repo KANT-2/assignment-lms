@@ -116,6 +116,12 @@ DATABASE_ROUTERS = ["config.routers.AccountsRouter"]
 # (apps.accounts_client.services._current_round_id). 특정 라운드 고정 시 숫자 지정.
 AX_ROUND_ID = env("AX_ROUND_ID", None)
 
+# --- AI 1차 평가 (FR-012) ---
+# GEMINI_API_KEY 가 있으면 apps.tutor.ai_gemini 가 실제 Gemini 호출,
+# 없거나 호출 실패 시 apps.tutor.ai_stub 시뮬레이션으로 폴백 (apps.tutor.ai_eval).
+GEMINI_API_KEY = env("GEMINI_API_KEY")
+GEMINI_MODEL = env("GEMINI_MODEL", "gemini-3.6-flash")
+
 # --- 인증 ---
 # 실제 로그인: ax_evaluation.accounts_user 이메일+비번 (AxPasswordBackend).
 # ModelBackend 는 dev 유저(DevAutoLoginMiddleware가 만든 로컬 계정)용으로 남겨둔다.

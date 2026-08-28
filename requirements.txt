@@ -19,8 +19,10 @@ Pillow==12.3.0               # 이미지 첨부/썸네일 처리
 # --- 템플릿 / 폼 (Django 템플릿 UI) ---
 django-widget-tweaks==1.5.1  # 템플릿에서 폼 위젯 class/속성 조정
 
+# --- AI 1차 평가 (FR-012) ---
+google-genai==2.20.0        # Gemini 연동. GEMINI_API_KEY 없으면 시뮬레이션(ai_stub) 폴백
+
 # --- 나중에 필요해지면 (지금은 PRD상 범위 밖 / 미정) ---
-google-genai              # FR-012 실제 Gemini 연동 (현재는 시뮬레이션, Out of Scope)
 # requests                  # AX Evaluator 연동이 DB 가 아니라 REST API 인 경우
 # django-storages[s3]       # 업로드 파일을 S3 등 외부 스토리지로 뺄 경우
 # django-allauth            # 인증 방식 확정되면 (Open Question 9장)
