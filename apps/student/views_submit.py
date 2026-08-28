@@ -141,6 +141,7 @@ def assignment_submit(request, assignment_id):
                     student_id=None if assignment.is_team else student_id,
                     team_id=team.id if assignment.is_team else None,
                     description=form.cleaned_data["description"],
+                    last_editor_id=external_student_id(request),
                 )
                 SubmissionFile.objects.create(
                     submission=submission,
@@ -180,9 +181,15 @@ def assignment_preview(request, assignment_id):
         student_id=None if assignment.is_team else request.user.id,
         team_id=team.id if assignment.is_team else None,
     )
+    editor = (
+        accounts.get_user(submission.last_editor_id)
+        if submission.last_editor_id
+        else None
+    )
     return render(request, "student/submission_preview.html", {
         "assignment": assignment,
         "submission": submission,
+        "last_editor": editor,
         "previews": [_preview(file) for file in submission.files.all()],
         # 팀 과제도 재제출 허용 — 제출물이 팀당 1행이라 팀원 누구나 고치면 전원 반영.
         "can_resubmit": (

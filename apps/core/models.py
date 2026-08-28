@@ -165,6 +165,10 @@ class Submission(models.Model):
 
     description = models.TextField(blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
+    last_editor_id = models.IntegerField(
+        null=True, blank=True,
+        help_text="accounts_user.id — 최초 제출/마지막 재제출을 수행한 사용자 (팀 과제 책임소재)",
+    )
     is_locked = models.BooleanField(
         default=False, help_text="EVALUATION 최초 저장 시 true, 재제출 차단"
     )

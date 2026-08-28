@@ -140,7 +140,10 @@ def resubmit(request, submission_id):
                 locked.files.all().delete()
                 locked.description = form.cleaned_data["description"]
                 locked.submitted_at = timezone.now()
-                locked.save(update_fields=["description", "submitted_at"])
+                locked.last_editor_id = external_student_id(request)
+                locked.save(
+                    update_fields=["description", "submitted_at", "last_editor_id"]
+                )
                 SubmissionFile.objects.create(
                     submission=locked,
                     kind=_submission_kind(safe_name),
@@ -158,10 +161,20 @@ def resubmit(request, submission_id):
         messages.success(request, "최신 제출물로 재제출되었습니다.")
         return redirect("student:submission-result", submission_id=submission.id)
 
+    last_editor = (
+        accounts.get_user(submission.last_editor_id)
+        if submission.last_editor_id
+        else None
+    )
     return render(
         request,
         "student/resubmission_form.html",
-        {"submission": submission, "assignment": submission.assignment, "form": form},
+        {
+            "submission": submission,
+            "assignment": submission.assignment,
+            "form": form,
+            "last_editor": last_editor,
+        },
     )
 
 
@@ -179,6 +192,11 @@ def result(request, submission_id):
 
     evaluation = getattr(submission, "evaluation", None)
     ai_evaluation = getattr(submission, "ai_evaluation", None)
+    last_editor = (
+        accounts.get_user(submission.last_editor_id)
+        if submission.last_editor_id
+        else None
+    )
     return render(
         request,
         "student/result_view.html",
@@ -187,6 +205,7 @@ def result(request, submission_id):
             "submission": submission,
             "evaluation": evaluation,
             "ai_evaluation": ai_evaluation,
+            "last_editor": last_editor,
             "previews": [_preview(file) for file in submission.files.all()],
         },
     )

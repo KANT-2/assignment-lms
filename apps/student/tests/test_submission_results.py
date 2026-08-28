@@ -98,6 +98,7 @@ class SubmissionResultTests(TestCase):
         self.assertEqual(submission.files.get().file_name, "team-new.ipynb")
         self.assertIsNone(submission.student_id)
         self.assertEqual(submission.team_id, 42)
+        self.assertEqual(submission.last_editor_id, self.user.id)
 
     def test_resubmit_denied_for_non_member_of_team(self):
         submission = self.make_team_submission(team_id=42)
@@ -128,6 +129,7 @@ class SubmissionResultTests(TestCase):
         self.assertEqual(Submission.objects.count(), 1)
         submission.refresh_from_db()
         self.assertEqual(submission.description, "새 설명")
+        self.assertEqual(submission.last_editor_id, self.user.id)
         self.assertEqual(submission.files.count(), 1)
         self.assertEqual(submission.files.get().kind, SubmissionFile.Kind.IPYNB)
         self.assertEqual(submission.files.get().file_name, "new.ipynb")
