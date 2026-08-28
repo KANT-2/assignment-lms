@@ -97,18 +97,24 @@ DATABASES = {
         "HOST": env("DB_HOST", "127.0.0.1"),
         "PORT": env("DB_PORT", "5432"),
     },
+    # AX2 통합 플랫폼 (ax_evaluation) — VIEW 읽기 전용. 마이그레이션·write 안 함.
     "accounts": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("ACCOUNTS_DB_NAME", "accounts"),
+        "NAME": env("ACCOUNTS_DB_NAME", "ax_evaluation"),
         "USER": env("ACCOUNTS_DB_USER", ""),
         "PASSWORD": env("ACCOUNTS_DB_PASSWORD", ""),
         "HOST": env("ACCOUNTS_DB_HOST", "127.0.0.1"),
         "PORT": env("ACCOUNTS_DB_PORT", "5432"),
+        "OPTIONS": {"options": "-c default_transaction_read_only=on"},
     },
 }
 
 # apps.accounts_client 모델 → accounts DB 로 라우팅. 그 외는 default.
 DATABASE_ROUTERS = ["config.routers.AccountsRouter"]
+
+# 우리 강의에 해당하는 AX2 평가 라운드. 비우면 IN_PROGRESS 라운드를 자동 선택
+# (apps.accounts_client.services._current_round_id). 특정 라운드 고정 시 숫자 지정.
+AX_ROUND_ID = env("AX_ROUND_ID", None)
 
 # --- 인증 ---
 AUTH_PASSWORD_VALIDATORS = [
