@@ -1,48 +1,79 @@
 """
 apps/accounts_client/models.py — 공통 담당 전담
 
-외부 팀 구성 시스템(AX Evaluator)의 `accounts` DB 테이블을 읽기 전용으로 매핑한다.
-- managed = False : 이 앱은 마이그레이션을 만들지 않는다.
-- config.routers.AccountsRouter 가 이 모델들을 'accounts' DB 로 라우팅한다.
-- 다른 앱은 이 모델을 직접 import 하지 말고 services.py 헬퍼로만 접근한다.
-- 절대 write/save 하지 않는다.
+AX2 통합 플랫폼(`ax_evaluation` DB)이 제공하는 **VIEW 2개**를 읽기 전용으로 매핑한다.
 
-⚠ 아래 필드 구성은 docs/assignment-lms-ERD.md §3.1 기준의 잠정안이다.
-  AX Evaluator 실제 스키마가 확정되면 컬럼명·타입을 맞춰야 한다.
+- managed = False : 이 앱은 마이그레이션을 만들지 않는다. `migrate` 도 이 DB 를 건드리지 않음
+  (config.routers.AccountsRouter.allow_migrate → False).
+- config.routers.AccountsRouter 가 이 모델들을 'accounts' DB(=ax_evaluation)로 라우팅.
+- 다른 앱은 이 모델을 직접 import 하지 말고 services.py 헬퍼로만 접근. 절대 write 금지.
+
+VIEW 정의는 AX2 팀 소유 (문서: "AX2 통합 플랫폼 DB VIEW 제공 안내").
 """
 from django.db import models
 
 
-class AccountsUser(models.Model):
-    email = models.EmailField()
-    name = models.CharField(max_length=100)
-    role = models.CharField(max_length=20)  # "STUDENT" | "TUTOR"
-    is_active = models.BooleanField(default=True)
-    date_joined = models.DateTimeField()
+class AxUserLogin(models.Model):
+    """
+    ax_user_team_login_view — 사용자별 1행 (해당 유저의 **가장 최근 라운드** 팀 기준).
+    role / 이메일 / 승인상태는 여기에만 있다. 튜터·admin 은 팀/라운드가 NULL (라운드 미참가).
+    """
+
+    user_id = models.BigIntegerField(primary_key=True)
+    user_email = models.CharField(max_length=254)
+    primary_email = models.CharField(max_length=254, null=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    display_name_snapshot = models.CharField(max_length=150, null=True)
+    role = models.CharField(max_length=20)  # "student" | "tutor" | "admin"
+    approval_status = models.CharField(max_length=20, null=True)  # "approved" | "pending"
+    is_active = models.BooleanField()
+    round_id = models.BigIntegerField(null=True)
+    team_id = models.BigIntegerField(null=True)
+    team_name = models.CharField(max_length=100, null=True)
 
     class Meta:
         managed = False
-        db_table = "accounts_user"
+        db_table = "ax_user_team_login_view"
 
     def __str__(self):
         return f"{self.name} ({self.role})"
 
+    @property
+    def name(self):
+        return self.display_name_snapshot or self.first_name or self.user_email
 
-class TeamsTeam(models.Model):
-    name = models.CharField(max_length=100)
+    @property
+    def email(self):
+        return self.primary_email or self.user_email
+
+
+class RoundTeamMember(models.Model):
+    """
+    user_round_team_view — (참가자 × 라운드) 팀 소속. participant 당 1행.
+    라운드마다 팀이 재편성되므로 team 조회는 **반드시 round_id 로 스코프**한다.
+    INNER JOIN 이라 라운드 참가자(=학생)만 나온다.
+    """
+
+    participant_id = models.BigIntegerField(primary_key=True)
+    user_id = models.BigIntegerField()
+    email = models.CharField(max_length=254)
+    round_id = models.BigIntegerField()
+    round_title = models.CharField(max_length=200)
+    round_status = models.CharField(max_length=20)  # "IN_PROGRESS" | "COMPLETED"
+    student_number_snapshot = models.CharField(max_length=50, null=True)
+    display_name_snapshot = models.CharField(max_length=150, null=True)
+    team_id = models.BigIntegerField()
+    team_number = models.SmallIntegerField(null=True)
+    team_name = models.CharField(max_length=100)
 
     class Meta:
         managed = False
-        db_table = "teams_team"
+        db_table = "user_round_team_view"
 
     def __str__(self):
-        return self.name
+        return f"{self.name} · {self.team_name} (round {self.round_id})"
 
-
-class TeamsTeamMembership(models.Model):
-    team_id = models.IntegerField()
-    user_id = models.IntegerField()
-
-    class Meta:
-        managed = False
-        db_table = "teams_team_membership"
+    @property
+    def name(self):
+        return self.display_name_snapshot or self.email
