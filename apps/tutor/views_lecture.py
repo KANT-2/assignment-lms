@@ -46,7 +46,7 @@ def tutor_lecture_update_api(request):
         existing_lesson_ids = set(lecture.lessons.values_list('id', flat=True))
         incoming_ids = set()
         
-        for idx, l_data in enumerate(lessons_list):
+        for l_data in lessons_list:
             l_id = l_data.get('id')
             if l_id and l_id in existing_lesson_ids:
                 # Update
