@@ -281,7 +281,12 @@ class Todo(models.Model):
     student_id = models.IntegerField(help_text="accounts_user.id 참조, FK 아님")
     content = models.CharField(max_length=500)
     is_done = models.BooleanField(default=False)
+    due_date = models.DateField(help_text="이 할 일을 배치한 날짜 (달력 연동)")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "todo"
+        ordering = ["is_done", "-created_at"]
+        indexes = [
+            models.Index(fields=["student_id", "due_date"], name="todo_student_due_idx"),
+        ]

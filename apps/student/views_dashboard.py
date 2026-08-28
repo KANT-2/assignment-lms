@@ -21,6 +21,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -89,12 +90,22 @@ def dashboard(request):
     year, month = _resolve_month(request, today)
     selected = _resolve_selected_day(request, year, month, today)
     by_day = _calendar_events(year, month, my_subs, _applies)
-    weeks = _month_weeks(year, month, today, selected, by_day)
+    todo_days = set(
+        Todo.objects.filter(
+            student_id=uid, due_date__year=year, due_date__month=month
+        ).values_list("due_date", flat=True)
+    )
+    weeks = _month_weeks(year, month, today, selected, by_day, todo_days)
 
     day_selected = bool(request.GET.get("d"))
     day_bucket = by_day.get(selected, {})
     day_lectures = day_bucket.get("lecture", [])
     day_assignments = day_bucket.get("assignment", [])
+
+    # ── TODO — 보고 있는 날짜(날짜 선택 시 그 날, 아니면 오늘) 기준 ──
+    todo_date = selected if day_selected else today
+    todos = list(Todo.objects.filter(student_id=uid, due_date=todo_date))
+    todo_done = sum(1 for t in todos if t.is_done)
 
     # ── 다가오는 마감 (미제출 + 아직 마감 전 과제, 마감 임박순) ──
     # "다가오는" 마감이므로 이미 마감이 지난 과제는 제외한다.
@@ -136,8 +147,6 @@ def dashboard(request):
         .first()
     )
 
-    todos = Todo.objects.filter(student_id=uid).order_by("is_done", "-created_at")
-
     prev_y, prev_m = (year - 1, 12) if month == 1 else (year, month - 1)
     next_y, next_m = (year + 1, 1) if month == 12 else (year, month + 1)
 
@@ -152,6 +161,7 @@ def dashboard(request):
                 "next": {"y": next_y, "m": next_m},
             },
             "selected": selected,
+            "today": today,
             "day_selected": day_selected,
             "day_lectures": day_lectures,
             "day_assignments": day_assignments,
@@ -163,7 +173,9 @@ def dashboard(request):
             "recent_result": recent,
             "team": team, "team_members": team_members,
             "todos": todos,
-            "todo_done": sum(1 for t in todos if t.is_done),
+            "todo_done": todo_done,
+            "todo_date": todo_date,
+            "todo_is_today": todo_date == today,
         },
     )
 
@@ -213,7 +225,7 @@ def _calendar_events(year, month, my_subs, applies):
     return by_day
 
 
-def _month_weeks(year, month, today, selected, by_day):
+def _month_weeks(year, month, today, selected, by_day, todo_days=frozenset()):
     cal = _calendar.Calendar(firstweekday=6)  # 일요일 시작
     weeks = []
     for week in cal.monthdatescalendar(year, month):
@@ -230,6 +242,7 @@ def _month_weeks(year, month, today, selected, by_day):
                 "has_lecture": bool(bucket.get("lecture")),
                 "has_pending": any(not x["done"] for x in assigns),
                 "has_done": any(x["done"] for x in assigns),
+                "has_todo": d in todo_days,
             })
         weeks.append(row)
     return weeks
@@ -239,13 +252,31 @@ def _month_weeks(year, month, today, selected, by_day):
 # TODO (학생 본인 항목 CRUD — Todo 모델)
 # =========================================================
 
+def _redirect_to_day(raw_date):
+    """편집한 날짜를 유지한 채 대시보드로 돌아간다."""
+    try:
+        d = dt.date.fromisoformat(raw_date)
+    except (TypeError, ValueError):
+        return redirect("student:dashboard")
+    return redirect(
+        f"{reverse('student:dashboard')}?y={d.year}&m={d.month}&d={d.isoformat()}"
+    )
+
+
 @student_required
 @require_POST
 def todo_add(request):
     content = (request.POST.get("content") or "").strip()
+    raw_date = request.POST.get("date")
+    try:
+        due = dt.date.fromisoformat(raw_date) if raw_date else timezone.localdate()
+    except ValueError:
+        due = timezone.localdate()
     if content:
-        Todo.objects.create(student_id=request.user.id, content=content[:500])
-    return redirect("student:dashboard")
+        Todo.objects.create(
+            student_id=request.user.id, content=content[:500], due_date=due
+        )
+    return _redirect_to_day(due.isoformat())
 
 
 @student_required
@@ -254,11 +285,14 @@ def todo_toggle(request, pk):
     todo = get_object_or_404(Todo, pk=pk, student_id=request.user.id)
     todo.is_done = not todo.is_done
     todo.save(update_fields=["is_done"])
-    return redirect("student:dashboard")
+    return _redirect_to_day(todo.due_date.isoformat())
 
 
 @student_required
 @require_POST
 def todo_delete(request, pk):
-    Todo.objects.filter(pk=pk, student_id=request.user.id).delete()
-    return redirect("student:dashboard")
+    todo = Todo.objects.filter(pk=pk, student_id=request.user.id).first()
+    day = todo.due_date.isoformat() if todo else None
+    if todo:
+        todo.delete()
+    return _redirect_to_day(day)
