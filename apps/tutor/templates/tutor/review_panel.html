@@ -85,6 +85,15 @@
   .tt-scope .field .errorlist{list-style:none;margin:0;padding:0;font-size:11.5px;color:var(--red);}
   .tt-scope details > summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--accent-text);}
   .tt-scope details[open] > summary{margin-bottom:12px;}
+
+  {# AI 채점 진행 표시 (동기 호출 3~6초 블로킹 동안) #}
+  .tt-scope .spin{display:inline-block;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:tt-spin .7s linear infinite;}
+  .tt-scope .btn .spin{width:12px;height:12px;border-width:2px;}
+  .tt-scope .btn-ai[disabled]{background:var(--ai);color:#fff;opacity:.8;cursor:progress;pointer-events:none;filter:none;}
+  .tt-scope .ai-loading{display:flex;align-items:center;gap:12px;background:var(--ai-soft);border:1px solid #bfe9e2;color:#0b7d73;font-size:13px;font-weight:600;line-height:1.6;}
+  .tt-scope .ai-loading .spin{width:18px;height:18px;border-width:2.5px;flex-shrink:0;color:var(--ai);}
+  @keyframes tt-spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion:reduce){.tt-scope .spin{animation-duration:1.8s;}}
 </style>
 {% endblock %}
 
@@ -133,12 +142,12 @@
   <div class="card">
     <div class="card-head">
       <div class="card-title">🔍 제출 파일 미리보기</div>
-      <form method="post" action="{% url 'tutor:submission-ai-eval' submission.pk %}">
+      <form method="post" action="{% url 'tutor:submission-ai-eval' submission.pk %}" id="ai-eval-form">
         {% csrf_token %}
         <input type="hidden" name="q" value="{{ request.GET.q }}">
         <input type="hidden" name="status" value="{{ request.GET.status }}">
         <input type="hidden" name="sort" value="{{ request.GET.sort }}">
-        <button type="submit" class="btn btn-ai btn-sm">{% if ai %}✨ AI 다시 채점{% else %}✨ AI 채점{% endif %}</button>
+        <button type="submit" class="btn btn-ai btn-sm" id="ai-eval-btn">{% if ai %}✨ AI 다시 채점{% else %}✨ AI 채점{% endif %}</button>
       </form>
     </div>
     {% for preview in previews %}
@@ -172,6 +181,12 @@
     <div class="desc-view{% if not submission.description %} empty{% endif %}">{{ submission.description|default:"작성된 설명이 없습니다." }}</div>
   </div>
 
+  {# AI 채점 진행 표시 — 폼 제출 시 JS 가 hidden 해제 #}
+  <div class="card ai-loading" id="ai-loading" hidden>
+    <span class="spin"></span>
+    <div>AI가 제출물을 채점하고 있습니다… 최대 10초 정도 걸립니다.<br>완료되면 자동으로 결과가 표시됩니다. 이 화면을 벗어나지 마세요.</div>
+  </div>
+
   {# AI 1차 평가 (있을 때만, 튜터 평가란보다 위) #}
   {% if ai %}
   <div class="card">
@@ -181,7 +196,7 @@
     </div>
     <div class="ai-text">{{ ai.comment|default:"(코멘트 없음)" }}</div>
     <div class="ai-note">
-      참고용 1차 평가입니다 (현재 시뮬레이션 · Gemini 연동 예정). 공식 결과는 아래 튜터 평가 기준입니다.
+      참고용 AI 1차 평가입니다. 공식 결과는 아래 튜터 평가 기준입니다.
       · 마지막 생성 {{ ai.updated_at|date:"Y.m.d H:i" }}
     </div>
   </div>
@@ -208,4 +223,25 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  (function () {
+    var form = document.getElementById("ai-eval-form");
+    if (!form) return;
+    form.addEventListener("submit", function () {
+      var btn = document.getElementById("ai-eval-btn");
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin"></span> AI 채점 중…';
+      }
+      var loading = document.getElementById("ai-loading");
+      if (loading) {
+        loading.hidden = false;
+        loading.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  })();
+</script>
 {% endblock %}

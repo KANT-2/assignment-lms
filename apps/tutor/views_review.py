@@ -10,6 +10,8 @@ FR-013 튜터 평가     : 점수(0~100) + 피드백 저장 → 제출물 잠금
 
 ※ tutor_required / 로스터 빌드 로직은 튜터A(views_manage)에 이미 있어 재사용한다.
 """
+import logging
+
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -20,7 +22,7 @@ from apps.accounts_client import services as accounts
 from apps.common.preview import _preview
 from apps.core.models import AiEvaluation, Evaluation, Submission
 
-from . import ai_stub
+from . import ai_eval
 from .forms import EvaluationForm
 from .views_manage import (
     SORT_CHOICES,
@@ -31,6 +33,8 @@ from .views_manage import (
     _sort_rows,
     tutor_required,
 )
+
+logger = logging.getLogger(__name__)
 
 # 이전/다음 이동 시 유지할 쿼리 파라미터 (대시보드 필터/정렬)
 _CARRY_KEYS = ("q", "status", "sort")
@@ -158,7 +162,13 @@ def submission_review(request, pk):
 def ai_evaluation_generate(request, pk):
     """FR-012 — AI 1차 평가 생성/재생성 (기존 AiEvaluation 을 덮어씀)."""
     submission = get_object_or_404(Submission.objects.select_related("assignment"), pk=pk)
-    result = ai_stub.generate(submission)
+    try:
+        result = ai_eval.generate(submission)
+    except Exception:
+        logger.exception("AI 1차 평가 생성 실패 (submission=%s)", pk)
+        messages.error(request, "AI 1차 평가 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+        return redirect(_review_url(pk, request.POST))
+
     _, created = AiEvaluation.objects.update_or_create(
         submission=submission,
         defaults={"score": result.score, "comment": result.comment},
