@@ -206,22 +206,38 @@
             <span class="label">{{ selected|date:"n월 j일" }} 일정</span>
             <a class="back-link" href="?y={{ cal.year }}&m={{ cal.month }}">← 다가오는 마감</a>
           </div>
-          {% if day_lectures %}
-            <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
-              <span class="chip g"></span>
-              <span class="t">오늘의 강의 보러가기</span>
-              <span class="stag g" style="margin-left:auto;">강의 {{ day_lectures|length }}개</span>
+          {% for lec in day_lectures %}
+            <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}&lesson={{ lec.id }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+              <span class="chip b"></span>
+              <span class="t">{{ lec.title }}</span>
+              <span class="stag b" style="margin-left:auto;">강의</span>
               <span style="color:var(--d-tfaint);">›</span>
             </a>
-          {% endif %}
-          {% if day_assignments %}
-            <a href="{% url 'student:assignment-list' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
-              <span class="chip r"></span>
-              <span class="t">오늘의 과제 하러가기</span>
-              <span class="stag r" style="margin-left:auto;">과제 {{ day_assignments|length }}개</span>
-              <span style="color:var(--d-tfaint);">›</span>
-            </a>
-          {% endif %}
+          {% endfor %}
+          {% for it in day_assignments %}
+            {% if it.is_team %}
+              <a href="{% url 'student:assignment-list' %}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+                <span class="chip {% if it.done %}g{% else %}r{% endif %}"></span>
+                <span class="t">{{ it.title }}</span>
+                <span class="stag b" style="margin-left:auto;">팀 과제</span>
+                <span style="color:var(--d-tfaint);">›</span>
+              </a>
+            {% elif it.done %}
+              <a href="{% url 'student:assignment-preview' it.id %}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+                <span class="chip g"></span>
+                <span class="t">{{ it.title }}</span>
+                <span class="stag done" style="margin-left:auto;">제출 완료</span>
+                <span style="color:var(--d-tfaint);">›</span>
+              </a>
+            {% else %}
+              <a href="{% url 'student:assignment-submit' it.id %}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+                <span class="chip r"></span>
+                <span class="t">{{ it.title }}</span>
+                <span class="stag miss" style="margin-left:auto;">제출하기</span>
+                <span style="color:var(--d-tfaint);">›</span>
+              </a>
+            {% endif %}
+          {% endfor %}
           {% if not day_lectures and not day_assignments %}
             <div class="day-empty">등록된 일정이 없습니다.</div>
           {% endif %}

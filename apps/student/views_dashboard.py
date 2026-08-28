@@ -202,6 +202,7 @@ def _calendar_events(year, month, my_subs, applies):
             "time": local.strftime("%H:%M"),
             "id": a.id,
             "done": a.id in my_subs,
+            "is_team": a.is_team,
         })
     for lesson in Lesson.objects.filter(lesson_date__year=year, lesson_date__month=month):
         by_day.setdefault(lesson.lesson_date, {}).setdefault("lecture", []).append(
