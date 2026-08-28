@@ -143,8 +143,8 @@
             </div>
             <div class="roster-actions">
               {% if row.submitted %}
-                {# 제출물 상세/검토는 튜터B(views_review) 담당 — 링크 지점만 남겨둠 #}
-                <span class="not-submitted-label">제출됨</span>
+                {# 튜터B(views_review): 검토 화면. 현재 필터/정렬을 그대로 넘겨 이전/다음 이동에 사용 #}
+                <a class="btn" href="{% url 'tutor:submission-review' row.submission.pk %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}">제출확인하기</a>
               {% else %}
                 <span class="not-submitted-label">미제출</span>
               {% endif %}

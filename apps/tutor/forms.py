@@ -2,17 +2,17 @@
 # 튜터팀 — 과제 관리 / 평가 폼
 #
 # 여기에 들어갈 것:
-# - AssignmentForm        : 제목/설명/마감일/재제출허용/공개여부 — 튜터A (FR-001, FR-002)
-# - ResubmitRequestForm   : 재제출 요청 사유 — 튜터A (FR-010)
-# - EvaluationForm        : 점수/피드백/통과여부 — 튜터B (FR-011, FR-012)
-# - ReviewFilterForm      : 평가 목록 필터 — 튜터B (FR-013)
+# - AssignmentForm       : 제목/설명/마감일/필수·지각·팀 여부 — 튜터A (FR-001, FR-002)
+# - ResubmitRequestForm  : 재제출 요청 사유 — 튜터A (FR-010, 미구현)
+# - EvaluationForm       : 점수/피드백 — 튜터B (FR-013)
 
 from datetime import timedelta
 
 from django import forms
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 
-from apps.core.models import Assignment
+from apps.core.models import Assignment, Evaluation
 
 # HTML5 <input type="datetime-local"> 이 주고받는 포맷
 _DATETIME_LOCAL_FORMATS = ["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"]
@@ -104,3 +104,42 @@ class AssignmentForm(forms.ModelForm):
                 "이미 제출물이 있는 과제는 개인/팀 구분을 변경할 수 없습니다."
             )
         return value
+
+
+class EvaluationForm(forms.ModelForm):
+    """
+    튜터의 공식 평가 입력/수정 폼 — 튜터B (FR-013).
+
+    - 점수(0~100)와 피드백 텍스트 둘 다 필수 (목업 기준).
+    - 저장 시 signals.py 가 Submission.final_score / is_locked 를 동기화하므로
+      이 폼은 Evaluation 만 저장하면 된다.
+    - 팀 과제도 Submission 이 1행이라 그대로 저장하면 팀 전체에 적용된다 (BR-005).
+    - 최초 저장 후에도 수정 가능 (instance 를 넘겨 받으면 수정 모드).
+    """
+
+    class Meta:
+        model = Evaluation
+        fields = ["score", "feedback"]
+        labels = {"score": "튜터 점수", "feedback": "피드백"}
+        widgets = {
+            "score": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "max": 100, "placeholder": "0-100"}
+            ),
+            "feedback": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 5,
+                    "maxlength": 1000,
+                    "placeholder": "텍스트로 피드백을 남겨주세요.",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["score"].validators.extend(
+            [MinValueValidator(0), MaxValueValidator(100)]
+        )
+        self.fields["score"].error_messages["invalid"] = "숫자를 입력해주세요."
+        self.fields["feedback"].required = True  # 모델은 blank 허용이나 화면에서는 필수
+
