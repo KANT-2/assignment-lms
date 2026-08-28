@@ -1,3 +1,164 @@
-{# apps/student/templates/student/assignment_list.html #}
-{# 학생A — FR-003 과제 목록 #}
-{# base.html 상속. 과제명 / 마감일 / 제출상태(미제출·제출완료·평가완료) / 제출 버튼 #}
+{% extends "base.html" %}
+
+{% block title %}과제 목록{% endblock %}
+
+{% block extra_head %}
+<style>
+  .assignment-list-page {
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #111827;
+    --text-muted: #6b7280;
+    --text-faint: #9ca3af;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    color: var(--text);
+  }
+  .page-header {
+    margin-bottom: 24px;
+  }
+  .page-title {
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+  }
+  .page-desc {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  
+  .assignment-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .assignment-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  
+  .card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+  }
+  
+  .tag {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+  .tag.team { background: #e5e7eb; color: #374151; }
+  .tag.personal { background: #dbeafe; color: #1e40af; }
+  
+  .status-badge {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+  .status-todo { background: #fee2e2; color: #991b1b; }
+  .status-done { background: #fef3c7; color: #92400e; }
+  .status-graded { background: #dcfce3; color: #166534; }
+  
+  .card-meta {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .due-late { color: #dc2626; font-weight: 600; }
+  
+  .action-btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: opacity 0.2s;
+  }
+  .action-btn:hover { opacity: 0.9; }
+  .action-btn.view { background: #f3f4f6; color: #374151; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="assignment-list-page">
+  <div class="page-header">
+    <h1 class="page-title">과제 목록</h1>
+    <p class="page-desc">진행 중인 과제와 제출 내역을 확인하세요.</p>
+  </div>
+  
+  <div class="assignment-list">
+    {% for item in assignments_data %}
+      <div class="assignment-card">
+        <div class="card-info">
+          <div class="card-title-row">
+            <span class="tag {% if item.is_team %}team{% else %}personal{% endif %}">
+              {% if item.is_team %}팀 과제{% else %}개인 과제{% endif %}
+            </span>
+            <h3 class="card-title">{{ item.assignment.title }}</h3>
+            
+            {% if item.status == 'todo' %}
+              <span class="status-badge status-todo">미제출</span>
+            {% elif item.status == 'done' %}
+              <span class="status-badge status-done">제출 완료</span>
+            {% elif item.status == 'graded' %}
+              <span class="status-badge status-graded">평가 완료</span>
+            {% endif %}
+          </div>
+          <div class="card-meta">
+            마감일: <span class="{% if item.is_late %}due-late{% endif %}">{{ item.assignment.due_at|date:"Y-m-d H:i" }}</span>
+            {% if item.is_late and item.status == 'todo' %}
+              (마감됨)
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="card-action">
+          <a href="{% url 'student:submission-form' item.assignment.pk %}" 
+             class="action-btn {% if item.status != 'todo' %}view{% endif %}">
+            {% if item.status == 'todo' %}
+              과제 제출
+            {% else %}
+              제출 내역 보기
+            {% endif %}
+          </a>
+        </div>
+      </div>
+    {% empty %}
+      <div style="text-align:center; padding: 40px; color: var(--text-faint);">
+        현재 등록된 활성 과제가 없습니다.
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

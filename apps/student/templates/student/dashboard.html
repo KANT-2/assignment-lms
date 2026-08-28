@@ -220,7 +220,7 @@
       <div class="prog-track"><div class="prog-fill" style="width:{{ assign_stats.pct }}%"></div></div>
       <div class="prog-pct">{{ assign_stats.pct }}%</div>
 
-      <a class="task-row" href="#" title="준비 중 (학생 A 과제 페이지)">
+      <a class="task-row" href="{% url 'student:assignment-list' %}">
         <span class="ico">📄</span>
         <span class="lbl">과제 목록으로 이동</span>
         <span class="pill">제출 {{ assign_stats.submitted }}/{{ assign_stats.total }}</span>
