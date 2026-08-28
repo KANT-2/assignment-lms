@@ -60,7 +60,17 @@
   .tt-scope .code-preview,.tt-scope .text-preview{margin:0;padding:14px;overflow:auto;max-height:420px;white-space:pre;}
   .tt-scope .code-preview{color:#f1f4ff;background:#1e2433;font:12.5px/1.7 Consolas,"SFMono-Regular",monospace;}
   .tt-scope .text-preview{color:var(--text);background:var(--surface);font:13px/1.7 var(--font-sans);white-space:pre-wrap;}
-  .tt-scope .notebook-preview{display:flex;flex-direction:column;gap:12px;padding:12px;}
+  .tt-scope .notebook-preview{display:flex;flex-direction:column;gap:12px;padding:12px;max-height:70vh;overflow:auto;}
+
+  {# .ipynb 미리보기는 길어서 기본 접힘 — "펼치기"로 코드 확인 #}
+  .tt-scope .nb-details > summary{list-style:none;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface-sunken);color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;}
+  .tt-scope .nb-details > summary::-webkit-details-marker{display:none;}
+  .tt-scope .nb-details > summary::before{content:"▸";font-size:10px;color:var(--text-faint);}
+  .tt-scope .nb-details[open] > summary{border-bottom:1px solid var(--border);margin-bottom:0;}
+  .tt-scope .nb-details[open] > summary::before{content:"▾";}
+  .tt-scope .nb-details .nb-hint{margin-left:auto;font-weight:600;color:var(--accent-text);}
+  .tt-scope .nb-details .nb-hint::after{content:"펼치기";}
+  .tt-scope .nb-details[open] .nb-hint::after{content:"접기";}
   .tt-scope .notebook-cell{overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-sm);}
   .tt-scope .cell-output{padding:10px 14px;border-top:1px solid var(--border);background:#fafafa;}
   .tt-scope .cell-output span{color:var(--text-faint);font-size:10px;font-weight:700;text-transform:uppercase;}
@@ -158,16 +168,24 @@
         {% elif preview.kind == "IPYNB" %}
           {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% endif %}
           {% if preview.cells %}
-            <div class="notebook-preview">
-              {% for cell in preview.cells %}
-                <article class="notebook-cell">
-                  <div class="cell-label">{{ cell.type|upper }} CELL</div>
-                  <pre class="{% if cell.type == 'code' %}code-preview{% else %}text-preview{% endif %}"><code>{{ cell.source }}</code></pre>
-                  {% for output in cell.outputs %}<div class="cell-output"><span>Output</span><pre>{{ output }}</pre></div>{% endfor %}
-                </article>
-              {% empty %}<p class="preview-message">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
-            </div>
-          {% elif preview.raw_text %}<pre class="text-preview">{{ preview.raw_text }}</pre>{% endif %}
+            <details class="nb-details">
+              <summary>📓 노트북 미리보기 · {{ preview.cells|length }}개 셀<span class="nb-hint"></span></summary>
+              <div class="notebook-preview">
+                {% for cell in preview.cells %}
+                  <article class="notebook-cell">
+                    <div class="cell-label">{{ cell.type|upper }} CELL</div>
+                    <pre class="{% if cell.type == 'code' %}code-preview{% else %}text-preview{% endif %}"><code>{{ cell.source }}</code></pre>
+                    {% for output in cell.outputs %}<div class="cell-output"><span>Output</span><pre>{{ output }}</pre></div>{% endfor %}
+                  </article>
+                {% empty %}<p class="preview-message">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
+              </div>
+            </details>
+          {% elif preview.raw_text %}
+            <details class="nb-details">
+              <summary>📄 원본 미리보기<span class="nb-hint"></span></summary>
+              <pre class="text-preview">{{ preview.raw_text }}</pre>
+            </details>
+          {% endif %}
         {% else %}
           <div class="file-meta"><strong>{{ preview.file.file_name }}</strong><span>{{ preview.file.file_size|filesizeformat }} · 미리보기 미지원</span></div>
         {% endif %}
