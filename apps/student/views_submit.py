@@ -40,6 +40,7 @@ def assignment_list(request):
             'status': status,
             'is_late': is_late,
             'is_team': a.is_team,
+            'due_date_str': timezone.localtime(a.due_at).strftime('%Y-%m-%d'),
         })
         
     return render(request, 'student/assignment_list.html', {

@@ -6,6 +6,7 @@
 <style>
   .assignment-list-page {
     --surface: #ffffff;
+    --surface-muted: #f9fafb;
     --border: #e5e7eb;
     --border-strong: #d1d5db;
     --text: #111827;
@@ -16,11 +17,42 @@
     --radius-md: 8px;
     --radius-lg: 12px;
     
-    max-width: 900px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
     color: var(--text);
   }
+  
+  .layout-grid {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 768px) {
+    .layout-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Mini Calendar */
+  .cal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  }
+  .cal-header { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 800; margin-bottom: 12px; }
+  .cal-header button { background: var(--surface-muted); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-muted); padding: 4px 8px; transition: all 0.15s; }
+  .cal-header button:hover { background: var(--surface); color: var(--accent); border-color: var(--accent); }
+  .cal-days-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.15s; color: var(--text); }
+  .cal-day.empty { background: transparent; cursor: default; }
+  .cal-day.has-assign { background: var(--surface); border: 1px solid var(--border); font-weight: 700; color: var(--accent); }
+  .cal-day.has-assign:hover { border-color: var(--accent); background: var(--surface-muted); }
+  .cal-day.has-assign.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .cal-reset-btn { width: 100%; margin-top: 12px; padding: 8px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-muted); cursor: pointer; color: var(--text-muted); }
+  .cal-reset-btn:hover { background: #f3f4f6; color: var(--text); }
   .page-header {
     margin-bottom: 24px;
   }
@@ -117,48 +149,152 @@
     <p class="page-desc">진행 중인 과제와 제출 내역을 확인하세요.</p>
   </div>
   
-  <div class="assignment-list">
-    {% for item in assignments_data %}
-      <div class="assignment-card">
-        <div class="card-info">
-          <div class="card-title-row">
-            <span class="tag {% if item.is_team %}team{% else %}personal{% endif %}">
-              {% if item.is_team %}팀 과제{% else %}개인 과제{% endif %}
-            </span>
-            <h3 class="card-title">{{ item.assignment.title }}</h3>
-            
-            {% if item.status == 'todo' %}
-              <span class="status-badge status-todo">미제출</span>
-            {% elif item.status == 'done' %}
-              <span class="status-badge status-done">제출 완료</span>
-            {% elif item.status == 'graded' %}
-              <span class="status-badge status-graded">평가 완료</span>
-            {% endif %}
+  <div class="layout-grid">
+    <!-- Calendar Panel -->
+    <div class="cal-card">
+      <div class="cal-header">
+        <button onclick="changeMonth(-1)">◀</button>
+        <span id="cal-month-year">2026. 08</span>
+        <button onclick="changeMonth(1)">▶</button>
+      </div>
+      <div class="cal-days-header">
+        <span style="color:#e2837e">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span style="color:#7f9bdb">토</span>
+      </div>
+      <div id="cal-grid" class="cal-grid">
+        <!-- JS generated -->
+      </div>
+      <button class="cal-reset-btn" onclick="filterByDate(null)">전체 과제 보기</button>
+    </div>
+
+    <!-- Assignment List Panel -->
+    <div class="assignment-list" id="assignment-list">
+      {% for item in assignments_data %}
+        <div class="assignment-card" data-date="{{ item.due_date_str }}">
+          <div class="card-info">
+            <div class="card-title-row">
+              <span class="tag {% if item.is_team %}team{% else %}personal{% endif %}">
+                {% if item.is_team %}팀 과제{% else %}개인 과제{% endif %}
+              </span>
+              <h3 class="card-title">{{ item.assignment.title }}</h3>
+              
+              {% if item.status == 'todo' %}
+                <span class="status-badge status-todo">미제출</span>
+              {% elif item.status == 'done' %}
+                <span class="status-badge status-done">제출 완료</span>
+              {% elif item.status == 'graded' %}
+                <span class="status-badge status-graded">평가 완료</span>
+              {% endif %}
+            </div>
+            <div class="card-meta">
+              마감일: <span class="{% if item.is_late %}due-late{% endif %}">{{ item.assignment.due_at|date:"Y-m-d H:i" }}</span>
+              {% if item.is_late and item.status == 'todo' %}
+                (마감됨)
+              {% endif %}
+            </div>
           </div>
-          <div class="card-meta">
-            마감일: <span class="{% if item.is_late %}due-late{% endif %}">{{ item.assignment.due_at|date:"Y-m-d H:i" }}</span>
-            {% if item.is_late and item.status == 'todo' %}
-              (마감됨)
-            {% endif %}
+          
+          <div class="card-action">
+            <a href="{% url 'student:submission-form' item.assignment.pk %}" 
+               class="action-btn {% if item.status != 'todo' %}view{% endif %}">
+              {% if item.status == 'todo' %}
+                과제 제출
+              {% else %}
+                제출 내역 보기
+              {% endif %}
+            </a>
           </div>
         </div>
-        
-        <div class="card-action">
-          <a href="{% url 'student:submission-form' item.assignment.pk %}" 
-             class="action-btn {% if item.status != 'todo' %}view{% endif %}">
-            {% if item.status == 'todo' %}
-              과제 제출
-            {% else %}
-              제출 내역 보기
-            {% endif %}
-          </a>
+      {% empty %}
+        <div style="text-align:center; padding: 40px; color: var(--text-faint);">
+          현재 등록된 활성 과제가 없습니다.
         </div>
+      {% endfor %}
+      
+      <div id="no-match-msg" style="display:none; text-align:center; padding: 40px; color: var(--text-faint);">
+        해당 마감일의 과제가 없습니다.
       </div>
-    {% empty %}
-      <div style="text-align:center; padding: 40px; color: var(--text-faint);">
-        현재 등록된 활성 과제가 없습니다.
-      </div>
-    {% endfor %}
+    </div>
   </div>
 </div>
+
+<script>
+  let currentCalDate = new Date();
+  let selectedDateStr = null;
+  const assignmentDates = new Set();
+  
+  // Gather unique due dates from rendered cards
+  document.querySelectorAll('.assignment-card').forEach(card => {
+    if (card.dataset.date) assignmentDates.add(card.dataset.date);
+  });
+
+  function changeMonth(delta) {
+    currentCalDate.setMonth(currentCalDate.getMonth() + delta);
+    renderCalendar();
+  }
+
+  function filterByDate(dateStr) {
+    selectedDateStr = dateStr;
+    renderCalendar(); // Update active class
+    
+    let matchCount = 0;
+    document.querySelectorAll('.assignment-card').forEach(card => {
+      if (!dateStr || card.dataset.date === dateStr) {
+        card.style.display = 'flex';
+        matchCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    
+    document.getElementById('no-match-msg').style.display = (matchCount === 0 && dateStr) ? 'block' : 'none';
+  }
+
+  function renderCalendar() {
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth();
+    
+    document.getElementById('cal-month-year').textContent = `${year}. ${String(month + 1).padStart(2, '0')}`;
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = '';
+    
+    for(let i = 0; i < firstDay; i++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day empty';
+      grid.appendChild(el);
+    }
+    
+    for(let d = 1; d <= daysInMonth; d++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day';
+      el.textContent = d;
+      
+      const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      
+      if(assignmentDates.has(dateStr)) {
+        el.classList.add('has-assign');
+        if(dateStr === selectedDateStr) el.classList.add('active');
+        
+        el.onclick = () => filterByDate(dateStr);
+      } else {
+        el.onclick = () => alert('해당 날짜에는 과제 마감일이 없습니다.');
+      }
+      grid.appendChild(el);
+    }
+  }
+
+  // Initialize
+  const params = new URLSearchParams(window.location.search);
+  const paramDate = params.get('date');
+  if (paramDate) {
+    const [y, m, d] = paramDate.split('-');
+    currentCalDate = new Date(y, parseInt(m)-1, parseInt(d));
+    filterByDate(paramDate);
+  } else {
+    renderCalendar();
+  }
+</script>
 {% endblock %}
