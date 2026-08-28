@@ -1,0 +1,716 @@
+<title>AX 프로젝트 튜터 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1f8;
+    --surface: #ffffff;
+    --surface-muted: #f4f6fb;
+    --surface-sunken: #eef1f8;
+    --text: #1c2130;
+    --text-muted: #6b7280;
+    --text-faint: #9aa1b1;
+    --border: #e4e8f1;
+    --border-strong: #d5dbe8;
+    --accent: #4f6df5;
+    --accent-soft: #eaefff;
+    --accent-text: #3a56d4;
+    --green: #1fa971;
+    --green-soft: #e5f7ee;
+    --red: #ef4b4b;
+    --red-soft: #fdecec;
+    --amber: #c98a1a;
+    --amber-soft: #fbf0dd;
+    --purple: #7c4fd6;
+    --purple-soft: #f1e9ff;
+    --slack: #611f69;
+    --slack-soft: #f3e8f5;
+    --sidebar: #1c2130;
+    --sidebar-muted: #9aa1b1;
+    --shadow: 0 1px 2px rgba(24, 30, 51, 0.03), 0 1px 10px rgba(24, 30, 51, 0.03);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  /* 이 목업은 다크모드 없이 단일 라이트 룩으로 고정 (다른 목업과 동일).
+     실제 구현은 DESIGN.md / LAYOUT.md(Bootstrap 5.3) 기준으로 다시 만든다 — 토큰/색 그대로 쓰지 말 것.
+     사이드바는 공통 shell(apps/common/templates/includes/sidebar.html)에 이미 있음 — 여기선 배치 참고용. */
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Noto Sans KR", "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.modal-open { overflow: hidden; }
+  a { color: inherit; text-decoration: none; }
+
+  .app { display: flex; min-height: 100vh; }
+
+  /* ============ sidebar ============ */
+  .sidebar {
+    width: 232px;
+    flex-shrink: 0;
+    background: var(--sidebar);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 14px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 15px; font-weight: 800; letter-spacing: -0.01em;
+    padding: 6px 10px 18px;
+  }
+  .brand .logo {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .nav-group-label {
+    font-size: 10.5px; font-weight: 700; color: var(--sidebar-muted);
+    letter-spacing: 0.04em; padding: 14px 12px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; color: var(--sidebar-muted);
+    cursor: pointer;
+  }
+  .nav-item .ico { font-size: 15px; width: 18px; text-align: center; }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+  .nav-item.active { background: var(--accent); color: #fff; }
+  .nav-item .count {
+    margin-left: auto; font-size: 10.5px; font-weight: 700;
+    background: rgba(255,255,255,0.16); color: #fff;
+    padding: 1px 7px; border-radius: 20px;
+  }
+  .nav-item.active .count { background: rgba(255,255,255,0.24); }
+  .sidebar-foot { margin-top: auto; padding-top: 14px; }
+  .sidebar-user {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 12px; border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.05);
+  }
+  .sidebar-user .u-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent-soft); color: var(--accent-text);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
+  }
+  .sidebar-user .u-name { font-size: 12px; font-weight: 700; }
+  .sidebar-user .u-role { font-size: 10.5px; color: var(--sidebar-muted); }
+
+  /* ============ main ============ */
+  .main { flex: 1; min-width: 0; padding: 26px 32px 60px; }
+  .content { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  @media (min-width: 1500px) { .main { padding-left: 56px; padding-right: 56px; } }
+
+  .page-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 2px; }
+  .breadcrumb { font-size: 12.5px; color: var(--text-faint); font-weight: 600; }
+  h1.page-title { font-size: 21px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+  .page-sub { font-size: 12.5px; color: var(--text-muted); }
+
+  /* 한 줄 요약 (박스 아님) */
+  .summary-line {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+    font-size: 12.5px; color: var(--text-muted); margin-top: 4px;
+  }
+  .summary-line b { color: var(--text); font-weight: 800; }
+  .summary-line .s-alert b { color: var(--red); }
+  .summary-line .sep { color: var(--border-strong); }
+
+  /* ---------- cards ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 18px 20px 20px;
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .card-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+  .card-link { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .card-link:hover { color: var(--accent-text); }
+  .muted { color: var(--text-muted); }
+
+  /* 개체가 많아지면 카드 안에서 스크롤 (헤더/푸터는 고정) */
+  .list-scroll { max-height: 328px; overflow-y: auto; margin: 0 -6px; padding: 0 6px; }
+  .list-scroll.tall { max-height: 380px; }
+  .list-scroll::-webkit-scrollbar { width: 8px; }
+  .list-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 20px; }
+  .list-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  /* ---------- progress bars ---------- */
+  .bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 128px; }
+  .bar-track { flex: 1; height: 7px; border-radius: 20px; background: var(--surface-sunken); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 20px; background: var(--accent); }
+  .bar-fill.fb { background: var(--purple); }
+  .bar-num { font-size: 11.5px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+
+  /* ---------- table ---------- */
+  .scroll-x { overflow: auto; max-height: 360px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tbl thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); }
+  .tbl th {
+    text-align: left; font-size: 11px; color: var(--text-faint); font-weight: 700;
+    padding: 6px 10px 8px; border-bottom: 1px solid var(--border);
+  }
+  .tbl td { padding: 11px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl .t-name { font-weight: 700; }
+  .tbl .t-name .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 6px; }
+
+  .badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .badge.unit { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.unit.team { background: var(--purple-soft); color: var(--purple); }
+  .badge.dday { background: var(--surface-sunken); color: var(--text-muted); }
+  .badge.dday.soon { background: var(--red-soft); color: var(--red); }
+  .badge.st-imminent { background: var(--amber-soft); color: var(--amber); }
+  .badge.st-open { background: var(--green-soft); color: #147a52; }
+  .badge.st-done { background: var(--accent-soft); color: var(--accent-text); }
+
+  /* ---------- feedback queue ---------- */
+  .fq-row { display: flex; align-items: center; gap: 11px; padding: 9px 4px; border-bottom: 1px solid var(--border); }
+  .fq-row:last-child { border-bottom: 0; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent-soft); color: var(--accent-text);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+  }
+  .avatar.team { background: var(--purple-soft); color: var(--purple); }
+  .fq-main { flex: 1; min-width: 0; }
+  .fq-main .fq-who { font-size: 12.5px; font-weight: 700; }
+  .fq-main .fq-what { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fq-time { font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+
+  .btn {
+    border: none; border-radius: var(--radius-sm);
+    padding: 7px 13px; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-ghost { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border-strong); }
+  .btn-ghost:hover { background: var(--surface-muted); }
+  .btn-slack { background: var(--slack); color: #fff; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-slack:hover { filter: brightness(1.12); }
+  .btn-slack.ghost { background: var(--slack-soft); color: var(--slack); }
+  .btn-slack.ghost:hover { filter: none; background: #ecdcef; }
+
+  /* ---------- 미제출 현황 ---------- */
+  .ns-row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .ns-row:last-child { border-bottom: 0; }
+  .ns-main { flex: 1; min-width: 150px; }
+  .ns-main .ns-title { font-size: 12.5px; font-weight: 700; }
+  .ns-main .ns-meta { font-size: 11px; color: var(--text-faint); }
+  .ns-count { font-size: 13px; font-weight: 800; color: var(--red); white-space: nowrap; }
+  .ns-count small { font-size: 10.5px; color: var(--text-faint); font-weight: 600; }
+  .note { font-size: 11px; color: var(--text-faint); margin-top: 12px; line-height: 1.5; }
+  .conn-pill { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+  .conn-pill.ok { background: var(--green-soft); color: #147a52; }
+
+  /* 강의안 준비 현황 */
+  .lc-row { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .lc-row:last-child { border-bottom: 0; }
+  .lc-date {
+    width: 46px; flex-shrink: 0; text-align: center;
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    background: var(--surface-sunken); border-radius: var(--radius-sm); padding: 5px 0; line-height: 1.25;
+  }
+  .lc-main { flex: 1; min-width: 150px; }
+  .lc-main .lc-title { font-size: 12.5px; font-weight: 700; }
+  .lc-main .lc-meta { font-size: 11px; color: var(--text-faint); }
+  .lc-status { display: flex; gap: 6px; flex-wrap: wrap; }
+  .st-chip { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: var(--surface-sunken); color: var(--text-faint); white-space: nowrap; }
+  .st-chip.ok { background: var(--green-soft); color: #147a52; }
+  .st-chip.warn { background: var(--amber-soft); color: var(--amber); }
+
+  /* ---------- two-col ---------- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+
+  /* ---------- modal ---------- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(17, 22, 38, 0.46);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 40px 18px; overflow-y: auto; z-index: 100;
+    opacity: 0; pointer-events: none; transition: opacity 0.16s ease;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    box-shadow: 0 24px 64px rgba(15, 20, 40, 0.28);
+    width: 100%; max-width: 540px; padding: 22px 24px 24px;
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.16s cubic-bezier(.2,.8,.2,1);
+  }
+  .modal-overlay.show .modal-card { transform: translateY(0) scale(1); }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .modal-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+  .modal-close {
+    width: 30px; height: 30px; border-radius: 8px;
+    border: 1px solid var(--border-strong); background: var(--surface);
+    color: var(--text-muted); cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .modal-close:hover { background: var(--surface-muted); color: var(--text); }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
+  .field-label { font-size: 12.5px; font-weight: 700; }
+  .field textarea {
+    width: 100%; border: 1px solid var(--border-strong); background: var(--surface-sunken);
+    border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px;
+    color: var(--text); font-family: inherit; line-height: 1.6; min-height: 104px; resize: vertical;
+  }
+  .field textarea:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rchip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-sunken); border: 1px solid var(--border-strong);
+    border-radius: 999px; padding: 4px 6px 4px 10px; font-size: 11.5px; font-weight: 600;
+  }
+  .rchip .handle { color: var(--text-faint); }
+  .rchip button { border: none; background: none; color: var(--text-faint); cursor: pointer; font-size: 13px; line-height: 1; padding: 2px; }
+  .rchip button:hover { color: var(--red); }
+  .rchip.off { opacity: 0.4; text-decoration: line-through; }
+  .static-note {
+    font-size: 11.5px; color: var(--text-muted); background: var(--slack-soft);
+    border-radius: var(--radius-sm); padding: 9px 12px; line-height: 1.5;
+  }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions .btn { flex: 1; padding: 11px 16px; font-size: 13px; }
+
+  /* ---------- toast ---------- */
+  .toast {
+    position: fixed; right: 22px; bottom: 22px;
+    background: var(--text); color: #fff; padding: 12px 16px;
+    border-radius: 12px; font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    transform: translateY(16px) scale(0.96); opacity: 0; pointer-events: none;
+    transition: transform 0.22s cubic-bezier(.2,.8,.2,1), opacity 0.22s ease;
+    z-index: 150; max-width: 360px;
+  }
+  .toast.show { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .modal-overlay, .modal-card, .toast { transition: none; }
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 860px) {
+    .app { flex-direction: column; }
+    .sidebar {
+      width: 100%; height: auto; position: static;
+      flex-direction: row; align-items: center; flex-wrap: wrap;
+      gap: 4px; padding: 12px;
+    }
+    .brand { padding: 6px 10px; }
+    .nav-group-label, .sidebar-foot { display: none; }
+    .nav-item { padding: 8px 10px; }
+    .nav-item .count { display: none; }
+    .cols { grid-template-columns: 1fr; }
+    .main { padding: 20px 16px 48px; }
+  }
+</style>
+
+<div class="app">
+
+  <!-- ============ sidebar ============ -->
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">🎓</span> AX 평가 콘솔</div>
+
+    <div class="nav-group-label">튜터</div>
+    <a class="nav-item active"><span class="ico">📊</span> 대시보드</a>
+    <a class="nav-item" href="tutor-lecture.html"><span class="ico">📚</span> 강의안 관리</a>
+    <a class="nav-item" href="tutor-assign-management.html"><span class="ico">📝</span> 과제 관리</a>
+    <a class="nav-item" href="tutor-assign-management.html"><span class="ico">📥</span> 제출 현황</a>
+    <a class="nav-item" href="tutor-assign-management.html">
+      <span class="ico">✍️</span> 피드백 관리 <span class="count">9</span>
+    </a>
+
+    <div class="sidebar-foot">
+      <a class="nav-item"><span class="ico">⚙️</span> 설정 · 연동</a>
+      <div class="sidebar-user">
+        <span class="u-avatar">김</span>
+        <span>
+          <span class="u-name">김튜터</span><br>
+          <span class="u-role">튜터</span>
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ main ============ -->
+  <main class="main">
+    <div class="content">
+
+      <div class="page-head">
+        <div class="breadcrumb">튜터 · 대시보드</div>
+        <h1 class="page-title">김튜터님, 오늘도 수고 많으세요 👋</h1>
+        <div class="summary-line">
+          <span>진행 중 과제 <b>4</b></span>
+          <span class="sep">·</span>
+          <span class="s-alert">피드백 대기 <b>9건</b></span>
+          <span class="sep">·</span>
+          <span class="s-alert">마감 임박(D-3) <b>2</b></span>
+          <span class="sep">·</span>
+          <span>오늘 신규 제출 <b>6</b></span>
+          <span class="sep">·</span>
+          <span>강의안 <b>12차시</b></span>
+        </div>
+      </div>
+
+      <!-- ============ 진행 중인 과제 ============ -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">🗂️ 진행 중인 과제</div>
+          <a class="card-link" href="tutor-assign-management.html">전체 보기 →</a>
+        </div>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>과제명</th><th>대상</th><th>마감</th>
+                <th style="min-width:150px;">제출</th><th style="min-width:150px;">피드백</th><th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="t-name"><span class="dot"></span>Python 클래스 실습</td>
+                <td><span class="badge unit">개인</span></td>
+                <td><span class="badge dday soon">D-1</span></td>
+                <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div><span class="bar-num">18/25</span></div></td>
+                <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill fb" style="width:67%"></div></div><span class="bar-num">12/18</span></div></td>
+                <td><span class="badge st-imminent">마감 임박</span></td>
+              </tr>
+              <tr>
+                <td class="t-name"><span class="dot"></span>함수와 모듈 과제</td>
+                <td><span class="badge unit">개인</span></td>
+                <td><span class="badge dday">D-6</span></td>
+                <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><span class="bar-num">10/25</span></div></td>
+                <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill fb" style="width:40%"></div></div><span class="bar-num">4/10</span></div></td>
+                <td><span class="badge st-open">진행 중</span></td>
+              </tr>
+              <tr>
+                <td class="t-name"><span class="dot"></span>팀 프로젝트 — 미니 크롤러</td>
+                <td><span class="badge unit team">팀</span></td>
+                <td><span class="badge dday">D-9</span></td>
+                <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><span class="bar-num">3/6 팀</span></div></td>
+                <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill fb" style="width:33%"></div></div><span class="bar-num">1/3 팀</span></div></td>
+                <td><span class="badge st-open">진행 중</span></td>
+              </tr>
+              <tr>
+                <td class="t-name"><span class="dot"></span>SQL 기본 쿼리 실습</td>
+                <td><span class="badge unit">개인</span></td>
+                <td><span class="badge dday">마감됨</span></td>
+                <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div><span class="bar-num">20/25</span></div></td>
+                <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill fb" style="width:100%"></div></div><span class="bar-num">20/20</span></div></td>
+                <td><span class="badge st-done">피드백 완료</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ 2-col: 피드백 대기 / 미제출 현황 ============ -->
+      <div class="cols">
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">⏳ 피드백 대기 목록 <span class="muted" style="font-weight:600;">9건</span></div>
+            <a class="card-link" href="tutor-assign-management.html">전체 보기 →</a>
+          </div>
+          <div class="list-scroll" style="max-height:214px;">
+          <div class="fq-row">
+            <div class="avatar">홍</div>
+            <div class="fq-main"><div class="fq-who">홍길동</div><div class="fq-what">Python 클래스 실습</div></div>
+            <span class="fq-time">오늘 14:30</span>
+            <button class="btn btn-primary">검토하기</button>
+          </div>
+          <div class="fq-row">
+            <div class="avatar">김</div>
+            <div class="fq-main"><div class="fq-who">김민수</div><div class="fq-what">Python 클래스 실습</div></div>
+            <span class="fq-time">오늘 11:25</span>
+            <button class="btn btn-primary">검토하기</button>
+          </div>
+          <div class="fq-row">
+            <div class="avatar team">2팀</div>
+            <div class="fq-main"><div class="fq-who">2팀</div><div class="fq-what">팀 프로젝트 — 미니 크롤러</div></div>
+            <span class="fq-time">어제 22:10</span>
+            <button class="btn btn-primary">검토하기</button>
+          </div>
+          <div class="fq-row">
+            <div class="avatar">박</div>
+            <div class="fq-main"><div class="fq-who">박서준</div><div class="fq-what">SQL 기본 쿼리 실습 · 재제출</div></div>
+            <span class="fq-time">어제 18:45</span>
+            <button class="btn btn-primary">검토하기</button>
+          </div>
+          <div class="fq-row">
+            <div class="avatar">최</div>
+            <div class="fq-main"><div class="fq-who">최우진</div><div class="fq-what">함수와 모듈 과제</div></div>
+            <span class="fq-time">어제 16:05</span>
+            <button class="btn btn-primary">검토하기</button>
+          </div>
+          <div class="fq-row">
+            <div class="avatar team">5팀</div>
+            <div class="fq-main"><div class="fq-who">5팀</div><div class="fq-what">팀 프로젝트 — 미니 크롤러</div></div>
+            <span class="fq-time">어제 09:12</span>
+            <button class="btn btn-primary">검토하기</button>
+          </div>
+          <div class="fq-row">
+            <div class="avatar">정</div>
+            <div class="fq-main"><div class="fq-who">정하은</div><div class="fq-what">함수와 모듈 과제</div></div>
+            <span class="fq-time">2일 전</span>
+            <button class="btn btn-primary">검토하기</button>
+          </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">🚨 미제출 학생 현황</div>
+            <button class="btn btn-slack ghost" id="bulkSlackBtn"><span>🔔</span> 전체 독려</button>
+          </div>
+          <div class="list-scroll">
+          <div class="ns-row">
+            <div class="ns-main">
+              <div class="ns-title">Python 클래스 실습</div>
+              <div class="ns-meta">마감 2026.05.20 · D-1</div>
+            </div>
+            <span class="ns-count">7명 <small>미제출</small></span>
+            <button class="btn btn-slack js-slack" data-assignment="Python 클래스 실습" data-due="D-1 (2026.05.20 18:00)"
+              data-students='[["김지훈","@jihoon"],["이서연","@seoyeon"],["박도윤","@doyoon"],["정하은","@haeun"],["강민재","@minjae"],["윤채원","@chaewon"],["임준호","@junho"]]'>
+              <span>🔔</span> Slack 독려
+            </button>
+          </div>
+          <div class="ns-row">
+            <div class="ns-main">
+              <div class="ns-title">함수와 모듈 과제</div>
+              <div class="ns-meta">마감 2026.05.25 · D-6</div>
+            </div>
+            <span class="ns-count">15명 <small>미제출</small></span>
+            <button class="btn btn-slack js-slack" data-assignment="함수와 모듈 과제" data-due="D-6 (2026.05.25 18:00)"
+              data-students='[["김지훈","@jihoon"],["이서연","@seoyeon"],["최유나","@yuna"],["장우석","@wooseok"]]'>
+              <span>🔔</span> Slack 독려
+            </button>
+          </div>
+          <div class="ns-row">
+            <div class="ns-main">
+              <div class="ns-title">팀 프로젝트 — 미니 크롤러</div>
+              <div class="ns-meta">마감 2026.06.02 · D-9 · 팀 과제</div>
+            </div>
+            <span class="ns-count">3팀 <small>미제출</small></span>
+            <button class="btn btn-slack js-slack" data-assignment="팀 프로젝트 — 미니 크롤러" data-due="D-9 (2026.06.02 18:00)"
+              data-students='[["1팀 (대표채널)","#team-1"],["4팀 (대표채널)","#team-4"],["5팀 (대표채널)","#team-5"]]'>
+              <span>🔔</span> Slack 독려
+            </button>
+          </div>
+          </div>
+          <p class="note">
+            Slack 워크스페이스 연동: <span class="conn-pill ok">연동됨</span>
+            · 미연동 시 설정 · 연동에서 Webhook/Bot Token 등록
+          </p>
+        </div>
+
+      </div>
+
+      <!-- ============ 강의안 준비 현황 ============ -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">📚 강의안 준비 현황 <span class="muted" style="font-weight:600;">차시 12개</span></div>
+          <a class="card-link" href="tutor-lecture.html">강의안 관리 →</a>
+        </div>
+        <p class="note" style="margin:0 0 6px;">
+          차시별 영상·교안 등록 상태입니다. 교안 첨부는 선택이에요 — 필요한 차시에만 올리면 됩니다.
+        </p>
+        <div class="list-scroll">
+          <div class="lc-row">
+            <span class="lc-date">5/23</span>
+            <div class="lc-main">
+              <div class="lc-title">모듈과 패키지 구조</div>
+              <div class="lc-meta">지난 수업 · 아직 아무것도 등록 안 됨</div>
+            </div>
+            <div class="lc-status">
+              <span class="st-chip warn">영상 미등록</span>
+              <span class="st-chip warn">교안 없음</span>
+            </div>
+            <button class="btn btn-primary">강의안 올리기</button>
+          </div>
+          <div class="lc-row">
+            <span class="lc-date">5/21</span>
+            <div class="lc-main">
+              <div class="lc-title">예외 처리와 디버깅</div>
+              <div class="lc-meta">교안 1개 등록 · 영상 링크 없음</div>
+            </div>
+            <div class="lc-status">
+              <span class="st-chip">영상 미등록</span>
+              <span class="st-chip ok">교안 1</span>
+            </div>
+            <button class="btn btn-ghost">영상 링크 추가</button>
+          </div>
+          <div class="lc-row">
+            <span class="lc-date">5/19</span>
+            <div class="lc-main">
+              <div class="lc-title">클래스와 객체 · 상속</div>
+              <div class="lc-meta">영상 + 교안 3개 등록 완료</div>
+            </div>
+            <div class="lc-status">
+              <span class="st-chip ok">영상 ✓</span>
+              <span class="st-chip ok">교안 3</span>
+            </div>
+            <button class="btn btn-ghost">관리</button>
+          </div>
+          <div class="lc-row">
+            <span class="lc-date">5/12</span>
+            <div class="lc-main">
+              <div class="lc-title">파일 입출력 실습</div>
+              <div class="lc-meta">영상만 등록 (교안은 이번 차시 미사용)</div>
+            </div>
+            <div class="lc-status">
+              <span class="st-chip ok">영상 ✓</span>
+              <span class="st-chip">교안 없음</span>
+            </div>
+            <button class="btn btn-ghost">관리</button>
+          </div>
+          <div class="lc-row">
+            <span class="lc-date">5/08</span>
+            <div class="lc-main">
+              <div class="lc-title">정규표현식 기초</div>
+              <div class="lc-meta">영상 + 교안 2개 등록 완료</div>
+            </div>
+            <div class="lc-status">
+              <span class="st-chip ok">영상 ✓</span>
+              <span class="st-chip ok">교안 2</span>
+            </div>
+            <button class="btn btn-ghost">관리</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ============ Slack 독려 모달 ============ -->
+<div class="modal-overlay" id="slackOverlay">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="slackTitle">
+    <div class="modal-head">
+      <div class="modal-title" id="slackTitle">🔔 Slack 독려 보내기</div>
+      <button class="modal-close" id="slackClose" type="button" aria-label="닫기">✕</button>
+    </div>
+    <div class="modal-sub" id="slackContext">Python 클래스 실습 · 마감 D-1</div>
+
+    <div class="field">
+      <span class="field-label">받는 사람 <span class="muted" id="slackCount">(7명)</span></span>
+      <div class="chips" id="slackChips"></div>
+    </div>
+
+    <div class="field">
+      <span class="field-label">메시지</span>
+      <textarea id="slackMsg"></textarea>
+      <span class="muted" style="font-size:11px;">치환: {이름} · {과제명} · {마감}</span>
+    </div>
+
+    <div class="static-note" id="slackNote">개별 DM으로 전송됩니다. 팀 과제는 각 팀 대표 채널로 전송돼요.</div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="slackCancel" type="button">취소</button>
+      <button class="btn btn-slack" id="slackSend" type="button" style="justify-content:center;"><span>🔔</span> <span id="slackSendLabel">7명에게 보내기</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span></div>
+
+<script>
+(function () {
+  var overlay = document.getElementById("slackOverlay");
+  var chipsBox = document.getElementById("slackChips");
+  var msgBox = document.getElementById("slackMsg");
+  var ctx = document.getElementById("slackContext");
+  var countEl = document.getElementById("slackCount");
+  var sendLabel = document.getElementById("slackSendLabel");
+  var note = document.getElementById("slackNote");
+  var active = [];
+
+  var DEFAULT_TMPL =
+    '{이름}님, "{과제명}" 마감이 {마감} 남았어요. 아직 제출이 확인되지 않았습니다. 어려운 부분 있으면 편하게 질문 주세요! 🙌';
+
+  function render() {
+    chipsBox.innerHTML = "";
+    var on = 0;
+    active.forEach(function (r) {
+      var chip = document.createElement("span");
+      chip.className = "rchip" + (r.off ? " off" : "");
+      chip.innerHTML =
+        '<span>' + r.name + '</span><span class="handle">' + r.handle + '</span>' +
+        '<button type="button" aria-label="제외">✕</button>';
+      chip.querySelector("button").addEventListener("click", function () { r.off = !r.off; render(); });
+      chipsBox.appendChild(chip);
+      if (!r.off) on++;
+    });
+    countEl.textContent = "(" + on + "명)";
+    sendLabel.textContent = on + "명에게 보내기";
+  }
+
+  function openModal(btn) {
+    var name = btn.getAttribute("data-assignment");
+    var due = btn.getAttribute("data-due");
+    var isTeam = /팀/.test(name);
+    active = JSON.parse(btn.getAttribute("data-students")).map(function (s) {
+      return { name: s[0], handle: s[1], off: false };
+    });
+    ctx.textContent = name + " · 마감 " + due;
+    note.textContent = isTeam
+      ? "각 팀의 대표 채널로 전송됩니다. 팀원 전체가 메시지를 보게 돼요."
+      : "각 학생에게 개별 DM으로 전송됩니다.";
+    msgBox.value = DEFAULT_TMPL.replace("{과제명}", name).replace("{마감}", due.split(" ")[0]);
+    render();
+    overlay.classList.add("show");
+    document.body.classList.add("modal-open");
+  }
+  function closeModal() {
+    overlay.classList.remove("show");
+    document.body.classList.remove("modal-open");
+  }
+
+  document.querySelectorAll(".js-slack").forEach(function (b) {
+    b.addEventListener("click", function () { openModal(b); });
+  });
+  document.getElementById("bulkSlackBtn").addEventListener("click", function () {
+    openModal(document.querySelector(".js-slack"));
+    ctx.textContent = "미제출 과제 3건 · 대상 학생 전체";
+  });
+
+  document.getElementById("slackClose").addEventListener("click", closeModal);
+  document.getElementById("slackCancel").addEventListener("click", closeModal);
+  overlay.addEventListener("click", function (e) { if (e.target === overlay) closeModal(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && overlay.classList.contains("show")) closeModal();
+  });
+
+  var toast = document.getElementById("toast");
+  var toastText = document.getElementById("toastText");
+  var toastTimer = null;
+  document.getElementById("slackSend").addEventListener("click", function () {
+    var on = active.filter(function (r) { return !r.off; }).length;
+    closeModal();
+    toastText.textContent = on + "명에게 Slack 독려 알림을 보냈습니다.";
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove("show"); }, 2400);
+  });
+})();
+</script>

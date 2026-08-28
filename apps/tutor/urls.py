@@ -1,10 +1,12 @@
 from django.urls import path
 
-from . import views_lecture, views_manage, views_review
+from . import views_dashboard, views_lecture, views_manage, views_review
 
 app_name = "tutor"
 
 urlpatterns = [
+    path("", views_dashboard.dashboard, name="dashboard"),
+    path("dashboard/", views_dashboard.dashboard, name="dashboard-alt"),
     path("assignments/", views_manage.assignment_list, name="assignment-list"),
     path("assignments/<int:pk>/edit/", views_manage.assignment_edit, name="assignment-edit"),
     path("assignments/<int:pk>/delete/", views_manage.assignment_delete, name="assignment-delete"),
