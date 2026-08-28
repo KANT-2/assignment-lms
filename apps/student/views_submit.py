@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import default_storage
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -26,6 +27,7 @@ from apps.common.preview import (  # noqa: F401
 from apps.core.models import Assignment, Submission, SubmissionFile
 
 from .forms import SubmissionForm
+from .identity import external_student_id
 
 
 def student_required(view_func):
@@ -43,16 +45,19 @@ def student_required(view_func):
 @student_required
 def assignment_list(request):
     student_id = request.user.id
+    team = accounts.get_user_team(external_student_id(request))
     submissions = {
-        item.assignment_id: item
-        for item in Submission.objects.filter(student_id=student_id, team_id__isnull=True)
+        item.assignment_id: item for item in Submission.objects.filter(
+            Q(student_id=student_id, team_id__isnull=True)
+            | Q(student_id__isnull=True, team_id=team.id if team else None)
+        )
     }
     now = timezone.now()
     rows = []
     for assignment in Assignment.objects.all().order_by("due_at"):
-        submission = submissions.get(assignment.id) if not assignment.is_team else None
-        if assignment.is_team:
-            status, status_class = "팀 과제 · 개인 제출 불가", "secondary"
+        submission = submissions.get(assignment.id)
+        if assignment.is_team and team is None:
+            status, status_class = "소속 팀 없음", "secondary"
         elif submission and submission.final_score is not None:
             status, status_class = "평가완료", "primary"
         elif submission:
@@ -68,8 +73,8 @@ def assignment_list(request):
             "status_class": status_class,
             "is_past": assignment.due_at < now,
             "can_submit": (
-                not assignment.is_team
-                and submission is None
+                submission is None
+                and (not assignment.is_team or team is not None)
                 and (assignment.allow_late or assignment.due_at >= now)
             ),
             "due_date_str": timezone.localtime(assignment.due_at).strftime('%Y-%m-%d'),
@@ -81,19 +86,32 @@ def assignment_list(request):
 def assignment_submit(request, assignment_id):
     assignment = get_object_or_404(Assignment, pk=assignment_id)
     student_id = request.user.id
+    team = (
+        accounts.get_user_team(external_student_id(request))
+        if assignment.is_team
+        else None
+    )
 
-    if assignment.is_team:
-        messages.error(request, "팀 과제는 개인 제출 화면에서 제출할 수 없습니다.")
+    if assignment.is_team and team is None:
+        messages.error(request, "소속된 팀이 없어 팀 과제를 제출할 수 없습니다.")
         return redirect("student:assignment-list")
     if timezone.now() > assignment.due_at and not assignment.allow_late:
         messages.error(request, "마감되어 더 이상 제출할 수 없는 과제입니다.")
         return redirect("student:assignment-list")
 
-    existing = Submission.objects.filter(
-        assignment=assignment, student_id=student_id, team_id__isnull=True
-    ).first()
+    existing_filter = {
+        "assignment": assignment,
+        "student_id": None if assignment.is_team else student_id,
+        "team_id": team.id if assignment.is_team else None,
+    }
+    existing = Submission.objects.filter(**existing_filter).first()
     if existing:
-        messages.info(request, "이미 제출한 과제입니다. 기존 제출물을 확인해 주세요.")
+        messages.info(
+            request,
+            "이미 팀원이 제출한 과제입니다. 기존 제출물을 확인해 주세요."
+            if assignment.is_team
+            else "이미 제출한 과제입니다. 기존 제출물을 확인해 주세요.",
+        )
         return redirect("student:assignment-preview", assignment_id=assignment.id)
 
     form = SubmissionForm(request.POST or None, request.FILES or None)
@@ -104,11 +122,24 @@ def assignment_submit(request, assignment_id):
         saved_name = None
         try:
             with transaction.atomic():
+                locked_assignment = Assignment.objects.select_for_update().get(
+                    pk=assignment.id
+                )
+                if Submission.objects.filter(**existing_filter).exists():
+                    messages.info(
+                        request,
+                        "다른 팀원이 먼저 제출했습니다. 기존 제출물을 확인해 주세요."
+                        if assignment.is_team
+                        else "이미 제출한 과제입니다. 기존 제출물을 확인해 주세요.",
+                    )
+                    return redirect(
+                        "student:assignment-preview", assignment_id=assignment.id
+                    )
                 saved_name = default_storage.save(storage_name, uploaded_file)
                 submission = Submission.objects.create(
-                    assignment=assignment,
-                    student_id=student_id,
-                    team_id=None,
+                    assignment=locked_assignment,
+                    student_id=None if assignment.is_team else student_id,
+                    team_id=team.id if assignment.is_team else None,
                     description=form.cleaned_data["description"],
                 )
                 SubmissionFile.objects.create(
@@ -135,20 +166,27 @@ def assignment_submit(request, assignment_id):
 @student_required
 def assignment_preview(request, assignment_id):
     assignment = get_object_or_404(Assignment, pk=assignment_id)
-    if assignment.is_team:
-        raise PermissionDenied("팀 과제 제출물은 이 화면에서 볼 수 없습니다.")
+    team = (
+        accounts.get_user_team(external_student_id(request))
+        if assignment.is_team
+        else None
+    )
+    if assignment.is_team and team is None:
+        raise PermissionDenied("소속된 팀의 제출물만 볼 수 있습니다.")
 
     submission = get_object_or_404(
         Submission.objects.prefetch_related("files"),
         assignment=assignment,
-        student_id=request.user.id,
-        team_id__isnull=True,
+        student_id=None if assignment.is_team else request.user.id,
+        team_id=team.id if assignment.is_team else None,
     )
     return render(request, "student/submission_preview.html", {
         "assignment": assignment,
         "submission": submission,
         "previews": [_preview(file) for file in submission.files.all()],
         "can_resubmit": (
-            timezone.now() < assignment.due_at and not submission.is_locked
+            not assignment.is_team
+            and timezone.now() < assignment.due_at
+            and not submission.is_locked
         ),
     })

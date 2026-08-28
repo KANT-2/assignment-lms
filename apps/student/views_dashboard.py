@@ -27,6 +27,8 @@ from django.views.decorators.http import require_POST
 from apps.accounts_client import services as accounts
 from apps.core.models import Assignment, Lesson, Submission, Todo
 
+from .identity import external_student_id
+
 # 공지 모델이 없어 정적 문구로 노출 (목업 배너 자리)
 NOTICES = [
     "[안내] 과제 제출 마감은 각 과제의 마감일시 기준입니다.",
@@ -70,7 +72,7 @@ def dashboard(request):
     now = timezone.now()
 
     # 내 팀 (없으면 None)
-    team = accounts.get_user_team(uid)
+    team = accounts.get_user_team(external_student_id(request))
     team_members = accounts.get_team_members(team.id) if team else []
 
     # 내 제출물 = 내 개인 제출 + (팀이 있으면) 내 팀 제출

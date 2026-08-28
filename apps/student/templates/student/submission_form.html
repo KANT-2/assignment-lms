@@ -5,7 +5,7 @@
 {% block page_header %}
 <div class="page-header">
   <a class="student-back-link" href="{% url 'student:assignment-list' %}">‹ 과제 목록으로 돌아가기</a>
-  <p class="student-eyebrow mt-3 mb-1">AX 프로젝트 평가 · 개인 과제</p>
+  <p class="student-eyebrow mt-3 mb-1">AX 프로젝트 평가 · {% if assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}</p>
   <div class="d-flex align-items-center flex-wrap gap-2">
     <h1 class="student-page-title">{{ assignment.title }}</h1>
     <span class="badge-soft {% if assignment.is_required %}badge-required{% else %}badge-optional{% endif %}">{% if assignment.is_required %}필수{% else %}선택{% endif %}</span>
@@ -20,6 +20,9 @@
     <h2 class="student-section-title">📌 과제 안내</h2>
     <div class="description-view">{{ assignment.description|default:"등록된 과제 설명이 없습니다."|linebreaksbr }}</div>
   </section>
+  {% if assignment.is_team %}
+    <div class="alert alert-info mb-0">팀원 중 한 명이 제출하면 팀 제출이 완료되며, 다른 팀원은 추가로 제출할 수 없습니다.</div>
+  {% endif %}
   <section class="student-card">
     <h2 class="student-section-title">📤 제출 파일 <span class="required-mark">필수</span></h2>
     <label class="form-label" for="{{ form.file.id_for_label }}">파일 선택</label>

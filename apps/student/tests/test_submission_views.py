@@ -64,7 +64,56 @@ class SubmissionViewTests(TestCase):
         self.assertEqual(saved_file.kind, SubmissionFile.Kind.PY)
         self.assertEqual(saved_file.file_name, "answer.PY")
 
-    def test_team_assignment_is_blocked(self):
+    @patch("apps.student.views_submit.accounts.get_user_team")
+    def test_team_member_can_submit_once_for_the_team(self, get_user_team):
+        get_user_team.return_value.id = 7
+        assignment = self.assignment(is_team=True)
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {
+                "description": "팀 제출 설명",
+                "file": SimpleUploadedFile("team.py", b"print('team')"),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("student:assignment-preview", args=[assignment.id]),
+        )
+        submission = Submission.objects.get(assignment=assignment)
+        self.assertIsNone(submission.student_id)
+        self.assertEqual(submission.team_id, 7)
+
+    @patch("apps.student.views_submit.accounts.get_user_team")
+    def test_second_team_member_cannot_submit_again(self, get_user_team):
+        get_user_team.return_value.id = 7
+        assignment = self.assignment(is_team=True)
+        existing = Submission.objects.create(
+            assignment=assignment,
+            student_id=None,
+            team_id=7,
+            description="먼저 제출한 내용",
+        )
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {
+                "description": "두 번째 제출",
+                "file": SimpleUploadedFile("second.py", b"print('second')"),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("student:assignment-preview", args=[assignment.id]),
+        )
+        self.assertEqual(Submission.objects.filter(assignment=assignment).count(), 1)
+        existing.refresh_from_db()
+        self.assertEqual(existing.description, "먼저 제출한 내용")
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_student_without_team_cannot_submit_team_assignment(self, _get_user_team):
         assignment = self.assignment(is_team=True)
 
         response = self.client.get(

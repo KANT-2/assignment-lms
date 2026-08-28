@@ -6,12 +6,15 @@ from uuid import uuid4
 from django.contrib import messages
 from django.core.files.storage import default_storage
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.core.models import Submission, SubmissionFile
+from apps.accounts_client import services as accounts
+from apps.core.models import Assignment, Submission, SubmissionFile
 
 from .forms import ResubmissionForm
+from .identity import external_student_id
 from .views_submit import _preview, _storage_name, _submission_kind, student_required
 
 
@@ -35,6 +38,64 @@ def _resubmission_block_reason(submission):
     if submission.is_locked or hasattr(submission, "evaluation"):
         return "튜터 평가가 등록된 제출물은 재제출할 수 없습니다."
     return None
+
+
+def _result_submission(submission_id, student_id, external_id):
+    team = accounts.get_user_team(external_id)
+    owner_filter = Q(student_id=student_id, team_id__isnull=True)
+    if team:
+        owner_filter |= Q(student_id__isnull=True, team_id=team.id)
+    return get_object_or_404(
+        Submission.objects.select_related(
+            "assignment", "evaluation", "ai_evaluation"
+        ).prefetch_related("files"),
+        owner_filter,
+        pk=submission_id,
+    )
+
+
+@student_required
+def result_list(request):
+    team = accounts.get_user_team(external_student_id(request))
+    owner_filter = Q(student_id=request.user.id, team_id__isnull=True)
+    if team:
+        owner_filter |= Q(student_id__isnull=True, team_id=team.id)
+
+    submissions = {
+        submission.assignment_id: submission
+        for submission in Submission.objects.filter(owner_filter).select_related(
+            "evaluation", "ai_evaluation"
+        )
+    }
+    now = timezone.now()
+    rows = []
+    for assignment in Assignment.objects.all().order_by("-due_at"):
+        submission = submissions.get(assignment.id)
+        is_past = assignment.due_at <= now
+        evaluation = getattr(submission, "evaluation", None) if submission else None
+        if not is_past:
+            status, status_class = "마감 전", "secondary"
+        elif submission is None:
+            status, status_class = "제출 기록 없음", "danger"
+        elif evaluation is None:
+            status, status_class = "피드백 대기", "secondary"
+        else:
+            status, status_class = "피드백 완료", "primary"
+        rows.append(
+            {
+                "assignment": assignment,
+                "submission": submission,
+                "evaluation": evaluation,
+                "is_past": is_past,
+                "status": status,
+                "status_class": status_class,
+            }
+        )
+    return render(
+        request,
+        "student/result_list.html",
+        {"rows": rows},
+    )
 
 
 @student_required
@@ -105,7 +166,11 @@ def resubmit(request, submission_id):
 
 @student_required
 def result(request, submission_id):
-    submission = _owned_submission(submission_id, request.user.id)
+    submission = _result_submission(
+        submission_id,
+        request.user.id,
+        external_student_id(request),
+    )
     assignment = submission.assignment
     if timezone.now() < assignment.due_at:
         messages.info(request, "평가 결과는 과제 마감 후 확인할 수 있습니다.")
