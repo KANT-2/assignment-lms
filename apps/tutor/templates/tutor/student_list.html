@@ -102,7 +102,7 @@
             <th>학생</th><th>팀</th>
             <th style="min-width:150px;">필수 과제 제출률</th>
             <th style="min-width:150px;">선택 과제 제출률</th>
-            <th>성적</th><th>마지막 활동</th><th>체류 시간</th>
+            <th>성적</th><th>마지막 제출</th>
           </tr>
         </thead>
         <tbody>
@@ -136,8 +136,7 @@
               {% else %}<span class="dash-val">—</span>{% endif %}
             </td>
             <td class="dash-val">—</td>
-            <td class="bar-num">{% if r.last_at %}{{ r.last_at|timesince }} 전{% else %}활동 없음{% endif %}</td>
-            <td class="dash-val">—</td>
+            <td class="bar-num">{% if r.last_at %}{{ r.last_at|timesince }} 전{% else %}제출 없음{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -151,7 +150,7 @@
       · <b>팀</b> — 라운드(프로젝트)마다 팀이 재편성되며 팀 명단은 별도 테이블에서 관리됩니다. 아직 연동 전이라 "미연동"으로 표시됩니다.<br>
       · <b>성적</b> — 평가 집계 방식이 확정되지 않아 컬럼 자리만 잡아 두었습니다.<br>
       · <b>제출률</b> — 개인 과제 전체 기준입니다. 팀 과제는 학생 귀속 정보가 없어 분모에서 제외했습니다.<br>
-      · <b>체류 시간</b> — 학습 활동 추적이 아직 없어 값이 비어 있습니다.
+      · <b>마지막 제출</b> — 마지막 과제 제출 시각 기준입니다 (접속 기록은 수집하지 않음).
     </p>
   </div>
 </div>

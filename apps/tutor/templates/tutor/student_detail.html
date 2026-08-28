@@ -30,7 +30,7 @@
   .sdet .d-name { font-size:17px; font-weight:800; }
   .sdet .d-meta { font-size:12px; color:var(--s-tmuted); }
 
-  .sdet .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:14px; }
+  .sdet .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
   @media (max-width:760px){ .sdet .tiles { grid-template-columns:repeat(2,1fr); } }
   .sdet .tile { border:1px solid var(--s-border); border-radius:var(--s-r-md); padding:12px 14px; display:flex; flex-direction:column; gap:4px; background:var(--s-surface); }
   .sdet .tile .t-label { font-size:11px; color:var(--s-tmuted); font-weight:600; }
@@ -89,10 +89,9 @@
       <span class="t-value">{% if opt_rate is not None %}{{ opt_rate }}<small>%</small>{% else %}<span class="dash-val">—</span>{% endif %}</span>
       <span class="muted" style="font-size:11px;">{{ opt_done }}/{{ opt_total }}</span>
     </div>
-    <div class="tile"><span class="t-label">마지막 활동</span>
-      <span class="t-value" style="font-size:15px;">{% if last_at %}{{ last_at|timesince }} 전{% else %}<span class="dash-val">활동 없음</span>{% endif %}</span>
+    <div class="tile"><span class="t-label">마지막 제출</span>
+      <span class="t-value" style="font-size:15px;">{% if last_at %}{{ last_at|timesince }} 전{% else %}<span class="dash-val">제출 없음</span>{% endif %}</span>
     </div>
-    <div class="tile"><span class="t-label">체류 시간</span><span class="t-value dash-val">—</span></div>
   </div>
 
   <div class="card">
