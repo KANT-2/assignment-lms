@@ -617,8 +617,12 @@
 
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get('date');
+    const lessonParam = parseInt(params.get('lesson'), 10);
+    const targetLesson = lessonsData.find(l => l.id === lessonParam);
 
-    if (dateParam && lessonsData.some(l => l.date === dateParam)) {
+    if (targetLesson) {
+        selectedDateStr = targetLesson.date;
+    } else if (dateParam && lessonsData.some(l => l.date === dateParam)) {
         selectedDateStr = dateParam;
     } else {
         const todayStr = new Date().toISOString().split('T')[0];
@@ -634,7 +638,9 @@
     renderPlaylist();
     
     const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
-    if (dayLessons.length > 0) {
+    if (targetLesson) {
+        selectLesson(targetLesson.id);
+    } else if (dayLessons.length > 0) {
         selectLesson(dayLessons[0].id);
     }
   }
