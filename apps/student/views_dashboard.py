@@ -3,12 +3,12 @@
 # 학생 A(과제 목록/제출)·학생 B(재제출/결과)와 별개 — 이 파일은 홈 대시보드 전용.
 #
 # 목업: docs/mockups/student-dashboard.html — 바꾼 부분:
-#   - 평가 진행률 카드 → "내 과제 현황"(진행률 + 개수 + 전체 과제 링크)
+#   - 평가 진행률 카드 → 별도 박스 없이 "다가오는 마감" 패널에 진행률·개수 통합
 #   - 최근 공개 결과 → 100점 만점 기준 (5점 척도·가중합산은 ERD §4.3 폐기안)
 #   - 공지 배너 → 정적 플레이스홀더 (공지 모델 없음)
 #   - 캘린더 = Assignment.due_at + Lesson.lesson_date, 점은 제출 상태별 색(미제출/제출완료)
-#   - 캘린더 아래 패널 = 평소엔 "다가오는 마감"(미제출 과제 D-day순),
-#     날짜를 누르면(?d=) 그날 일정으로 전환
+#   - 캘린더 아래 패널 = 평소엔 "다가오는 마감"(미제출·마감 전 과제 D-day순 + 진행률),
+#     날짜를 누르면(?d=) 그날 일정으로 전환, 패널의 "← 다가오는 마감"으로 복귀
 #
 # 외부 계정/팀 데이터는 apps/accounts_client/services.py 헬퍼로만 접근.
 # 사용자 role / 네비게이션은 apps/common/context_processors.py 가 처리 → nav_role 안 넘김.
@@ -84,10 +84,13 @@ def dashboard(request):
     day_lectures = day_bucket.get("lecture", [])
     day_assignments = day_bucket.get("assignment", [])
 
-    # ── 다가오는 마감 (미제출 과제, 마감 임박순) ──
+    # ── 다가오는 마감 (미제출 + 아직 마감 전 과제, 마감 임박순) ──
+    # "다가오는" 마감이므로 이미 마감이 지난 과제는 제외한다.
     upcoming = []
     for a in Assignment.objects.order_by("due_at"):
         if not _applies(a) or a.id in my_subs:
+            continue
+        if now > a.due_at:
             continue
         due_local = timezone.localtime(a.due_at)
         upcoming.append({
@@ -95,7 +98,6 @@ def dashboard(request):
             "title": a.title,
             "due": due_local,
             "dday": (due_local.date() - today).days,
-            "overdue": now > a.due_at,
             "allow_late": a.allow_late,
             "is_team": a.is_team,
         })

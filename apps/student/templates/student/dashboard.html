@@ -68,6 +68,10 @@
   .dash .day-panel-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
   .dash .day-panel-head .label { font-size:13px; font-weight:700; }
   .dash .day-panel-head .count { font-size:11.5px; color:var(--d-tmuted); font-weight:600; }
+  .dash .day-panel-head .back-link { font-size:11.5px; color:var(--d-accent-text); font-weight:700; text-decoration:none; }
+  .dash .day-panel-head .back-link:hover { text-decoration:underline; }
+  .dash .day-panel .stat-counts { margin:10px 0 6px; }
+  .dash .day-panel .see-all { margin-top:12px; padding-top:10px; }
   .dash .sched-item { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:10px; }
   .dash .sched-item:hover { background:var(--d-muted); }
   .dash .sched-item .chip { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
@@ -87,17 +91,13 @@
   .dash .due-row:last-of-type { border-bottom:0; }
   .dash .dday { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; flex-shrink:0; min-width:58px; text-align:center;
     background:var(--d-sunken); color:var(--d-tmuted); }
-  .dash .dday.over { background:var(--d-red-soft); color:var(--d-red); }
   .dash .dday.soon { background:var(--d-amber-soft); color:var(--d-amber); }
   .dash .due-row .dt { flex:1; font-size:13px; }
   .dash .due-row .dt small { color:var(--d-tfaint); font-size:11.5px; }
   .dash .day-cap { font-size:11px; color:var(--d-tfaint); margin-top:10px; }
 
-  .dash .prog-top { display:flex; align-items:center; gap:10px; font-size:12.5px; margin-bottom:8px; }
-  .dash .prog-top .status { color:var(--d-green); font-weight:700; }
   .dash .prog-track { height:6px; border-radius:4px; background:var(--d-sunken); overflow:hidden; margin-bottom:6px; }
   .dash .prog-fill { height:100%; background:linear-gradient(90deg,var(--d-accent),#8aa2ff); border-radius:4px; }
-  .dash .prog-pct { font-size:12px; color:var(--d-tmuted); font-weight:700; text-align:right; margin-bottom:12px; }
   .dash .stat-counts { display:flex; gap:16px; font-size:13px; margin-top:4px; }
   .dash .stat-counts b { font-weight:800; }
   .dash .stat-counts .miss { color:var(--d-red); }
@@ -204,6 +204,7 @@
           {# 특정 날짜 클릭 → 그날 일정 #}
           <div class="day-panel-head">
             <span class="label">{{ selected|date:"n월 j일" }} 일정</span>
+            <a class="back-link" href="?y={{ cal.year }}&m={{ cal.month }}">← 다가오는 마감</a>
           </div>
           {% if day_lectures %}
             <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
@@ -225,14 +226,21 @@
             <div class="day-empty">등록된 일정이 없습니다.</div>
           {% endif %}
         {% else %}
-          {# 평소 → 다가오는 마감 (미제출 과제) #}
+          {# 평소 → 다가오는 마감 (미제출 · 마감 전 과제) + 내 과제 현황 #}
           <div class="day-panel-head">
             <span class="label">⏰ 다가오는 마감</span>
+            <span class="count">{{ assign_stats.submitted }} / {{ assign_stats.total }} 제출</span>
+          </div>
+          <div class="prog-track"><div class="prog-fill" style="width:{{ assign_stats.pct }}%"></div></div>
+          <div class="stat-counts">
+            <span class="miss">미제출 <b>{{ assign_stats.todo }}</b></span>
+            <span>제출 <b>{{ assign_stats.submitted }}</b></span>
+            <span class="grd">평가완료 <b>{{ assign_stats.graded }}</b></span>
           </div>
           {% for u in upcoming %}
             <div class="due-row">
-              <span class="dday {% if u.overdue %}over{% elif u.dday <= 3 %}soon{% endif %}">
-                {% if u.overdue %}마감 지남{% elif u.dday == 0 %}오늘{% else %}D-{{ u.dday }}{% endif %}
+              <span class="dday {% if u.dday <= 3 %}soon{% endif %}">
+                {% if u.dday == 0 %}오늘{% else %}D-{{ u.dday }}{% endif %}
               </span>
               <span class="dt">
                 {{ u.title }}
@@ -240,32 +248,17 @@
               </span>
             </div>
           {% empty %}
-            <div class="day-empty">제출할 과제가 없습니다. 👍</div>
+            <div class="day-empty">다가오는 마감이 없습니다. 👍</div>
           {% endfor %}
+          <a class="see-all" href="#" title="준비 중 (학생 A 과제 페이지)">
+            전체 과제 보기 <span aria-hidden="true">→</span>
+            <span class="soon">학생 A 페이지 완성 후 연결</span>
+          </a>
           <div class="day-cap">날짜를 누르면 그날 일정(강의·과제)으로 바뀝니다.</div>
         {% endif %}
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">🔵 내 과제 현황</div>
-        <div class="card-sub">{{ assign_stats.submitted }} / {{ assign_stats.total }} 제출</div>
-      </div>
-      <div class="prog-track"><div class="prog-fill" style="width:{{ assign_stats.pct }}%"></div></div>
-      <div class="prog-pct">{{ assign_stats.pct }}%</div>
-
-      <div class="stat-counts">
-        <span class="miss">미제출 <b>{{ assign_stats.todo }}</b></span>
-        <span>제출 <b>{{ assign_stats.submitted }}</b></span>
-        <span class="grd">평가완료 <b>{{ assign_stats.graded }}</b></span>
-      </div>
-
-      <a class="see-all" href="#" title="준비 중 (학생 A 과제 페이지)">
-        전체 과제 보기 <span aria-hidden="true">→</span>
-        <span class="soon">학생 A 페이지 완성 후 연결</span>
-      </a>
-    </div>
   </div>
 
   {# ── 오른쪽 ── #}
