@@ -46,7 +46,7 @@ def tutor_lecture_update_api(request):
         existing_lesson_ids = set(lecture.lessons.values_list('id', flat=True))
         incoming_ids = set()
         
-        for idx, l_data in enumerate(lessons_list):
+        for l_data in lessons_list:
             l_id = l_data.get('id')
             if l_id and l_id in existing_lesson_ids:
                 # Update
@@ -83,5 +83,21 @@ def tutor_lecture_update_api(request):
         for l_id in existing_lesson_ids - incoming_ids:
             Lesson.objects.filter(id=l_id).delete()
             
-        return JsonResponse({'status': 'success'})
+        # Return updated lessons so frontend gets real DB IDs
+        updated_lessons = []
+        for idx, lesson in enumerate(lecture.lessons.all().prefetch_related('materials')):
+            updated_lessons.append({
+                'id': lesson.id,
+                'order': idx + 1,
+                'title': lesson.title,
+                'date': lesson.lesson_date.strftime('%Y-%m-%d'),
+                'blogUrl': lesson.blog_link,
+                'videoUrl': lesson.video_url,
+                'materials': [
+                    {'kind': mat.kind, 'title': mat.title, 'size': '0 MB', 'url': mat.file_url if mat.kind == 'FILE' else mat.link_url}
+                    for mat in lesson.materials.all()
+                ]
+            })
+            
+        return JsonResponse({'status': 'success', 'lessons': updated_lessons})
     return JsonResponse({'status': 'error'}, status=400)
