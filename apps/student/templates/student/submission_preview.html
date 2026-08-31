@@ -1,7 +1,29 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{{ assignment.title }} 미리보기 | AX 과제 시스템{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
+<style>
+  .student-card .preview-panel { margin-bottom:12px; }
+  .student-card .preview-panel:last-child { margin-bottom:0; }
+  .student-preview-details > summary { display:flex; align-items:center; gap:8px; padding:10px 12px; list-style:none; color:var(--color-text-muted); background:var(--color-surface-subtle); font-size:12px; font-weight:700; cursor:pointer; }
+  .student-preview-details > summary::-webkit-details-marker { display:none; }
+  .student-preview-details > summary::before { content:"▸"; color:var(--color-text-muted); font-size:10px; }
+  .student-preview-details[open] > summary { border-bottom:1px solid var(--color-outline); }
+  .student-preview-details[open] > summary::before { content:"▾"; }
+  .student-preview-details .preview-hint { margin-left:auto; color:var(--color-primary); font-weight:600; }
+  .student-preview-details .preview-hint::after { content:"펼치기"; }
+  .student-preview-details[open] .preview-hint::after { content:"접기"; }
+  .student-submission-image { display:block; max-width:100%; max-height:640px; margin:0 auto; border-radius:10px; object-fit:contain; }
+  .student-card .text-preview { max-height:420px; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
+  .student-csv-preview { white-space:pre; }
+  .student-card .file-meta { align-items:center; flex-wrap:wrap; }
+  .submission-info-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; }
+  .submission-info-header .student-section-title { margin-bottom:0; }
+  .submission-file-actions { display:flex; align-items:center; gap:12px; margin-left:auto; }
+  .submission-download-button { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+</style>
+{% endblock %}
 {% block page_header %}
 <div class="page-header">
   <a class="student-back-link" href="{% url 'student:assignment-list' %}">‹ 과제 목록으로 돌아가기</a>
@@ -20,39 +42,58 @@
     <div class="description-view">{{ submission.description|default:"작성한 설명이 없습니다."|linebreaksbr }}</div>
   </section>
   <section class="student-card">
-    <h2 class="student-section-title">📄 내 제출 정보</h2>
+    <div class="submission-info-header">
+      <h2 class="student-section-title">📄 내 제출 정보</h2>
+      {% if previews.0 %}
+        <a class="submission-download-button btn btn-outline-primary btn-sm" href="{% url 'student:submission-file-download' previews.0.file.id %}" download aria-label="{{ previews.0.file.file_name }} 다운로드">⬇ 다운로드</a>
+      {% endif %}
+    </div>
     {% for preview in previews %}
       <div class="file-meta">
         <a class="fw-semibold text-decoration-none" href="{% url 'student:submission-file-download' preview.file.id %}" download>{{ preview.file.file_name }}</a>
-        <span>{{ preview.file.file_size|filesizeformat }}</span>
+        <div class="submission-file-actions">
+          <span>{{ preview.file.file_size|filesizeformat }}</span>
+        </div>
       </div>
     {% endfor %}
   </section>
   <section class="student-card">
-    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
-      <h2 class="student-section-title mb-0">🔍 제출 파일 미리보기</h2>
-      <button id="preview-toggle" class="btn btn-link btn-sm p-1 text-secondary text-decoration-none" style="font-size:18px; line-height:1;" type="button" aria-label="미리보기 접기" aria-expanded="true" aria-controls="submission-preview-content" title="미리보기 접기">⌃</button>
-    </div>
-    <div id="submission-preview-content">
+    <h2 class="student-section-title">🔍 제출 파일 미리보기</h2>
+    <div>
       {% for preview in previews %}
         <div class="preview-panel">
           <div class="preview-file-name">{{ preview.file.file_name }}</div>
-          {% if preview.kind == "PY" %}
+          {% if preview.is_image %}
+            <img class="student-submission-image" src="{% url 'student:submission-file-image' preview.file.id %}" alt="{{ preview.file.file_name }} 미리보기" loading="lazy">
+          {% elif preview.kind == "PY" %}
             {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% else %}<pre class="code-preview"><code>{{ preview.highlighted }}</code></pre>{% endif %}
           {% elif preview.kind == "IPYNB" %}
             {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% endif %}
             {% if preview.cells %}
-              <div class="notebook-preview">
-                {% for cell in preview.cells %}
-                  <article class="notebook-cell">
-                    <div class="cell-label">{{ cell.type|upper }} CELL</div>
-                    <pre class="{% if cell.type == 'code' %}code-preview{% else %}text-preview{% endif %}"><code>{{ cell.source }}</code></pre>
-                    {% for output in cell.outputs %}<div class="cell-output"><span>Output</span><pre>{{ output }}</pre></div>{% endfor %}
-                  </article>
-                {% empty %}<p class="text-muted mb-0">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
-              </div>
-            {% elif preview.raw_text %}<pre class="text-preview">{{ preview.raw_text }}</pre>{% endif %}
-          {% else %}<div class="preview-message">📁 이 파일 형식은 미리보기를 지원하지 않습니다. 파일명과 크기만 표시됩니다.</div>{% endif %}
+              <details class="student-preview-details">
+                <summary>📓 노트북 미리보기 · {{ preview.cells|length }}개 셀<span class="preview-hint"></span></summary>
+                <div class="notebook-preview">
+                  {% for cell in preview.cells %}
+                    <article class="notebook-cell">
+                      <div class="cell-label">{{ cell.type|upper }} CELL</div>
+                      <pre class="{% if cell.type == 'code' %}code-preview{% else %}text-preview{% endif %}"><code>{{ cell.source }}</code></pre>
+                      {% for output in cell.outputs %}<div class="cell-output"><span>Output</span><pre>{{ output }}</pre></div>{% endfor %}
+                    </article>
+                  {% empty %}<p class="text-muted mb-0">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
+                </div>
+              </details>
+            {% elif preview.raw_text %}
+              <details class="student-preview-details">
+                <summary>📄 원본 미리보기<span class="preview-hint"></span></summary>
+                <pre class="text-preview">{{ preview.raw_text }}</pre>
+              </details>
+            {% endif %}
+          {% elif preview.raw_text %}
+            <details class="student-preview-details">
+              <summary>📄 텍스트 미리보기<span class="preview-hint"></span></summary>
+              <pre class="text-preview{% if preview.is_csv %} student-csv-preview{% endif %}"><code>{{ preview.raw_text }}</code></pre>
+            </details>
+          {% else %}<div class="preview-message">📁 이 파일은 미리보기를 지원하지 않습니다. 위 파일명을 눌러 다운로드할 수 있습니다.</div>{% endif %}
         </div>
       {% empty %}<div class="empty-state">첨부된 파일이 없습니다.</div>{% endfor %}
     </div>
@@ -86,24 +127,4 @@
     </div>
   {% endif %}
 </div>
-{% endblock %}
-
-{% block extra_script %}
-<script>
-(() => {
-  const button = document.getElementById("preview-toggle");
-  const content = document.getElementById("submission-preview-content");
-  if (!button || !content) return;
-
-  button.addEventListener("click", () => {
-    const expanded = button.getAttribute("aria-expanded") === "true";
-    button.setAttribute("aria-expanded", String(!expanded));
-    const label = expanded ? "미리보기 펼치기" : "미리보기 접기";
-    button.textContent = expanded ? "⌄" : "⌃";
-    button.setAttribute("aria-label", label);
-    button.setAttribute("title", label);
-    content.hidden = expanded;
-  });
-})();
-</script>
 {% endblock %}

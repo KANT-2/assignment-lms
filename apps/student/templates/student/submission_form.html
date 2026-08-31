@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{{ assignment.title }} 제출 | AX 과제 시스템{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
+<style>.upload-preview-image { display:block; max-width:100%; max-height:480px; margin:12px auto 0; border-radius:10px; object-fit:contain; }</style>
+{% endblock %}
 {% block page_header %}
 <div class="page-header">
   <a class="student-back-link" href="{% url 'student:assignment-list' %}">‹ 과제 목록으로 돌아가기</a>
@@ -33,7 +36,7 @@
     <h2 class="student-section-title">📤 제출 파일 <span class="required-mark">필수</span></h2>
     <label class="form-label" for="{{ form.file.id_for_label }}">파일 선택</label>
     {{ form.file }}
-    <div class="form-text">.py, .ipynb 파일은 제출 후 자동 미리보기가 제공됩니다. 파일당 최대 30MB입니다.</div>
+    <div class="form-text">모든 형식의 파일을 제출할 수 있습니다. 텍스트·소스 코드·SQL 파일 등은 자동 미리보기가 제공되며, 파일당 최대 30MB입니다.</div>
     {% for error in form.file.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     <div id="upload-preview" class="upload-preview mt-3" hidden aria-live="polite">
       <div class="preview-file-name" id="upload-preview-name"></div>
@@ -98,11 +101,41 @@
     if (!file) { preview.hidden = true; return; }
     name.textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
     preview.hidden = false;
-    const extension = file.name.split(".").pop().toLowerCase();
-    if (extension !== "py" && extension !== "ipynb") {
+    const extension = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+    const imageExtensions = new Set(["avif", "bmp", "gif", "ico", "jpeg", "jpg", "png", "webp"]);
+    const textExtensions = new Set([
+      "txt", "text", "md", "markdown", "rst", "log", "csv", "tsv",
+      "sql", "py", "js", "jsx", "ts", "tsx", "java", "c", "h", "cpp",
+      "cc", "cs", "go", "rs", "rb", "php", "swift", "kt", "kts", "scala",
+      "html", "htm", "css", "scss", "sass", "less", "xml", "json", "jsonl",
+      "yaml", "yml", "toml", "ini", "cfg", "conf", "env", "properties",
+      "sh", "bash", "zsh", "fish", "ps1", "bat", "cmd", "dockerfile",
+      "gitignore", "gitattributes", "vue", "svelte", "r", "m", "lua", "pl"
+    ]);
+    const isImageFile = imageExtensions.has(extension);
+    const isTextFile = file.type.startsWith("text/") || textExtensions.has(extension);
+    if (isImageFile) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = document.createElement("img");
+        image.className = "upload-preview-image";
+        image.alt = `${file.name} 미리보기`;
+        image.src = String(reader.result || "");
+        body.appendChild(image);
+      };
+      reader.onerror = () => {
+        const message = document.createElement("div");
+        message.className = "preview-message";
+        message.textContent = "이미지를 미리 볼 수 없습니다.";
+        body.appendChild(message);
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+    if (extension !== "ipynb" && !isTextFile) {
       const message = document.createElement("div");
       message.className = "preview-message";
-      message.textContent = "이 파일 형식은 미리보기를 지원하지 않습니다. 파일명과 크기만 표시됩니다.";
+      message.textContent = "이 파일은 제출할 수 있지만 브라우저 텍스트 미리보기는 제공되지 않습니다. 제출 후 다운로드할 수 있습니다.";
       body.appendChild(message);
       return;
     }
@@ -110,7 +143,7 @@
     reader.onload = () => {
       const text = String(reader.result || "");
       if (extension === "ipynb") showNotebook(text);
-      else body.appendChild(addPre(text, "code-preview"));
+      else body.appendChild(addPre(text, extension === "txt" ? "text-preview" : "code-preview"));
     };
     reader.onerror = () => {
       const message = document.createElement("div");

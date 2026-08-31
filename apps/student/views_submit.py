@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import default_storage
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404
@@ -20,7 +21,7 @@ from apps.accounts_client import services as accounts
 # views_result.py 가 이 모듈에서 import 하므로 여기서 재노출한다.
 from apps.common.preview import (  # noqa: F401
     _notebook_cells,
-    _preview,
+    _preview as _common_preview,
     _read_text,
     _storage_name,
     _submission_kind,
@@ -29,6 +30,41 @@ from apps.core.models import Assignment, Submission, SubmissionFile
 
 from .forms import SubmissionForm
 from .identity import external_student_id
+
+IMAGE_PREVIEW_EXTENSIONS = {".avif", ".bmp", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".webp"}
+IMAGE_CONTENT_TYPES = {
+    ".avif": "image/avif",
+    ".bmp": "image/bmp",
+    ".gif": "image/gif",
+    ".ico": "image/x-icon",
+    ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
+
+
+def _preview(submission_file):
+    """학생 화면에서는 일반 텍스트로 읽을 수 있는 기타 파일도 보여준다."""
+    preview = _common_preview(submission_file)
+    preview["is_csv"] = Path(submission_file.file_name).suffix.lower() == ".csv"
+    preview["is_image"] = (
+        Path(submission_file.file_name).suffix.lower() in IMAGE_PREVIEW_EXTENSIONS
+    )
+    if submission_file.kind == SubmissionFile.Kind.OTHER:
+        raw_text = _read_text(submission_file)
+        if raw_text is None:
+            try:
+                with default_storage.open(
+                    _storage_name(submission_file.file_url), "rb"
+                ) as stored:
+                    raw_bytes = stored.read()
+                raw_text = raw_bytes.decode("cp949")
+            except (OSError, UnicodeDecodeError, ValueError, Http404):
+                raw_text = None
+        if raw_text is not None:
+            preview["raw_text"] = raw_text
+    return preview
 
 
 def student_required(view_func):
@@ -49,10 +85,13 @@ def assignment_list(request):
     team = accounts.get_user_team(external_student_id(request))
     submission_filter = request.GET.get("submission", "all")
     deadline_filter = request.GET.get("deadline", "all")
+    date_group = request.GET.get("date_group", "all")
     if submission_filter not in {"all", "submitted", "unsubmitted"}:
         submission_filter = "all"
     if deadline_filter not in {"all", "open", "closed"}:
         deadline_filter = "all"
+    if date_group not in {"all", "month", "day"}:
+        date_group = "all"
     submissions = {
         item.assignment_id: item for item in Submission.objects.filter(
             Q(student_id=student_id, team_id__isnull=True)
@@ -61,7 +100,7 @@ def assignment_list(request):
     }
     now = timezone.now()
     rows = []
-    for assignment in Assignment.objects.all().order_by("due_at"):
+    for assignment in Assignment.objects.all():
         submission = submissions.get(assignment.id)
         if assignment.is_team and team is None:
             status, status_class = "소속 팀 없음", "secondary"
@@ -86,6 +125,17 @@ def assignment_list(request):
             ),
             "due_date_str": timezone.localtime(assignment.due_at).strftime('%Y-%m-%d'),
         })
+    closed_rows = sorted(
+        (row for row in rows if row["is_past"]),
+        key=lambda row: (row["assignment"].due_at, row["assignment"].id),
+        reverse=True,
+    )
+    open_rows = sorted(
+        (row for row in rows if not row["is_past"]),
+        key=lambda row: (row["assignment"].created_at, row["assignment"].id),
+        reverse=True,
+    )
+    rows = closed_rows + open_rows
     filtered_rows = [
         row
         for row in rows
@@ -100,14 +150,38 @@ def assignment_list(request):
             or (deadline_filter == "closed" and row["is_past"])
         )
     ]
+    page_obj = Paginator(filtered_rows, 10).get_page(request.GET.get("page"))
+    page_rows = list(page_obj.object_list)
+    row_groups = []
+    if date_group == "all" and page_rows:
+        row_groups.append({"label": "", "rows": page_rows})
+    else:
+        label_format = "%Y년 %m월" if date_group == "month" else "%Y년 %m월 %d일"
+        groups = {}
+        for row in page_rows:
+            created_at = timezone.localtime(row["assignment"].created_at)
+            deadline_label = "마감" if row["is_past"] else "진행 중"
+            group_key = (row["is_past"], created_at.strftime(label_format))
+            if group_key not in groups:
+                group = {
+                    "label": f"{deadline_label} · {group_key[1]}",
+                    "rows": [],
+                }
+                groups[group_key] = group
+                row_groups.append(group)
+            groups[group_key]["rows"].append(row)
     return render(
         request,
         "student/assignment_list.html",
         {
-            "rows": filtered_rows,
+            "rows": page_rows,
+            "row_groups": row_groups,
             "total_count": len(rows),
+            "filtered_count": len(filtered_rows),
+            "page_obj": page_obj,
             "submission_filter": submission_filter,
             "deadline_filter": deadline_filter,
+            "date_group": date_group,
         },
     )
 
@@ -266,3 +340,35 @@ def submission_file_download(request, file_id):
         as_attachment=True,
         filename=Path(submission_file.file_name).name,
     )
+
+
+@student_required
+def submission_file_image(request, file_id):
+    submission_file = get_object_or_404(
+        SubmissionFile.objects.select_related("submission__assignment"),
+        pk=file_id,
+    )
+    submission = submission_file.submission
+    if submission.team_id is not None:
+        team = accounts.get_user_team(external_student_id(request))
+        allowed = bool(team and team.id == submission.team_id)
+    else:
+        allowed = submission.student_id == request.user.id
+    extension = Path(submission_file.file_name).suffix.lower()
+    if not allowed or extension not in IMAGE_PREVIEW_EXTENSIONS:
+        raise Http404("미리 볼 수 있는 이미지가 없습니다.")
+
+    try:
+        storage_name = _storage_name(submission_file.file_url)
+        file_handle = default_storage.open(storage_name, "rb")
+    except (FileNotFoundError, OSError, ValueError):
+        raise Http404("저장된 이미지를 찾을 수 없습니다.") from None
+
+    response = FileResponse(
+        file_handle,
+        as_attachment=False,
+        filename=Path(submission_file.file_name).name,
+        content_type=IMAGE_CONTENT_TYPES[extension],
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
