@@ -72,7 +72,7 @@
 {% block page_header %}
 <div class="tt-scope">
   <a class="back-link" href="{% url 'tutor:assignment-list' %}">‹ 과제 관리로 돌아가기</a>
-  <div class="breadcrumb">AX 프로젝트 평가 · {% if assignment.is_team %}팀 과제{% else %}개인 과제{% endif %} 제출 관리</div>
+
   <div class="title-row">
     <h1 class="page-title">{{ assignment.title }}</h1>
     <span class="badge type {% if not assignment.is_required %}optional{% endif %}">{% if assignment.is_required %}필수{% else %}선택{% endif %}</span>
