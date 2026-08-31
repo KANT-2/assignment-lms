@@ -82,8 +82,9 @@ def generate(submission: Submission) -> AiResult:
 
     client = genai.Client(
         api_key=settings.GEMINI_API_KEY,
-        # 워커가 무한정 매달리지 않도록 (ms).
-        http_options=types.HttpOptions(timeout=30_000),
+        # 워커가 오래 매달리지 않도록 (ms). 초과 시 예외 → 뷰가 "실패" 메시지.
+        # 모델 혼잡 시 보통 15~20초 안에 504 가 돌아온다.
+        http_options=types.HttpOptions(timeout=25_000),
     )
     response = client.models.generate_content(
         model=settings.GEMINI_MODEL,

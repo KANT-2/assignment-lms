@@ -17,6 +17,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.views.decorators.http import require_POST
+from google.genai.errors import ServerError
 
 from apps.accounts_client import services as accounts
 from apps.common.preview import _preview
@@ -164,6 +165,10 @@ def ai_evaluation_generate(request, pk):
     submission = get_object_or_404(Submission.objects.select_related("assignment"), pk=pk)
     try:
         result = ai_gemini.generate(submission)
+    except ServerError:
+        logger.warning("AI 1차 평가 — Gemini 서버 혼잡 (submission=%s)", pk)
+        messages.error(request, "AI 채점 서버가 혼잡합니다. 잠시 후 '✨ AI 다시 채점'을 눌러주세요.")
+        return redirect(_review_url(pk, request.POST))
     except Exception:
         logger.exception("AI 1차 평가 생성 실패 (submission=%s)", pk)
         messages.error(request, "AI 1차 평가 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.")
