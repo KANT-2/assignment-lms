@@ -2,7 +2,7 @@
 apps/tutor/views_review.py — 👨‍🏫 튜터B 전담
 
 FR-011 제출물 검토   : 파일 미리보기 + 학생 설명 + 이전/다음 순차 이동
-FR-012 AI 1차 평가   : 튜터가 수동 트리거 → 점수/코멘트 생성 (지금은 ai_stub 시뮬레이션, 재생성 지원)
+FR-012 AI 1차 평가   : 튜터가 수동 트리거 → Gemini 점수/코멘트 생성 (재생성 지원, 실패 시 에러 메시지)
 FR-013 튜터 평가     : 점수(0~100) + 피드백 저장 → 제출물 잠금(재제출 차단), 이후 수정 가능
 
 진입점: 제출 현황 대시보드(views_manage.submission_dashboard) 의 '제출확인하기' 버튼.
@@ -22,7 +22,7 @@ from apps.accounts_client import services as accounts
 from apps.common.preview import _preview
 from apps.core.models import AiEvaluation, Evaluation, Submission
 
-from . import ai_eval
+from . import ai_gemini
 from .forms import EvaluationForm
 from .views_manage import (
     SORT_CHOICES,
@@ -163,7 +163,7 @@ def ai_evaluation_generate(request, pk):
     """FR-012 — AI 1차 평가 생성/재생성 (기존 AiEvaluation 을 덮어씀)."""
     submission = get_object_or_404(Submission.objects.select_related("assignment"), pk=pk)
     try:
-        result = ai_eval.generate(submission)
+        result = ai_gemini.generate(submission)
     except Exception:
         logger.exception("AI 1차 평가 생성 실패 (submission=%s)", pk)
         messages.error(request, "AI 1차 평가 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.")

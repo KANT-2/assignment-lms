@@ -1,14 +1,17 @@
 """
 apps/tutor/ai_gemini.py — 👨‍🏫 튜터B
 
-FR-012 AI 1차 평가의 실제 Gemini 구현. ai_stub.generate() 와 동일 시그니처
-(Submission -> AiResult) 라서, apps.tutor.ai_eval 이 키 유무에 따라 골라 호출한다.
+FR-012 AI 1차 평가 — 실제 Gemini 호출. 뷰(views_review)가 generate() 를 부른다.
 
 - BR-008: 참고용 1차 평가. 공식 결과는 튜터 평가 기준.
-- BR-009: 튜터 수동 트리거 (뷰에서 처리, 여기선 신경 안 씀).
+- BR-009: 튜터 수동 트리거 (뷰에서 처리).
 - 재생성: 호출할 때마다 새로 요청 (기존 AiEvaluation 덮어쓰기는 뷰 책임).
+- 실패 시(키 미설정 / 타임아웃 / 5xx / 파싱 실패) 예외를 그대로 올린다.
+  뷰가 잡아서 "AI 평가 생성에 실패했습니다" 메시지를 띄운다 (가짜 점수 저장 안 함).
 """
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 from django.conf import settings
 from google import genai
@@ -17,8 +20,6 @@ from pydantic import BaseModel
 
 from apps.common.preview import _read_text
 from apps.core.models import Submission
-
-from .ai_stub import AiResult
 
 # 프롬프트에 실어 보낼 제출 파일 본문 길이 상한 (토큰·비용 방어)
 _MAX_CHARS_PER_FILE = 15_000
@@ -32,6 +33,12 @@ _SYSTEM_INSTRUCTION = (
     "- comment 는 한국어 2~4문장. 잘한 점과 개선점을 구체적으로, 정중하게 쓴다.\n"
     "- 학생을 특정하는 개인정보나 단정적 표현은 피한다."
 )
+
+
+@dataclass
+class AiResult:
+    score: int
+    comment: str
 
 
 class _GeminiResult(BaseModel):
@@ -69,11 +76,13 @@ def _build_prompt(submission: Submission) -> str:
 
 
 def generate(submission: Submission) -> AiResult:
-    """제출물 하나에 대한 Gemini 1차 평가. 실패 시 예외를 그대로 올린다
-    (호출자 apps.tutor.ai_eval 이 잡아서 시뮬레이션으로 폴백)."""
+    """제출물 하나에 대한 Gemini 1차 평가. 실패 시 예외를 그대로 올린다."""
+    if not settings.GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY 가 설정되지 않았습니다.")
+
     client = genai.Client(
         api_key=settings.GEMINI_API_KEY,
-        # 워커가 무한정 매달리지 않도록 (ms). 실패하면 ai_eval 이 시뮬레이션으로 폴백.
+        # 워커가 무한정 매달리지 않도록 (ms).
         http_options=types.HttpOptions(timeout=30_000),
     )
     response = client.models.generate_content(
