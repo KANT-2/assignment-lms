@@ -21,9 +21,10 @@
     --shadow:0 1px 2px rgba(24,30,51,.03), 0 1px 10px rgba(24,30,51,.03);
     color:var(--text);
   }
+  .tt-scope .page-head{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
   .tt-scope .breadcrumb{font-size:12.5px;color:var(--text-faint);font-weight:600;}
-  .tt-scope h1.page-title{font-size:21px;font-weight:800;margin:.15rem 0;letter-spacing:-.01em;}
-  .tt-scope .page-sub{font-size:12.5px;color:var(--text-muted);}
+  .tt-scope h1.page-title{font-size:21px;font-weight:800;margin:0;letter-spacing:-.01em;}
+  .tt-scope .page-sub{font-size:12.5px;color:var(--text-muted);margin-top:4px;}
   .tt-scope .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:20px 22px 22px;}
   .tt-scope .card-title{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px;}
 
@@ -110,9 +111,11 @@
 
 {% block page_header %}
 <div class="tt-scope">
-  <div class="breadcrumb">AX 프로젝트 평가 · 과제 관리 (튜터)</div>
-  <h1 class="page-title">과제 관리</h1>
-  <div class="page-sub">과제를 클릭하면 학생·팀별 제출 현황을 확인할 수 있습니다.</div>
+  <div class="page-head">
+    <div class="breadcrumb">튜터 · 과제 관리</div>
+    <h1 class="page-title">과제 관리</h1>
+    <div class="page-sub">과제를 클릭하면 학생·팀별 제출 현황을 확인할 수 있습니다.</div>
+  </div>
 </div>
 {% endblock %}
 
@@ -239,6 +242,26 @@
         <div class="field-hint">허용 시 마감 후 제출도 일반 제출과 동일하게 처리됩니다.</div>
       </div>
 
+      {# 지각 감점 — late_penalty (성적 집계용) #}
+      <div class="field">
+        <label class="field-label" for="{{ form.late_penalty.id_for_label }}">지각 감점</label>
+        {% render_field form.late_penalty %}
+        {{ form.late_penalty.errors }}
+        <div class="field-hint">지각 제출 시 튜터 점수에서 차감할 고정 점수. 0이면 감점 없음. (성적 집계에만 반영)</div>
+      </div>
+
+      {# 중요도 — weight_tier (성적 집계 가중치) #}
+      <div class="field">
+        <label class="field-label">중요도</label>
+        <div class="seg-group" data-tt-seg="{{ form.weight_tier.html_name }}" data-tt-seg-multi>
+          {% for value, label in form.weight_tier.field.choices %}
+            <button type="button" class="seg-btn {% if form.weight_tier.value|stringformat:'s' == value %}active{% endif %}" data-value="{{ value }}">{{ label }}</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="{{ form.weight_tier.html_name }}" value="{{ form.weight_tier.value|default:'MID' }}">
+        <div class="field-hint">성적 집계 시 이 과제의 비중 — 상 1.5 / 중 1.0 / 하 0.5.</div>
+      </div>
+
       {# 과제 구분 — is_team (bool). 제출물 있으면 잠금 #}
       <div class="field">
         <label class="field-label">과제 구분</label>
@@ -320,7 +343,9 @@
         if (group.getAttribute("data-tt-locked") === "1") return;
         group.querySelectorAll(".seg-btn").forEach(function (b) { b.classList.toggle("active", b === btn); });
         var v = btn.getAttribute("data-value");
-        if (hidden) hidden.value = v === "1" ? "1" : "";
+        if (hidden) {
+          hidden.value = group.hasAttribute("data-tt-seg-multi") ? v : (v === "1" ? "1" : "");
+        }
         if (teamNote) teamNote.classList.toggle("show", v === "1");
       });
     });

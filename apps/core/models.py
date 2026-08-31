@@ -120,10 +120,13 @@ class Assignment(models.Model):
     allow_late = models.BooleanField(default=True)
     is_team = models.BooleanField(default=False, help_text="true=팀 과제, false=개인 과제")
 
-    # 성적 집계용 가중치 등급. 실제 가중치 숫자·감점/가산점 정책은
-    # 추후 GRADING_POLICY 테이블에서 별도 관리 예정 (팀 논의 대기 중).
+    # 성적 집계용 가중치 등급. 배수(상 1.5 / 중 1.0 / 하 0.5)는 GradingPolicy 에서 관리.
     weight_tier = models.CharField(
         max_length=10, choices=WeightTier.choices, default=WeightTier.MID
+    )
+    # 지각 제출 시 튜터 채점 점수에서 차감할 고정 점수 (성적 집계용, apps.tutor.grading).
+    late_penalty = models.PositiveSmallIntegerField(
+        default=0, help_text="지각 제출 시 점수에서 차감할 점수 (0=감점 없음)"
     )
 
     created_by = models.IntegerField(help_text="accounts_user.id 참조, FK 아님 (튜터)")

@@ -32,6 +32,8 @@
 
 * { box-sizing: border-box; }
 
+html { overflow-y: scroll; }
+
 body {
   margin: 0;
   font-family: var(--font-sans);

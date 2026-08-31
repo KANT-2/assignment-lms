@@ -55,6 +55,8 @@
   .sdet .badge.st-team { background:var(--s-purple-soft); color:var(--s-purple); }
   .sdet .pill { background:var(--s-sunken); color:var(--s-tfaint); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
   .sdet .dash-val { color:var(--s-tfaint); font-weight:700; }
+  .sdet .score-val { font-weight:800; color:var(--s-text); font-variant-numeric:tabular-nums; }
+  .sdet .miss-tag { color:var(--s-red); font-weight:700; font-size:11px; }
   .sdet .note { font-size:11px; color:var(--s-tfaint); margin-top:12px; line-height:1.6; }
   .sdet a.go { color:var(--s-tmuted); font-weight:600; }
   .sdet a.go:hover { color:var(--s-accent-text); }
@@ -75,7 +77,11 @@
       <span class="avatar">{{ student.name|slice:":1" }}</span>
       <div>
         <div class="d-name">{{ student.name }}</div>
-        <div class="d-meta">{{ student.email }} · 팀 {% if team %}<span class="pill">{{ team }}</span>{% else %}<span class="dash-val">—</span>{% endif %} · 성적 <span class="dash-val">—</span></div>
+        <div class="d-meta">{{ student.email }} · 팀 {% if team %}<span class="pill">{{ team }}</span>{% else %}<span class="dash-val">—</span>{% endif %} · 성적
+          {% if final_score is not None %}<b class="score-val">{{ final_score|floatformat:1 }}</b>{% if score_ungraded %} <span class="miss-tag">미채점 {{ score_ungraded }}건 제외</span>{% endif %}
+          {% elif score_ungraded %}<span class="dash-val">채점 미완료 ({{ score_ungraded }}건)</span>
+          {% else %}<span class="dash-val">—</span>{% endif %}
+        </div>
       </div>
     </div>
   </div>
@@ -128,7 +134,8 @@
     {% endif %}
     <p class="note">
       상태 = 제출완료 / 지각 제출(마감 후·지각 허용) / 미제출 / 마감 전 / 팀 과제(학생 귀속 정보 없음).
-      점수는 튜터 평가가 등록된 개인 과제만 표시됩니다. 성적 집계 방식은 추후 확정.
+      점수는 튜터 평가가 등록된 개인 과제만 표시됩니다.
+      상단 <b>성적</b>은 마감된 과제 기준 최종 점수(성취도 70% + 제출률 30%)이며, 미채점 제출물은 집계에서 제외됩니다.
     </p>
   </div>
 </div>

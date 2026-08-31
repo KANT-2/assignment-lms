@@ -12,7 +12,7 @@ from django.utils import timezone
 from apps.core.models import Assignment, Evaluation, Submission, SubmissionFile
 
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp(), DEV_SKIP_AUTH=True)
 class SubmissionResultTests(TestCase):
     databases = {"default"}
 

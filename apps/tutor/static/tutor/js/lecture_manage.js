@@ -185,7 +185,7 @@
 
       tr.innerHTML = `
         ${dateCellHtml}
-        <td><span class="badge order">${currentDailyIndex}교시 <span style="color:var(--text-faint); font-weight:500; font-size:10px; margin-left:4px;">(총 ${lesson.order}차시)</span></span></td>
+
         <td>
           <span style="font-weight:700; color:var(--text);">${lesson.title}</span>
         </td>
