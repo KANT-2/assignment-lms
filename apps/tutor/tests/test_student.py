@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -12,6 +12,7 @@ from apps.core.models import Assignment, Evaluation, Submission
 STUDENTS = [SimpleNamespace(id=i, name=f"학생{i}", email=f"s{i}@x.io", role="student") for i in (1, 2, 3)]
 
 
+@override_settings(DEV_SKIP_AUTH=True)
 class TutorStudentMgmtTests(TestCase):
     databases = {"default"}
 
