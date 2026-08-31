@@ -29,6 +29,7 @@ from apps.common.preview import (  # noqa: F401
     _submission_kind,
 )
 from apps.core.models import Assignment, Submission, SubmissionFile
+from apps.github_sync import services as github_services
 
 from .forms import SubmissionForm
 from .identity import external_student_id
@@ -296,6 +297,8 @@ def assignment_preview(request, assignment_id):
         "assignment": assignment,
         "submission": submission,
         "last_editor": editor,
+        "github_enabled": github_services.enabled(),
+        "github_push": getattr(submission, "github_push", None),
         "evaluation": getattr(submission, "evaluation", None),
         "ai_evaluation": getattr(submission, "ai_evaluation", None),
         "is_past": timezone.now() >= assignment.due_at,
