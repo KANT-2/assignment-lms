@@ -11,8 +11,12 @@ FR-013 튜터 평가     : 점수(0~100) + 피드백 저장 → 제출물 잠금
 ※ tutor_required / 로스터 빌드 로직은 튜터A(views_manage)에 이미 있어 재사용한다.
 """
 import logging
+import mimetypes
+from pathlib import Path
 
 from django.contrib import messages
+from django.core.files.storage import default_storage
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -20,8 +24,8 @@ from django.views.decorators.http import require_POST
 from google.genai.errors import ServerError
 
 from apps.accounts_client import services as accounts
-from apps.common.preview import _preview
-from apps.core.models import AiEvaluation, Evaluation, Submission
+from apps.common.preview import IMAGE_PREVIEW_EXTENSIONS, _preview, _storage_name
+from apps.core.models import AiEvaluation, Evaluation, Submission, SubmissionFile
 
 from . import ai_gemini
 from .forms import EvaluationForm
@@ -156,6 +160,28 @@ def submission_review(request, pk):
             "carry_qs": _carry_qs(params),
         },
     )
+
+
+@tutor_required
+def submission_file_inline(request, file_id):
+    """튜터 검토 화면의 이미지/PDF를 인증된 경로로 제공한다."""
+    submission_file = get_object_or_404(SubmissionFile, pk=file_id)
+    extension = Path(submission_file.file_name).suffix.lower()
+    if extension not in IMAGE_PREVIEW_EXTENSIONS and extension != ".pdf":
+        raise Http404("미리보기할 수 없는 파일입니다.")
+    try:
+        file_handle = default_storage.open(_storage_name(submission_file.file_url), "rb")
+    except (FileNotFoundError, OSError, ValueError):
+        raise Http404("저장된 제출 파일을 찾을 수 없습니다.") from None
+    content_type = mimetypes.guess_type(submission_file.file_name)[0] or "application/octet-stream"
+    response = FileResponse(
+        file_handle,
+        as_attachment=False,
+        filename=Path(submission_file.file_name).name,
+        content_type=content_type,
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @tutor_required

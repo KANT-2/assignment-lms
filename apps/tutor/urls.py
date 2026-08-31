@@ -20,5 +20,6 @@ urlpatterns = [
 
     # 튜터B — 제출물 검토 / 평가 (FR-011, FR-012, FR-013)
     path("submissions/<int:pk>/review/", views_review.submission_review, name="submission-review"),
+    path("submission-files/<int:file_id>/inline/", views_review.submission_file_inline, name="submission-file-inline"),
     path("submissions/<int:pk>/ai-evaluation/", views_review.ai_evaluation_generate, name="submission-ai-eval"),
 ]

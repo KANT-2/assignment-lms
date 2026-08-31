@@ -21,6 +21,7 @@ from apps.accounts_client import services as accounts
 # 제출 파일 미리보기 로직은 공통(apps/common/preview.py)으로 이동 — 튜터 검토 화면(FR-011)도 사용.
 # views_result.py 가 이 모듈에서 import 하므로 여기서 재노출한다.
 from apps.common.preview import (  # noqa: F401
+    IMAGE_PREVIEW_EXTENSIONS,
     _notebook_cells,
     _preview as _common_preview,
     _read_text,
@@ -32,7 +33,6 @@ from apps.core.models import Assignment, Submission, SubmissionFile
 from .forms import SubmissionForm
 from .identity import external_student_id
 
-IMAGE_PREVIEW_EXTENSIONS = {".avif", ".bmp", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".webp"}
 IMAGE_CONTENT_TYPES = {
     ".avif": "image/avif",
     ".bmp": "image/bmp",
@@ -46,26 +46,8 @@ IMAGE_CONTENT_TYPES = {
 
 
 def _preview(submission_file):
-    """학생 화면에서는 일반 텍스트로 읽을 수 있는 기타 파일도 보여준다."""
-    preview = _common_preview(submission_file)
-    preview["is_csv"] = Path(submission_file.file_name).suffix.lower() == ".csv"
-    preview["is_image"] = (
-        Path(submission_file.file_name).suffix.lower() in IMAGE_PREVIEW_EXTENSIONS
-    )
-    if submission_file.kind == SubmissionFile.Kind.OTHER:
-        raw_text = _read_text(submission_file)
-        if raw_text is None:
-            try:
-                with default_storage.open(
-                    _storage_name(submission_file.file_url), "rb"
-                ) as stored:
-                    raw_bytes = stored.read()
-                raw_text = raw_bytes.decode("cp949")
-            except (OSError, UnicodeDecodeError, ValueError, Http404):
-                raw_text = None
-        if raw_text is not None:
-            preview["raw_text"] = raw_text
-    return preview
+    """이전 import 경로를 유지하면서 공통 미리보기 데이터를 사용한다."""
+    return _common_preview(submission_file)
 
 
 def student_required(view_func):
