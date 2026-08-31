@@ -46,6 +46,18 @@ python manage.py runserver
   - `default` — 이 프로젝트 전용 (`DB_*` 환경변수)
   - `accounts` — 외부 계정/팀 DB, 읽기 전용 (`ACCOUNTS_DB_*` 환경변수)
 
+## GitHub 제출물 동기화 (선택 기능, `apps/github_sync`)
+
+학생이 과제를 제출하면 학생 **본인 GitHub 저장소**(public, 기본 `lms-assignments`)에 자동 커밋된다.
+`.env` 에 `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` / `GITHUB_TOKEN_ENC_KEY` 세 값이
+모두 있어야 활성화되며, 없으면 완전히 no-op (기존 제출 흐름 영향 없음). 자세한 발급 방법은 `.env.example`.
+
+- 학생은 대시보드에서 **GitHub 연결** 1회 → 이후 제출 시 즉시 push 시도
+- 배포 서버에 재시도 + 마감 최종본 커밋용 배치를 5분 간격으로 등록:
+  ```
+  */5 * * * * cd /app && /app/.venv/bin/python manage.py github_sync
+  ```
+
 ## 협업 규칙
 
 - `main` 직접 push 금지 → 브랜치 파고 PR

@@ -22,7 +22,10 @@ django-widget-tweaks==1.5.1  # 템플릿에서 폼 위젯 class/속성 조정
 # --- AI 1차 평가 (FR-012) ---
 google-genai==2.20.0        # Gemini 연동 (FR-012 AI 1차 평가)
 
+# --- GitHub 제출물 동기화 (apps.github_sync) ---
+requests==2.34.2            # GitHub REST / OAuth 호출
+cryptography==50.0.1        # 학생 액세스 토큰 Fernet 암호화
+
 # --- 나중에 필요해지면 (지금은 PRD상 범위 밖 / 미정) ---
-# requests                  # AX Evaluator 연동이 DB 가 아니라 REST API 인 경우
 # django-storages[s3]       # 업로드 파일을 S3 등 외부 스토리지로 뺄 경우
 # django-allauth            # 인증 방식 확정되면 (Open Question 9장)

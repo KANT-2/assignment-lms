@@ -27,6 +27,8 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts_client import services as accounts
 from apps.core.models import Assignment, Lesson, Submission, Todo
+from apps.github_sync import services as github_services
+from apps.github_sync.models import StudentGithubAccount
 
 from .identity import external_student_id
 
@@ -164,6 +166,16 @@ def dashboard(request):
     prev_y, prev_m = (year - 1, 12) if month == 1 else (year, month - 1)
     next_y, next_m = (year + 1, 1) if month == 12 else (year, month + 1)
 
+    # GitHub 연동 (apps.github_sync) — 키 미설정 시 카드 자체를 숨긴다
+    github_enabled = github_services.enabled()
+    github_account = (
+        StudentGithubAccount.objects.filter(
+            student_id=external_student_id(request)
+        ).first()
+        if github_enabled
+        else None
+    )
+
     return render(
         request,
         "student/dashboard.html",
@@ -199,6 +211,8 @@ def dashboard(request):
             "todo_done": todo_done,
             "todo_date": todo_date,
             "todo_is_today": todo_date == today,
+            "github_enabled": github_enabled,
+            "github_account": github_account,
         },
     )
 
