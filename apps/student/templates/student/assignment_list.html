@@ -9,6 +9,10 @@
   .assignment-list-summary .student-section-title { font-size:18px; }
   .assignment-list-summary .assignment-count { font-size:13px; }
   .assignment-date-view { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:10px; width:100%; padding-bottom:2px; }
+  .assignment-calendar-filter { display:flex; align-items:center; gap:6px; margin-left:4px; }
+  .assignment-calendar-input { width:142px; padding:5px 10px; border:1px solid #d8dee8; border-radius:999px; color:#4f5d73; background:#fff; font-size:12px; font-weight:700; }
+  .assignment-calendar-input:focus { border-color:#a8c5f5; outline:3px solid rgb(40 112 230 / 12%); }
+  .assignment-calendar-clear { color:#7a8494; font-size:12px; text-decoration:none; }
   .assignment-filters { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; margin-left:auto; padding:4px 0; background:transparent; }
   .assignment-filter-group { display:flex; align-items:center; gap:10px; }
   .assignment-filter-label { color:var(--color-text-muted); font-size:12px; font-weight:700; white-space:nowrap; }
@@ -66,10 +70,18 @@
     <div class="assignment-date-view" aria-label="생성일 보기 기준">
       <span class="assignment-filter-label">생성일 기준</span>
       <div class="assignment-filter-options" role="group" aria-label="생성일 묶음 선택">
-        <a class="assignment-filter-chip{% if date_group == 'all' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=all">전체</a>
-        <a class="assignment-filter-chip{% if date_group == 'month' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=month">월별</a>
-        <a class="assignment-filter-chip{% if date_group == 'day' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=day">일별</a>
+        <a class="assignment-filter-chip{% if date_group == 'all' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=all&amp;created_date={{ created_date }}">전체</a>
+        <a class="assignment-filter-chip{% if date_group == 'month' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=month&amp;created_date={{ created_date }}">월별</a>
+        <a class="assignment-filter-chip{% if date_group == 'day' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=day&amp;created_date={{ created_date }}">일별</a>
       </div>
+      <form class="assignment-calendar-filter" method="get">
+        <input type="hidden" name="submission" value="{{ submission_filter }}">
+        <input type="hidden" name="deadline" value="{{ deadline_filter }}">
+        <input type="hidden" name="date_group" value="{{ date_group }}">
+        <label class="visually-hidden" for="assignment-created-date">과제 생성 날짜 선택</label>
+        <input class="assignment-calendar-input" id="assignment-created-date" type="date" name="created_date" value="{{ created_date }}" aria-label="과제 생성 날짜 선택" onchange="this.form.submit()">
+        {% if created_date %}<a class="assignment-calendar-clear" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}">초기화</a>{% endif %}
+      </form>
     </div>
     <div class="assignment-list-summary">
       <span aria-hidden="true">📋</span>
@@ -80,17 +92,17 @@
       <div class="assignment-filter-group deadline-filter">
         <span class="assignment-filter-label">마감 상태</span>
         <div class="assignment-filter-options" role="group" aria-label="마감 상태 선택">
-          <a class="assignment-filter-chip{% if deadline_filter == 'all' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=all&amp;date_group={{ date_group }}">전체</a>
-          <a class="assignment-filter-chip{% if deadline_filter == 'open' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=open&amp;date_group={{ date_group }}">진행 중</a>
-          <a class="assignment-filter-chip{% if deadline_filter == 'closed' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=closed&amp;date_group={{ date_group }}">마감</a>
+          <a class="assignment-filter-chip{% if deadline_filter == 'all' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=all&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">전체</a>
+          <a class="assignment-filter-chip{% if deadline_filter == 'open' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=open&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">진행 중</a>
+          <a class="assignment-filter-chip{% if deadline_filter == 'closed' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=closed&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">마감</a>
         </div>
       </div>
       <div class="assignment-filter-group submission-filter">
         <span class="assignment-filter-label">제출 상태</span>
         <div class="assignment-filter-options" role="group" aria-label="제출 상태 선택">
-          <a class="assignment-filter-chip{% if submission_filter == 'all' %} is-submission-active{% endif %}" href="?submission=all&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}">전체</a>
-          <a class="assignment-filter-chip{% if submission_filter == 'unsubmitted' %} is-submission-active{% endif %}" href="?submission=unsubmitted&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}">미제출</a>
-          <a class="assignment-filter-chip{% if submission_filter == 'submitted' %} is-submission-active{% endif %}" href="?submission=submitted&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}">제출완료</a>
+          <a class="assignment-filter-chip{% if submission_filter == 'all' %} is-submission-active{% endif %}" href="?submission=all&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">전체</a>
+          <a class="assignment-filter-chip{% if submission_filter == 'unsubmitted' %} is-submission-active{% endif %}" href="?submission=unsubmitted&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">미제출</a>
+          <a class="assignment-filter-chip{% if submission_filter == 'submitted' %} is-submission-active{% endif %}" href="?submission=submitted&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">제출완료</a>
         </div>
       </div>
     </div>
@@ -122,13 +134,13 @@
   {% if page_obj.paginator.num_pages > 1 %}
     <nav class="assignment-pagination d-flex align-items-center justify-content-center gap-2 mt-4" aria-label="과제 목록 페이지">
       {% if page_obj.has_previous %}
-        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;page={{ page_obj.previous_page_number }}">‹ 이전</a>
+        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_obj.previous_page_number }}">‹ 이전</a>
       {% endif %}
       {% for page_number in page_obj.paginator.page_range %}
-        <a class="btn btn-sm {% if page_number == page_obj.number %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;page={{ page_number }}"{% if page_number == page_obj.number %} aria-current="page"{% endif %}>{{ page_number }}</a>
+        <a class="btn btn-sm {% if page_number == page_obj.number %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_number }}"{% if page_number == page_obj.number %} aria-current="page"{% endif %}>{{ page_number }}</a>
       {% endfor %}
       {% if page_obj.has_next %}
-        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;page={{ page_obj.next_page_number }}">다음 ›</a>
+        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_obj.next_page_number }}">다음 ›</a>
       {% endif %}
     </nav>
   {% endif %}

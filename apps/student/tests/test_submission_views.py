@@ -192,6 +192,24 @@ class SubmissionViewTests(TestCase):
         self.assertContains(response, f"진행 중 · {expected_month}")
         self.assertContains(response, "생성일 묶음 과제")
 
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_filters_by_selected_created_date(self, _get_user_team):
+        selected = self.assignment(title="선택 날짜 과제")
+        other = self.assignment(title="다른 날짜 과제")
+        selected_date = timezone.localtime(selected.created_at).date()
+        Assignment.objects.filter(pk=other.pk).update(
+            created_at=selected.created_at - timedelta(days=1)
+        )
+
+        response = self.client.get(
+            reverse("student:assignment-list"),
+            {"created_date": selected_date.isoformat()},
+        )
+
+        self.assertContains(response, "선택 날짜 과제")
+        self.assertNotContains(response, "다른 날짜 과제")
+        self.assertEqual(response.context["created_date"], selected_date.isoformat())
+
     @patch("apps.student.views_submit.accounts.get_user_team")
     def test_team_member_can_submit_once_for_the_team(self, get_user_team):
         get_user_team.return_value.id = 7
