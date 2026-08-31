@@ -27,6 +27,8 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts_client import services as accounts
 from apps.core.models import Assignment, Lesson, Submission, Todo
+from apps.github_sync import services as github_services
+from apps.github_sync.models import StudentGithubAccount
 
 from .identity import external_student_id
 
@@ -126,9 +128,11 @@ def dashboard(request):
         })
     upcoming = upcoming[:UPCOMING_LIMIT]
 
+    assignments = list(Assignment.objects.all())
+
     # ── 내 과제 현황 ──
     total = submitted = graded = 0
-    for a in Assignment.objects.all():
+    for a in assignments:
         if not _applies(a):
             continue
         total += 1
@@ -139,16 +143,38 @@ def dashboard(request):
                 graded += 1
     progress_pct = round(submitted / total * 100) if total else 0
 
-    # ── 최근 공개 결과 ──
-    recent = (
-        Submission.objects.filter(mine, final_score__isnull=False)
-        .select_related("assignment")
-        .order_by("-submitted_at")
-        .first()
+    # ── 주간 과제 제출 현황 ──
+    week_start = _resolve_week(request, today)
+    week_end = week_start + dt.timedelta(days=6)
+    week_assignments = [
+        a for a in assignments
+        if _applies(a) and week_start <= timezone.localtime(a.due_at).date() <= week_end
+    ]
+    week_submitted = sum(a.id in my_subs for a in week_assignments)
+    week_ungraded = sum(
+        a.id in my_subs and my_subs[a.id].final_score is None
+        for a in week_assignments
     )
+    week_total = len(week_assignments)
+    week_pct = round(week_submitted / week_total * 100) if week_total else 0
+
+    def _week_url(start):
+        params = request.GET.copy()
+        params["week"] = start.isoformat()
+        return f"?{params.urlencode()}"
 
     prev_y, prev_m = (year - 1, 12) if month == 1 else (year, month - 1)
     next_y, next_m = (year + 1, 1) if month == 12 else (year, month + 1)
+
+    # GitHub 연동 (apps.github_sync) — 키 미설정 시 카드 자체를 숨긴다
+    github_enabled = github_services.enabled()
+    github_account = (
+        StudentGithubAccount.objects.filter(
+            student_id=external_student_id(request)
+        ).first()
+        if github_enabled
+        else None
+    )
 
     return render(
         request,
@@ -170,14 +196,34 @@ def dashboard(request):
                 "total": total, "submitted": submitted, "graded": graded,
                 "todo": total - submitted, "pct": progress_pct,
             },
-            "recent_result": recent,
+            "submission_week": {
+                "start": week_start,
+                "end": week_end,
+                "total": week_total,
+                "submitted": week_submitted,
+                "ungraded": week_ungraded,
+                "pct": week_pct,
+                "prev_url": _week_url(week_start - dt.timedelta(days=7)),
+                "next_url": _week_url(week_start + dt.timedelta(days=7)),
+            },
             "team": team, "team_members": team_members,
             "todos": todos,
             "todo_done": todo_done,
             "todo_date": todo_date,
             "todo_is_today": todo_date == today,
+            "github_enabled": github_enabled,
+            "github_account": github_account,
         },
     )
+
+
+def _resolve_week(request, today):
+    """week 쿼리의 날짜가 속한 주(월요일 시작)를 반환한다."""
+    try:
+        anchor = dt.date.fromisoformat(request.GET.get("week", today.isoformat()))
+    except (TypeError, ValueError):
+        anchor = today
+    return anchor - dt.timedelta(days=anchor.weekday())
 
 
 def _resolve_month(request, today):

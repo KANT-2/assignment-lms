@@ -165,6 +165,23 @@ def get_student_teams():
     }
 
 
+def get_current_round():
+    """우리 라운드 (없으면 None). .id / .title — GitHub 저장소 폴더명 등에 쓴다."""
+    if _dev():
+        return _ns(id=1, title="개발기수")
+    from .models import RoundTeamMember
+
+    rid = _current_round_id()
+    if rid is None:
+        return None
+    title = (
+        RoundTeamMember.objects.filter(round_id=rid)
+        .values_list("round_title", flat=True)
+        .first()
+    )
+    return _ns(id=rid, title=title or f"round-{rid}")
+
+
 def is_team_member(user_id, team_id):
     """팀 과제 제출 자격 — 우리 라운드에서 그 팀 소속인지 (BR-005)."""
     user_id, team_id = int(user_id), int(team_id)

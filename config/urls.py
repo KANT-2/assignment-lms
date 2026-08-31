@@ -17,6 +17,7 @@ urlpatterns = [
     path("accounts/logout/", auth_views.logout_view, name="logout"),
 
     # 앱별 라우팅
+    path("github/", include("apps.github_sync.urls")),
     path("", include("apps.student.urls")),
     path("tutor/", include("apps.tutor.urls")),
 ]

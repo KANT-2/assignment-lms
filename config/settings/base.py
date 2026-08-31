@@ -50,6 +50,7 @@ LOCAL_APPS = [
     "apps.common",           # base 템플릿 / 공통 static
     "apps.student",          # 학생팀
     "apps.tutor",            # 튜터팀
+    "apps.github_sync",      # 제출물 → 학생 개인 GitHub 저장소 자동 push
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -121,6 +122,16 @@ AX_ROUND_ID = env("AX_ROUND_ID", None)
 # 키 미설정 / 호출 실패 시엔 뷰가 "AI 평가 생성에 실패했습니다" 메시지를 띄운다 (가짜 점수 저장 안 함).
 GEMINI_API_KEY = env("GEMINI_API_KEY")
 GEMINI_MODEL = env("GEMINI_MODEL", "gemini-3.6-flash")
+
+# --- GitHub 제출물 동기화 (apps.github_sync) ---
+# 세 값이 모두 있어야 기능 활성화 (services.enabled()). 없으면 시그널·UI 모두 no-op.
+# OAuth App: GitHub → Settings → Developer settings → OAuth Apps
+#   Authorization callback URL = <호스트>/github/callback/
+# 토큰 암호화 키: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+GITHUB_OAUTH_CLIENT_ID = env("GITHUB_OAUTH_CLIENT_ID")
+GITHUB_OAUTH_CLIENT_SECRET = env("GITHUB_OAUTH_CLIENT_SECRET")
+GITHUB_TOKEN_ENC_KEY = env("GITHUB_TOKEN_ENC_KEY")
+GITHUB_SUBMISSION_REPO_NAME = env("GITHUB_SUBMISSION_REPO_NAME", "lms-assignments")
 
 # --- 인증 ---
 # 실제 로그인: ax_evaluation.accounts_user 이메일+비번 (AxPasswordBackend).
