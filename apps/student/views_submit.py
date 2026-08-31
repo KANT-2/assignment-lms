@@ -1,5 +1,6 @@
 """학생 A — 과제 목록, 개인 과제 제출, 제출 파일 미리보기."""
 
+from datetime import date
 from functools import wraps
 from pathlib import Path
 from uuid import uuid4
@@ -86,12 +87,18 @@ def assignment_list(request):
     submission_filter = request.GET.get("submission", "all")
     deadline_filter = request.GET.get("deadline", "all")
     date_group = request.GET.get("date_group", "all")
+    created_date_value = request.GET.get("created_date", "")
     if submission_filter not in {"all", "submitted", "unsubmitted"}:
         submission_filter = "all"
     if deadline_filter not in {"all", "open", "closed"}:
         deadline_filter = "all"
     if date_group not in {"all", "month", "day"}:
         date_group = "all"
+    try:
+        created_date = date.fromisoformat(created_date_value) if created_date_value else None
+    except ValueError:
+        created_date = None
+        created_date_value = ""
     submissions = {
         item.assignment_id: item for item in Submission.objects.filter(
             Q(student_id=student_id, team_id__isnull=True)
@@ -149,6 +156,10 @@ def assignment_list(request):
             or (deadline_filter == "open" and not row["is_past"])
             or (deadline_filter == "closed" and row["is_past"])
         )
+        and (
+            created_date is None
+            or timezone.localtime(row["assignment"].created_at).date() == created_date
+        )
     ]
     page_obj = Paginator(filtered_rows, 10).get_page(request.GET.get("page"))
     page_rows = list(page_obj.object_list)
@@ -182,6 +193,7 @@ def assignment_list(request):
             "submission_filter": submission_filter,
             "deadline_filter": deadline_filter,
             "date_group": date_group,
+            "created_date": created_date_value,
         },
     )
 
