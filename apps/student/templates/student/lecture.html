@@ -524,7 +524,6 @@
 
         <div class="lesson-header">
           <div class="lesson-meta-row">
-            <span id="cur-order-badge" class="badge mat-count">4회차</span>
             <span id="cur-date">2026.08.20 (수)</span>
             <span id="cur-status-badge" class="badge video-ok">영상 시청 가능</span>
           </div>
@@ -670,7 +669,6 @@
         <div class="playlist-info">
           <div class="playlist-item-top">
             <span class="playlist-item-order" style="font-size: 12px;">${lesson.date}</span>
-            <span style="font-size:11.5px; color:var(--text-muted); font-weight: 600;">총 ${lesson.order}차시</span>
           </div>
           <div class="playlist-item-title">${lesson.title}</div>
           <div class="playlist-item-meta">
@@ -778,7 +776,6 @@
 
     // Update Details
     
-    document.getElementById('cur-order-badge').textContent = `총 ${lesson.order}차시`;
     document.getElementById('cur-date').textContent = lesson.date;
     document.getElementById('cur-title').textContent = lesson.title;
 
