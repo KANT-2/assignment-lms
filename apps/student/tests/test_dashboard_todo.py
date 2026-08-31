@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.core.models import Todo
+from apps.core.models import Assignment, Submission, Todo
 
 
 class DashboardTodoTests(TestCase):
@@ -88,3 +88,58 @@ class DashboardTodoTests(TestCase):
     def test_cannot_touch_other_students_todo(self):
         t = Todo.objects.create(student_id=self.user.id + 999, content="남의것", due_date=self.today)
         self.assertEqual(self.client.post(reverse("student:todo-toggle", args=[t.pk])).status_code, 404)
+
+    # ---------- weekly submission status ----------
+    def _assignment(self, title, due_date, **overrides):
+        values = {
+            "title": title,
+            "due_at": timezone.make_aware(
+                timezone.datetime.combine(due_date, timezone.datetime.min.time())
+            ),
+            "created_by": 1,
+            "is_team": False,
+        }
+        values.update(overrides)
+        return Assignment.objects.create(**values)
+
+    def test_weekly_submission_status_counts_current_week(self):
+        monday = self.today - timedelta(days=self.today.weekday())
+        submitted = self._assignment("제출 과제", monday)
+        graded = self._assignment("채점 과제", monday + timedelta(days=2))
+        self._assignment("미제출 과제", monday + timedelta(days=4))
+        self._assignment("다음 주 과제", monday + timedelta(days=7))
+        Submission.objects.create(assignment=submitted, student_id=self.user.id)
+        Submission.objects.create(
+            assignment=graded, student_id=self.user.id, final_score=90
+        )
+
+        response = self._get()
+
+        self.assertEqual(
+            response.context["submission_week"],
+            {
+                "start": monday,
+                "end": monday + timedelta(days=6),
+                "total": 3,
+                "submitted": 2,
+                "ungraded": 1,
+                "pct": 67,
+                "prev_url": f"?week={(monday - timedelta(days=7)).isoformat()}",
+                "next_url": f"?week={(monday + timedelta(days=7)).isoformat()}",
+            },
+        )
+        self.assertContains(response, "과제 제출 현황")
+        self.assertNotContains(response, "최근 공개 결과")
+
+    def test_week_navigation_preserves_dashboard_parameters(self):
+        anchor = self.today + timedelta(days=14)
+
+        response = self._get(
+            y=anchor.year, m=anchor.month, d=anchor.isoformat(), week=anchor.isoformat()
+        )
+
+        stats = response.context["submission_week"]
+        self.assertIn(f"y={anchor.year}", stats["prev_url"])
+        self.assertIn(f"m={anchor.month}", stats["prev_url"])
+        self.assertIn(f"d={anchor.isoformat()}", stats["prev_url"])
+        self.assertIn("week=", stats["prev_url"])
