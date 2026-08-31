@@ -117,8 +117,8 @@ DATABASE_ROUTERS = ["config.routers.AccountsRouter"]
 AX_ROUND_ID = env("AX_ROUND_ID", None)
 
 # --- AI 1차 평가 (FR-012) ---
-# GEMINI_API_KEY 가 있으면 apps.tutor.ai_gemini 가 실제 Gemini 호출,
-# 없거나 호출 실패 시 apps.tutor.ai_stub 시뮬레이션으로 폴백 (apps.tutor.ai_eval).
+# apps.tutor.ai_gemini 가 이 키로 Gemini 를 호출한다.
+# 키 미설정 / 호출 실패 시엔 뷰가 "AI 평가 생성에 실패했습니다" 메시지를 띄운다 (가짜 점수 저장 안 함).
 GEMINI_API_KEY = env("GEMINI_API_KEY")
 GEMINI_MODEL = env("GEMINI_MODEL", "gemini-3.6-flash")
 
