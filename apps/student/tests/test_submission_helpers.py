@@ -19,6 +19,12 @@ class SubmissionFormTests(SimpleTestCase):
         form = SubmissionForm(files={"file": SimpleUploadedFile("answer.py", b"print(1)")})
         self.assertTrue(form.is_valid())
 
+    def test_accepts_arbitrary_file_extension(self):
+        form = SubmissionForm(
+            files={"file": SimpleUploadedFile("archive.custom", b"any content")}
+        )
+        self.assertTrue(form.is_valid())
+
 
 class PreviewHelperTests(SimpleTestCase):
     def test_file_kind_is_case_insensitive(self):

@@ -65,6 +65,28 @@ class SubmissionViewTests(TestCase):
         self.assertEqual(saved_file.kind, SubmissionFile.Kind.PY)
         self.assertEqual(saved_file.file_name, "answer.PY")
 
+    def test_sql_submission_is_available_in_student_text_preview(self):
+        assignment = self.assignment()
+        sql = b"SELECT id, title FROM assignment ORDER BY created_at DESC;"
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {
+                "description": "SQL 제출",
+                "file": SimpleUploadedFile("report.sql", sql),
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("student:assignment-preview", args=[assignment.id]),
+        )
+
+        preview_response = self.client.get(
+            reverse("student:assignment-preview", args=[assignment.id])
+        )
+        self.assertContains(preview_response, "report.sql")
+        self.assertContains(preview_response, "SELECT id, title FROM assignment")
+
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
     def test_assignment_list_filters_by_submission_status(self, _get_user_team):
         submitted_assignment = self.assignment(title="제출한 과제")
@@ -100,6 +122,75 @@ class SubmissionViewTests(TestCase):
 
         self.assertContains(response, "진행 중 미제출")
         self.assertNotContains(response, "마감된 미제출")
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_paginates_after_ten_items(self, _get_user_team):
+        for number in range(1, 12):
+            self.assignment(title=f"페이지 과제 {number}")
+
+        first_page = self.client.get(reverse("student:assignment-list"))
+        second_page = self.client.get(
+            reverse("student:assignment-list"),
+            {"page": 2},
+        )
+
+        self.assertEqual(len(first_page.context["rows"]), 10)
+        self.assertEqual(len(second_page.context["rows"]), 1)
+        self.assertEqual(first_page.context["page_obj"].paginator.num_pages, 2)
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_sorts_closed_then_recently_created_open_assignments(
+        self, _get_user_team
+    ):
+        now = timezone.now()
+        older_closed = self.assignment(
+            title="이전 마감 과제",
+            due_at=now - timedelta(days=2),
+        )
+        recent_closed = self.assignment(
+            title="최근 마감 과제",
+            due_at=now - timedelta(days=1),
+        )
+        older_open = self.assignment(
+            title="먼저 생성된 진행 과제",
+            due_at=now + timedelta(days=3),
+        )
+        recent_open = self.assignment(
+            title="최근 생성된 진행 과제",
+            due_at=now + timedelta(days=1),
+        )
+        Assignment.objects.filter(pk=older_open.pk).update(
+            created_at=now - timedelta(hours=2)
+        )
+        Assignment.objects.filter(pk=recent_open.pk).update(
+            created_at=now - timedelta(hours=1)
+        )
+
+        response = self.client.get(reverse("student:assignment-list"))
+
+        assignment_ids = [
+            row["assignment"].id for row in response.context["rows"]
+        ]
+        self.assertEqual(
+            assignment_ids,
+            [recent_closed.id, older_closed.id, recent_open.id, older_open.id],
+        )
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_groups_by_created_month(self, _get_user_team):
+        assignment = self.assignment(title="생성일 묶음 과제")
+
+        response = self.client.get(
+            reverse("student:assignment-list"),
+            {"date_group": "month"},
+        )
+
+        expected_month = timezone.localtime(assignment.created_at).strftime(
+            "%Y년 %m월"
+        )
+        self.assertEqual(response.context["date_group"], "month")
+        self.assertContains(response, f"진행 중 · {expected_month}")
+        self.assertContains(response, "생성일 묶음 과제")
 
     @patch("apps.student.views_submit.accounts.get_user_team")
     def test_team_member_can_submit_once_for_the_team(self, get_user_team):
@@ -254,6 +345,38 @@ class SubmissionViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("attachment", response.headers["Content-Disposition"])
         self.assertIn("chapter16.ipynb", response.headers["Content-Disposition"])
+
+    def test_student_can_preview_own_image_inline(self):
+        assignment = self.assignment()
+        submission = Submission.objects.create(
+            assignment=assignment,
+            student_id=self.user.id,
+            team_id=None,
+        )
+        png_bytes = b"\x89PNG\r\n\x1a\npreview"
+        saved_name = default_storage.save(
+            "submissions/test/preview.png",
+            SimpleUploadedFile("preview.png", png_bytes, content_type="image/png"),
+        )
+        submission_file = SubmissionFile.objects.create(
+            submission=submission,
+            kind=SubmissionFile.Kind.OTHER,
+            file_url=default_storage.url(saved_name),
+            file_name="preview.png",
+            file_size=len(png_bytes),
+        )
+
+        page_response = self.client.get(
+            reverse("student:assignment-preview", args=[assignment.id])
+        )
+        image_response = self.client.get(
+            reverse("student:submission-file-image", args=[submission_file.id])
+        )
+
+        self.assertContains(page_response, "preview.png 미리보기")
+        self.assertEqual(image_response.status_code, 200)
+        self.assertEqual(image_response["Content-Type"], "image/png")
+        self.assertNotIn("attachment", image_response["Content-Disposition"])
 
     def test_student_cannot_download_another_students_file(self):
         assignment = self.assignment()
