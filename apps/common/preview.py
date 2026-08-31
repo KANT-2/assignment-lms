@@ -30,6 +30,14 @@ from pygments.lexers import PythonLexer
 from apps.core.models import SubmissionFile
 
 
+IMAGE_PREVIEW_EXTENSIONS = {
+    ".avif", ".bmp", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".webp",
+}
+PDF_PREVIEW_EXTENSIONS = {".pdf"}
+CSV_PREVIEW_EXTENSIONS = {".csv", ".tsv"}
+PREVIEW_TEXT_LIMIT = 1024 * 1024
+
+
 def _submission_kind(file_name):
     extension = Path(file_name).suffix.lower()
     if extension == ".py":
@@ -48,10 +56,48 @@ def _storage_name(file_url):
 def _read_text(submission_file):
     try:
         with default_storage.open(_storage_name(submission_file.file_url), "rb") as stored:
-            return stored.read().decode("utf-8")
-    except (OSError, UnicodeDecodeError, ValueError, Http404):
+            raw_bytes = stored.read()
+        if _looks_binary(raw_bytes):
+            return None
+        for encoding in ("utf-8-sig", "cp949"):
+            try:
+                return raw_bytes.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+        return None
+    except (OSError, ValueError, Http404):
         # 파일이 없거나 · 스토리지 밖 URL 이거나 · 텍스트가 아니면 미리보기 생략 (페이지는 정상)
         return None
+
+
+def _looks_binary(raw_bytes):
+    """텍스트처럼 디코딩되는 바이너리를 미리보기로 노출하지 않는다."""
+    if not raw_bytes:
+        return False
+    sample = raw_bytes[:8192]
+    if b"\x00" in sample:
+        return True
+    control_count = sum(byte < 32 and byte not in (9, 10, 12, 13) for byte in sample)
+    return control_count / len(sample) > 0.05
+
+
+def _read_preview_text(submission_file):
+    try:
+        with default_storage.open(_storage_name(submission_file.file_url), "rb") as stored:
+            raw_bytes = stored.read(PREVIEW_TEXT_LIMIT + 1)
+    except (OSError, ValueError, Http404):
+        return None, False
+
+    truncated = len(raw_bytes) > PREVIEW_TEXT_LIMIT
+    raw_bytes = raw_bytes[:PREVIEW_TEXT_LIMIT]
+    if _looks_binary(raw_bytes):
+        return None, truncated
+    for encoding in ("utf-8-sig", "cp949"):
+        try:
+            return raw_bytes.decode(encoding), truncated
+        except UnicodeDecodeError:
+            continue
+    return None, truncated
 
 
 def _notebook_cells(raw_text):
@@ -78,19 +124,27 @@ def _notebook_cells(raw_text):
 
 
 def _preview(submission_file):
-    preview = {"file": submission_file, "kind": submission_file.kind}
-    if submission_file.kind == SubmissionFile.Kind.OTHER:
+    extension = Path(submission_file.file_name).suffix.lower()
+    preview = {
+        "file": submission_file,
+        "kind": submission_file.kind,
+        "is_image": extension in IMAGE_PREVIEW_EXTENSIONS,
+        "is_pdf": extension in PDF_PREVIEW_EXTENSIONS,
+        "is_csv": extension in CSV_PREVIEW_EXTENSIONS,
+    }
+    if preview["is_image"] or preview["is_pdf"]:
         return preview
 
-    raw_text = _read_text(submission_file)
+    raw_text, truncated = _read_preview_text(submission_file)
     if raw_text is None:
-        preview["error"] = "파일 내용을 읽을 수 없습니다."
+        if submission_file.kind != SubmissionFile.Kind.OTHER:
+            preview["error"] = "파일 내용을 읽을 수 없습니다."
     elif submission_file.kind == SubmissionFile.Kind.PY:
         # Pygments가 사용자 코드를 escape한 뒤 만든 span 태그만 렌더링한다.
         preview["highlighted"] = mark_safe(
             highlight(raw_text, PythonLexer(), HtmlFormatter(nowrap=True))
         )
-    else:
+    elif submission_file.kind == SubmissionFile.Kind.IPYNB:
         cells = _notebook_cells(raw_text)
         if cells is None:
             preview.update(
@@ -99,4 +153,8 @@ def _preview(submission_file):
             )
         else:
             preview["cells"] = cells
+    else:
+        preview["raw_text"] = raw_text
+    if raw_text is not None and truncated:
+        preview["truncated"] = True
     return preview
