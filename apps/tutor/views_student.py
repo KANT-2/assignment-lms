@@ -26,6 +26,8 @@ from . import grading
 
 SORT_CHOICES = [
     ("required", "필수 제출률 낮은 순"),
+    ("score_low", "성적 낮은 순"),
+    ("score_high", "성적 높은 순"),
     ("name", "이름순"),
     ("last", "마지막 제출 오래된 순"),
 ]
@@ -114,11 +116,17 @@ def student_list(request):
     if q:
         rows = [r for r in rows if q.lower() in (r["name"] or "").lower()]
 
-    sort = request.GET.get("sort") or "required"
+    sort = request.GET.get("sort")
+    if sort not in {c[0] for c in SORT_CHOICES}:
+        sort = "required"
     if sort == "name":
         rows.sort(key=lambda r: r["name"] or "")
     elif sort == "last":
         rows.sort(key=lambda r: (r["last_at"] is not None, r["last_at"] or now))
+    elif sort == "score_low":  # 성적 낮은 순 (미산출은 뒤로)
+        rows.sort(key=lambda r: (r["final_score"] is None, r["final_score"] or 0))
+    elif sort == "score_high":  # 성적 높은 순 (미산출은 뒤로)
+        rows.sort(key=lambda r: (r["final_score"] is None, -(r["final_score"] or 0)))
     else:  # required — 낮은 제출률 먼저 (None 은 뒤로)
         rows.sort(key=lambda r: (r["req_rate"] is None, r["req_rate"] if r["req_rate"] is not None else 0))
 
