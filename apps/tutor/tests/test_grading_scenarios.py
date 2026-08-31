@@ -190,6 +190,30 @@ class PolicyAndEdgeTests(TestCase):
         # 성취도 10, 성실성 0 → 0.5/0.5 → 5.0  (기본 0.7/0.3 이면 7.0)
         self.assertEqual(grading.compute([1], now=NOW)[1].final, 5.0)
 
+    def test_doc_worked_example(self):
+        """docs/assignment-lms-grading.md §7 예시와 일치하는지 고정."""
+        fa = Assignment.objects.create(title="필수A", due_at=PAST, is_team=False,
+                                       is_required=True, weight_tier="MID", created_by=1)
+        Assignment.objects.create(title="필수B", due_at=PAST, is_team=False,
+                                  is_required=True, weight_tier="MID", created_by=1)
+        fc = Assignment.objects.create(title="필수C", due_at=PAST, is_team=False,
+                                       is_required=True, weight_tier="HIGH",
+                                       late_penalty=20, created_by=1)
+        oa = Assignment.objects.create(title="선택A", due_at=PAST, is_team=False,
+                                       is_required=False, weight_tier="MID", created_by=1)
+        tf = Assignment.objects.create(title="팀필수", due_at=PAST, is_team=True,
+                                       is_required=True, weight_tier="MID", created_by=1)
+        sub(fa, student=1, score=90)
+        sub(fc, student=1, score=50, late=True)   # max(40, 50-20) = 40
+        sub(oa, student=1, score=80)
+        sub(tf, team=3, score=85)
+        with patch("apps.tutor.grading.accounts.get_student_teams",
+                   return_value={1: SimpleNamespace(id=3)}):
+            r = grading.compute([1], now=NOW)[1]
+        self.assertAlmostEqual(r.achievement, 69.02, places=1)
+        self.assertEqual(r.sincerity, 80)
+        self.assertEqual(r.final, 72.3)
+
     def test_empty_input(self):
         self.assertEqual(grading.compute([]), {})
 
