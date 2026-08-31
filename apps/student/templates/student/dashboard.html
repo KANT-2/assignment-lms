@@ -136,10 +136,26 @@
   .dash .team-row .name { font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .dash .team-row .email { font-size:10.5px; color:var(--d-tmuted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-  .dash .result-tile { background:var(--d-sunken); border-radius:var(--d-r-md); padding:12px 14px; display:flex;
-    align-items:center; justify-content:space-between; }
-  .dash .result-tile .rl { font-size:12px; color:var(--d-tmuted); font-weight:600; }
-  .dash .result-tile .rv { font-size:18px; font-weight:800; }
+  .dash .submission-status { display:grid; grid-template-columns:minmax(130px, .9fr) minmax(150px, 1.1fr); align-items:center; gap:20px; }
+  .dash .submission-ring { --submission-pct:0%; position:relative; width:128px; height:128px; margin:auto; border-radius:50%;
+    display:grid; place-items:center; background:conic-gradient(from -90deg,var(--d-accent) var(--submission-pct),var(--d-sunken) 0); }
+  .dash .submission-ring::before { content:""; position:absolute; inset:24px; border-radius:50%; background:var(--d-surface); }
+  .dash .submission-ring-label { position:relative; z-index:1; text-align:center; color:var(--d-tmuted); font-size:11px; font-weight:600; }
+  .dash .submission-ring-label strong { display:block; margin-top:2px; color:var(--d-accent); font-size:24px; line-height:1; }
+  .dash .submission-summary { display:flex; flex-direction:column; }
+  .dash .submission-stat { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--d-border); }
+  .dash .submission-stat:last-child { border-bottom:0; }
+  .dash .submission-stat span { color:var(--d-tmuted); font-size:11px; }
+  .dash .submission-stat strong { font-size:14px; }
+  .dash .submission-week-nav { display:grid; grid-template-columns:30px 1fr 30px; align-items:center; margin-top:14px; border-radius:var(--d-r-sm); background:var(--d-muted); }
+  .dash .submission-week-nav a { display:grid; place-items:center; min-height:34px; color:var(--d-tmuted); text-decoration:none; font-size:16px; border-radius:var(--d-r-sm); }
+  .dash .submission-week-nav a:hover { background:var(--d-sunken); color:var(--d-text); }
+  .dash .submission-week-nav span { text-align:center; color:var(--d-tmuted); font-size:11px; font-weight:600; }
+  .dash .info-mark { color:var(--d-tmuted); font-size:12px; cursor:help; }
+  @media (max-width:420px){
+    .dash .submission-status { grid-template-columns:1fr; }
+    .dash .submission-summary { width:100%; }
+  }
   .dash .muted-empty { color:var(--d-tfaint); font-size:12.5px; padding:10px 0; }
 </style>
 {% endblock %}
@@ -342,15 +358,24 @@
     </div>
 
     <div class="card">
-      <div class="card-head"><div class="card-title">🏆 최근 공개 결과</div></div>
-      {% if recent_result %}
-        <div class="result-tile">
-          <span class="rl">{{ recent_result.assignment.title }}</span>
-          <span class="rv">{{ recent_result.final_score }}<span style="font-size:12px;color:var(--d-tmuted);"> / 100</span></span>
+      <div class="card-head">
+        <div class="card-title">과제 제출 현황 <span class="info-mark" title="선택한 주에 마감하는 개인 과제와 내 팀 과제를 기준으로 계산합니다." aria-label="집계 기준 안내">ⓘ</span></div>
+      </div>
+      <div class="submission-status">
+        <div class="submission-ring" style="--submission-pct:{{ submission_week.pct }}%" role="img" aria-label="과제 제출률 {{ submission_week.pct }}퍼센트">
+          <div class="submission-ring-label">제출률<strong>{{ submission_week.pct }}%</strong></div>
         </div>
-      {% else %}
-        <div class="muted-empty">아직 공개된 평가 결과가 없습니다.</div>
-      {% endif %}
+        <div class="submission-summary">
+          <div class="submission-stat"><span>전체 과제</span><strong>{{ submission_week.total }}개</strong></div>
+          <div class="submission-stat"><span>제출 완료</span><strong>{{ submission_week.submitted }}개</strong></div>
+          <div class="submission-stat"><span>채점 전</span><strong>{{ submission_week.ungraded }}개</strong></div>
+        </div>
+      </div>
+      <nav class="submission-week-nav" aria-label="과제 제출 현황 주간 이동">
+        <a href="{{ submission_week.prev_url }}" aria-label="이전 주">‹</a>
+        <span>{{ submission_week.start|date:"Y.m.d (D)" }} - {{ submission_week.end|date:"Y.m.d (D)" }}</span>
+        <a href="{{ submission_week.next_url }}" aria-label="다음 주">›</a>
+      </nav>
     </div>
   </div>
 </div>
