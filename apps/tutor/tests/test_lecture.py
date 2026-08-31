@@ -2,7 +2,7 @@ import json
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from apps.core.models import Lecture, Lesson
@@ -23,6 +23,7 @@ class LectureSingletonTests(TestCase):
         self.assertEqual(Lecture.get_singleton().pk, first.pk)
 
 
+@override_settings(DEV_SKIP_AUTH=True)
 class TutorLectureViewTests(TestCase):
     databases = {"default"}
 
@@ -63,8 +64,7 @@ class TutorLectureViewTests(TestCase):
 
         # 재방문 시 그대로 보인다
         ctx = self.client.get(reverse("tutor:lecture")).context
-        reloaded = json.loads(ctx["lessons_json"])
-        self.assertEqual(reloaded[0]["title"], "1회차")
+        self.assertEqual(ctx["lessons"][0]["title"], "1회차")
 
     def test_stale_revision_is_rejected_without_data_loss(self):
         rev = self.client.get(reverse("tutor:lecture")).context["revision"]

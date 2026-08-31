@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -12,6 +12,7 @@ from apps.core.models import Assignment, Evaluation, Submission
 STUDENTS = [SimpleNamespace(id=i, name=f"학생{i}", email=f"s{i}@x.io", role="student") for i in (1, 2, 3)]
 
 
+@override_settings(DEV_SKIP_AUTH=True)
 class TutorStudentMgmtTests(TestCase):
     databases = {"default"}
 
@@ -93,3 +94,28 @@ class TutorStudentMgmtTests(TestCase):
 
     def test_detail_unknown_student_403(self):
         self.assertEqual(self.client.get(reverse("tutor:student-detail", args=[999])).status_code, 403)
+
+    # ---------- 최종 점수 (grading) ----------
+    def test_list_shows_final_score(self):
+        a = self._a(due_at=timezone.now() - timedelta(days=1))
+        sub = Submission.objects.create(assignment=a, student_id=1)
+        Evaluation.objects.create(submission=sub, score=90, feedback="ok")
+        rows = {r["id"]: r for r in self.client.get(reverse("tutor:student-list")).context["rows"]}
+        # 학생1: 성취도 90, 성실성 100 → 90*.7 + 100*.3 = 93.0
+        self.assertEqual(rows[1]["final_score"], 93.0)
+        # 학생2: 미제출 필수 → 성취도 10, 성실성 0 → 7.0
+        self.assertEqual(rows[2]["final_score"], 7.0)
+
+    def test_list_final_score_none_when_all_ungraded(self):
+        a = self._a(due_at=timezone.now() - timedelta(days=1))
+        Submission.objects.create(assignment=a, student_id=1)  # 채점 안 함
+        rows = {r["id"]: r for r in self.client.get(reverse("tutor:student-list")).context["rows"]}
+        self.assertIsNone(rows[1]["final_score"])
+        self.assertEqual(rows[1]["score_ungraded"], 1)
+
+    def test_detail_has_final_score(self):
+        a = self._a(due_at=timezone.now() - timedelta(days=1))
+        sub = Submission.objects.create(assignment=a, student_id=1)
+        Evaluation.objects.create(submission=sub, score=80, feedback="ok")
+        ctx = self.client.get(reverse("tutor:student-detail", args=[1])).context
+        self.assertEqual(ctx["final_score"], 86.0)  # 80*.7 + 100*.3

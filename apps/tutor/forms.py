@@ -22,9 +22,10 @@ class AssignmentForm(forms.ModelForm):
     """
     과제 등록/수정 폼 — 튜터A (FR-001 등록 / FR-002 수정).
 
-    Assignment 모델 필드 중 튜터가 직접 다루는 6개만 노출한다:
-        title, description, due_at, is_required(FR-008), allow_late(FR-007), is_team(FR-009)
-    (weight_tier / created_by / deleted_at 등은 폼 밖에서 처리)
+    Assignment 모델 필드 중 튜터가 직접 다루는 8개를 노출한다:
+        title, description, due_at, is_required(FR-008), allow_late(FR-007), is_team(FR-009),
+        weight_tier(중요도 — 성적 집계 가중치), late_penalty(지각 감점)
+    (created_by / deleted_at 등은 폼 밖에서 처리)
 
     - 신규 등록 시 due_at 기본값 = 현재 시각 + 24시간.
     - 이미 제출물(Submission)이 1건이라도 있는 과제는 is_team(개인/팀 구분)을
@@ -34,7 +35,11 @@ class AssignmentForm(forms.ModelForm):
 
     class Meta:
         model = Assignment
-        fields = ["title", "description", "due_at", "is_required", "allow_late", "is_team"]
+        fields = [
+            "title", "description", "due_at",
+            "is_required", "allow_late", "is_team",
+            "weight_tier", "late_penalty",
+        ]
         widgets = {
             "title": forms.TextInput(
                 attrs={"class": "form-control", "maxlength": 60,
@@ -52,6 +57,10 @@ class AssignmentForm(forms.ModelForm):
             "is_required": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "allow_late": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "is_team": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "weight_tier": forms.Select(attrs={"class": "form-select"}),
+            "late_penalty": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "max": 100, "placeholder": "0"}
+            ),
         }
         labels = {
             "title": "과제명",
@@ -60,11 +69,15 @@ class AssignmentForm(forms.ModelForm):
             "is_required": "필수 과제",
             "allow_late": "지각 제출 허용",
             "is_team": "팀 과제",
+            "weight_tier": "중요도",
+            "late_penalty": "지각 감점",
         }
         help_texts = {
             "is_required": "체크 해제 시 '선택' 과제로 표시됩니다 (마감·제출·집계 동작은 동일).",
             "allow_late": "허용 시 마감 후 제출도 정상 접수됩니다. 불가 시 마감 후 제출이 차단됩니다.",
             "is_team": "체크 시 팀 단위 제출. 제출물이 하나라도 생기면 이후 변경할 수 없습니다.",
+            "weight_tier": "성적 집계 시 이 과제의 비중 (상 1.5 / 중 1.0 / 하 0.5).",
+            "late_penalty": "지각 제출 시 튜터 점수에서 차감할 고정 점수. 0이면 감점 없음.",
         }
 
     def __init__(self, *args, has_submissions=None, **kwargs):
@@ -79,6 +92,10 @@ class AssignmentForm(forms.ModelForm):
         # 목업 기준: 과제 설명도 필수 입력 (모델은 blank 허용이나 화면에서는 요구)
         self.fields["description"].required = True
 
+        # 지각 감점: 비워두면 0 (감점 없음). 상한 100.
+        self.fields["late_penalty"].required = False
+        self.fields["late_penalty"].validators.append(MaxValueValidator(100))
+
         if has_submissions is None:
             has_submissions = bool(self.instance.pk) and self.instance.submissions.exists()
         self.has_submissions = has_submissions
@@ -89,6 +106,8 @@ class AssignmentForm(forms.ModelForm):
                 "due_at",
                 (timezone.localtime() + timedelta(hours=24)).replace(second=0, microsecond=0),
             )
+            self.initial.setdefault("weight_tier", Assignment.WeightTier.MID)
+            self.initial.setdefault("late_penalty", 0)
 
         # 제출물이 있으면 개인/팀 구분 잠금.
         # 템플릿은 이 플래그를 보고 체크박스를 disabled 로 렌더링하고 현재 값을
@@ -96,6 +115,9 @@ class AssignmentForm(forms.ModelForm):
         # 위조된 POST 로 값을 바꾸려는 시도는 clean_is_team 이 최종 차단한다.
         if self.has_submissions:
             self.fields["is_team"].help_text = "제출물이 있어 개인/팀 구분을 변경할 수 없습니다."
+
+    def clean_late_penalty(self):
+        return self.cleaned_data.get("late_penalty") or 0
 
     def clean_is_team(self):
         value = self.cleaned_data.get("is_team")
