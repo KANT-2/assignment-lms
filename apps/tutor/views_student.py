@@ -22,6 +22,8 @@ from django.utils import timezone
 from apps.accounts_client import services as accounts
 from apps.core.models import Assignment, Submission
 
+from . import grading
+
 SORT_CHOICES = [
     ("required", "필수 제출률 낮은 순"),
     ("name", "이름순"),
@@ -76,6 +78,8 @@ def student_list(request):
     for s in Submission.objects.filter(assignment__is_team=False, student_id__isnull=False):
         by_student.setdefault(s.student_id, {})[s.assignment_id] = s
 
+    scores = grading.compute([stu.id for stu in students], now=now)
+
     rows = []
     students_with_missing = 0
     rate_sum = rate_n = 0
@@ -92,6 +96,7 @@ def student_list(request):
             rate_n += 1
         last_at = max((s.submitted_at for s in subs.values()), default=None)
         team = teams_by_student.get(stu.id)
+        score = scores.get(stu.id)
         rows.append({
             "id": stu.id,
             "name": stu.name,
@@ -101,6 +106,8 @@ def student_list(request):
             "opt_done": opt_done, "opt_total": len(opt_ids), "opt_rate": _rate(opt_done, len(opt_ids)),
             "missing_required": missing_required,
             "last_at": timezone.localtime(last_at) if last_at else None,
+            "final_score": score.final if score else None,
+            "score_ungraded": score.ungraded_count if score else 0,
         })
 
     q = (request.GET.get("q") or "").strip()
@@ -178,11 +185,14 @@ def student_detail(request, student_id):
 
     done = subs.keys()
     last_at = max((s.submitted_at for s in subs.values()), default=None)
+    score = grading.compute([student_id], now=now).get(student_id)
 
     return render(request, "tutor/student_detail.html", {
         "student": student,
         "team": team.name if team else None,
         "timeline": timeline,
+        "final_score": score.final if score else None,
+        "score_ungraded": score.ungraded_count if score else 0,
         "req_rate": _rate(len(req_ids & done), len(req_ids)),
         "opt_rate": _rate(len(opt_ids & done), len(opt_ids)),
         "req_done": len(req_ids & done), "req_total": len(req_ids),
