@@ -74,8 +74,10 @@
       <span>평균 필수 제출률 <b>{% if avg_required_rate is not None %}{{ avg_required_rate }}%{% else %}—{% endif %}</b></span>
       <span class="sep">·</span>
       <span class="s-alert">미제출 있는 학생 <b>{{ students_with_missing }}명</b></span>
+      {% if team_count %}
       <span class="sep">·</span>
-      <span>팀 정보 <b>미연동</b></span>
+      <span>팀 <b>{{ team_count }}개</b></span>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -117,7 +119,7 @@
                 </span>
               </div>
             </td>
-            <td><span class="pill">미연동</span></td>
+            <td>{% if r.team %}<span class="pill">{{ r.team }}</span>{% else %}<span class="dash-val">—</span>{% endif %}</td>
             <td>
               {% if r.req_rate is not None %}
               <div class="bar-wrap">
@@ -147,7 +149,7 @@
     {% endif %}
 
     <p class="note">
-      · <b>팀</b> — 라운드(프로젝트)마다 팀이 재편성되며 팀 명단은 별도 테이블에서 관리됩니다. 아직 연동 전이라 "미연동"으로 표시됩니다.<br>
+      · <b>팀</b> — 현재 진행 중인 라운드(프로젝트)의 팀 편성 기준입니다. 라운드가 바뀌면 팀도 재편성됩니다. 라운드에 배정되지 않은 학생은 "—"로 표시됩니다.<br>
       · <b>성적</b> — 평가 집계 방식이 확정되지 않아 컬럼 자리만 잡아 두었습니다.<br>
       · <b>제출률</b> — 개인 과제 전체 기준입니다. 팀 과제는 학생 귀속 정보가 없어 분모에서 제외했습니다.<br>
       · <b>마지막 제출</b> — 마지막 과제 제출 시각 기준입니다 (접속 기록은 수집하지 않음).

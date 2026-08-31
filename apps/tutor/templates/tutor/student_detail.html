@@ -75,7 +75,7 @@
       <span class="avatar">{{ student.name|slice:":1" }}</span>
       <div>
         <div class="d-name">{{ student.name }}</div>
-        <div class="d-meta">{{ student.email }} · 팀 <span class="pill">미연동</span> · 성적 <span class="dash-val">—</span></div>
+        <div class="d-meta">{{ student.email }} · 팀 {% if team %}<span class="pill">{{ team }}</span>{% else %}<span class="dash-val">—</span>{% endif %} · 성적 <span class="dash-val">—</span></div>
       </div>
     </div>
   </div>

@@ -148,6 +148,23 @@ def get_user_team(user_id):
     return _ns(id=r.team_id, name=r.team_name, number=r.team_number) if r else None
 
 
+def get_student_teams():
+    """우리 라운드 전체의 {user_id: team} 매핑 (학생 목록 화면용 · 1쿼리)."""
+    if _dev():
+        out = {}
+        for tid, members in _DEV_TEAM_MEMBERS.items():
+            t = next(x for x in _DEV_TEAMS if x["id"] == tid)
+            for uid in members:
+                out[uid] = _ns(**t)
+        return out
+    from .models import RoundTeamMember
+
+    return {
+        r.user_id: _ns(id=r.team_id, name=r.team_name, number=r.team_number)
+        for r in RoundTeamMember.objects.filter(round_id=_current_round_id())
+    }
+
+
 def is_team_member(user_id, team_id):
     """팀 과제 제출 자격 — 우리 라운드에서 그 팀 소속인지 (BR-005)."""
     user_id, team_id = int(user_id), int(team_id)

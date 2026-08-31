@@ -5,7 +5,7 @@
 #
 # 스코프 / placeholder (docs/mockups/README.md §5):
 #   - 학생 명단 = accounts.get_students() (전체 승인 학생)
-#   - 팀: 라운드마다 재편성 + 팀 명단 별도 테이블 미연동 → "미연동" 표시
+#   - 팀: accounts.get_student_teams() — 현재 라운드의 {학생: 팀} (라운드마다 재편성)
 #   - 제출률: 전체 과제 기준, 개인 과제만 집계 (팀 과제는 학생 귀속 불가 → 분모 제외)
 #     · 필수 / 선택 분리
 #   - 성적(집계): 방식 미정 → 컬럼 자리만
@@ -60,6 +60,11 @@ def student_list(request):
     now = timezone.now()
     students = _load_students()
 
+    try:
+        teams_by_student = accounts.get_student_teams() or {}
+    except AttributeError:
+        teams_by_student = {}
+
     assignments = list(Assignment.objects.filter(is_team=False))
     req_ids = {a.id for a in assignments if a.is_required}
     opt_ids = {a.id for a in assignments if not a.is_required}
@@ -86,10 +91,12 @@ def student_list(request):
             rate_sum += req_rate
             rate_n += 1
         last_at = max((s.submitted_at for s in subs.values()), default=None)
+        team = teams_by_student.get(stu.id)
         rows.append({
             "id": stu.id,
             "name": stu.name,
             "email": stu.email,
+            "team": team.name if team else None,
             "req_done": req_done, "req_total": len(req_ids), "req_rate": req_rate,
             "opt_done": opt_done, "opt_total": len(opt_ids), "opt_rate": _rate(opt_done, len(opt_ids)),
             "missing_required": missing_required,
@@ -116,6 +123,7 @@ def student_list(request):
         "total_students": len(students),
         "avg_required_rate": round(rate_sum / rate_n) if rate_n else None,
         "students_with_missing": students_with_missing,
+        "team_count": len({t.id for t in teams_by_student.values()}),
         "filters": {"q": q, "sort": sort},
         "sort_choices": SORT_CHOICES,
     })
@@ -141,6 +149,11 @@ def student_detail(request, student_id):
     student = accounts.get_user(student_id)
     if student is None:
         raise PermissionDenied("학생을 찾을 수 없습니다.")
+
+    try:
+        team = accounts.get_user_team(student_id)
+    except AttributeError:
+        team = None
 
     subs = {
         s.assignment_id: s
@@ -168,6 +181,7 @@ def student_detail(request, student_id):
 
     return render(request, "tutor/student_detail.html", {
         "student": student,
+        "team": team.name if team else None,
         "timeline": timeline,
         "req_rate": _rate(len(req_ids & done), len(req_ids)),
         "opt_rate": _rate(len(opt_ids & done), len(opt_ids)),
