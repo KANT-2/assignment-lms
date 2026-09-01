@@ -17,6 +17,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts_client import services as accounts
@@ -78,6 +79,16 @@ def student_list(request):
     for s in Submission.objects.filter(assignment__is_team=False, student_id__isnull=False):
         by_student.setdefault(s.student_id, {})[s.assignment_id] = s
 
+    # 미채점(마감됨 + final_score 없음) 제출물 → "미채점 N건" 클릭 시 검토로 이동
+    ungraded_personal, ungraded_team = {}, {}
+    for s in Submission.objects.filter(
+        final_score__isnull=True, assignment__due_at__lt=now
+    ).select_related("assignment"):
+        if s.student_id is not None:
+            ungraded_personal.setdefault(s.student_id, []).append(s.id)
+        elif s.team_id is not None:
+            ungraded_team.setdefault(s.team_id, []).append(s.id)
+
     scores = grading.compute([stu.id for stu in students], now=now)
 
     rows = []
@@ -97,6 +108,17 @@ def student_list(request):
         last_at = max((s.submitted_at for s in subs.values()), default=None)
         team = teams_by_student.get(stu.id)
         score = scores.get(stu.id)
+
+        ung = list(ungraded_personal.get(stu.id, []))
+        if team:
+            ung += ungraded_team.get(team.id, [])
+        if len(ung) == 1:
+            ungraded_url = reverse("tutor:submission-review", args=[ung[0]])
+        elif len(ung) > 1:
+            ungraded_url = reverse("tutor:student-detail", args=[stu.id])
+        else:
+            ungraded_url = None
+
         rows.append({
             "id": stu.id,
             "name": stu.name,
@@ -108,6 +130,7 @@ def student_list(request):
             "last_at": timezone.localtime(last_at) if last_at else None,
             "final_score": score.final if score else None,
             "score_ungraded": score.ungraded_count if score else 0,
+            "ungraded_url": ungraded_url,
         })
 
     q = (request.GET.get("q") or "").strip()
