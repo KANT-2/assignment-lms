@@ -8,18 +8,22 @@ FR-012 AI 1차 평가 — 실제 Gemini 호출. 뷰(views_review)가 generate() 
 - 재생성: 호출할 때마다 새로 요청 (기존 AiEvaluation 덮어쓰기는 뷰 책임).
 - 실패 시(키 미설정 / 타임아웃 / 5xx / 파싱 실패) 예외를 그대로 올린다.
   뷰가 잡아서 "AI 평가 생성에 실패했습니다" 메시지를 띄운다 (가짜 점수 저장 안 함).
+- 제출물에 읽을 수 있는 코드/텍스트가 하나도 없으면 NoReadableContent 예외
+  (GitHub 링크만 냈는데 접근 실패 등). 설계: docs/assignment-lms-github-link-eval.md
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from django.conf import settings
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from apps.common.preview import _read_text
+from apps.common.preview import _notebook_cells, _read_text
 from apps.core.models import Submission
+
+from . import github_fetch
 
 # 프롬프트에 실어 보낼 제출 파일 본문 길이 상한 (토큰·비용 방어)
 _MAX_CHARS_PER_FILE = 15_000
@@ -39,6 +43,15 @@ _SYSTEM_INSTRUCTION = (
 class AiResult:
     score: int
     comment: str
+    unreadable_links: list[str] = field(default_factory=list)  # 못 읽은 제출 링크
+
+
+class NoReadableContent(Exception):
+    """제출물에서 읽어낸 코드/텍스트가 하나도 없음. links = 접근 실패한 링크들."""
+
+    def __init__(self, links: list[str] | None = None):
+        self.links = links or []
+        super().__init__("제출물에서 읽을 수 있는 내용이 없습니다.")
 
 
 class _GeminiResult(BaseModel):
@@ -46,7 +59,29 @@ class _GeminiResult(BaseModel):
     comment: str
 
 
-def _build_prompt(submission: Submission) -> str:
+def _is_link(submission_file) -> bool:
+    return submission_file.file_url.startswith(("http://", "https://"))
+
+
+def _notebook_to_text(raw: str) -> str:
+    """.ipynb JSON → 코드/마크다운/출력만 추린 텍스트. 파싱 실패 시 원문."""
+    cells = _notebook_cells(raw)
+    if cells is None:
+        return raw
+    out = []
+    for cell in cells:
+        out.append(f"[{cell['type']} cell]\n{cell['source']}")
+        for output in cell.get("outputs", []):
+            out.append(f"[output]\n{output}")
+    return "\n\n".join(out)
+
+
+def _as_prompt_text(text: str, name: str) -> str:
+    return _notebook_to_text(text) if name.lower().endswith(".ipynb") else text
+
+
+def _build_prompt(submission: Submission) -> tuple[str, int, list[str]]:
+    """(프롬프트, 읽어낸 자료 수, 못 읽은 링크 목록)."""
     assignment = submission.assignment
     parts = [
         f"[과제 제목]\n{assignment.title}",
@@ -55,30 +90,59 @@ def _build_prompt(submission: Submission) -> str:
     ]
 
     budget = _MAX_CHARS_TOTAL
+    read_count = 0
+    unreadable_links: list[str] = []
     files = list(submission.files.all())
     if not files:
         parts.append("[제출 파일]\n(첨부 파일 없음)")
 
     for submission_file in files:
-        text = _read_text(submission_file)
-        if text is None:
-            parts.append(f"[파일: {submission_file.file_name}]\n(텍스트 파일이 아니라 내용 생략)")
-            continue
-        if budget <= 0:
-            parts.append(f"[파일: {submission_file.file_name}]\n(길이 제한으로 생략)")
-            continue
-        chunk = text[:_MAX_CHARS_PER_FILE][:budget]
-        budget -= len(chunk)
-        truncated = "\n...(이하 생략)" if len(text) > len(chunk) else ""
-        parts.append(f"[파일: {submission_file.file_name}]\n```\n{chunk}{truncated}\n```")
+        name = submission_file.file_name
+        link = _is_link(submission_file)
 
-    return "\n\n".join(parts)
+        text = _read_text(submission_file)
+        if text is None and link:
+            text = github_fetch.fetch_github_file(submission_file.file_url)
+            if text is None:
+                unreadable_links.append(submission_file.file_url)
+                if github_fetch.is_github_url(submission_file.file_url):
+                    reason = (
+                        "GitHub 링크 확인 불가 (비공개·404·타임아웃)"
+                        if github_fetch.raw_url(submission_file.file_url)
+                        else "GitHub 링크 — 단일 파일(blob) 링크만 지원"
+                    )
+                else:
+                    reason = "지원하지 않는 링크"
+                parts.append(f"[링크: {submission_file.file_url}]\n({reason})")
+                continue
+
+        if text is None:
+            parts.append(f"[파일: {name}]\n(텍스트 파일이 아니라 내용 생략)")
+            continue
+
+        label = f"링크: {submission_file.file_url}" if link else f"파일: {name}"
+        if budget <= 0:
+            parts.append(f"[{label}]\n(길이 제한으로 생략)")
+            continue
+
+        body = _as_prompt_text(text, name)
+        chunk = body[:_MAX_CHARS_PER_FILE][:budget]
+        budget -= len(chunk)
+        read_count += 1
+        truncated = "\n...(이하 생략)" if len(body) > len(chunk) else ""
+        parts.append(f"[{label}]\n```\n{chunk}{truncated}\n```")
+
+    return "\n\n".join(parts), read_count, unreadable_links
 
 
 def generate(submission: Submission) -> AiResult:
     """제출물 하나에 대한 Gemini 1차 평가. 실패 시 예외를 그대로 올린다."""
     if not settings.GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY 가 설정되지 않았습니다.")
+
+    prompt, read_count, unreadable_links = _build_prompt(submission)
+    if read_count == 0:
+        raise NoReadableContent(unreadable_links)
 
     client = genai.Client(
         api_key=settings.GEMINI_API_KEY,
@@ -88,7 +152,7 @@ def generate(submission: Submission) -> AiResult:
     )
     response = client.models.generate_content(
         model=settings.GEMINI_MODEL,
-        contents=_build_prompt(submission),
+        contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction=_SYSTEM_INSTRUCTION,
             response_mime_type="application/json",
@@ -106,4 +170,4 @@ def generate(submission: Submission) -> AiResult:
     if not comment:
         raise ValueError("Gemini 응답에 코멘트가 비어 있음")
 
-    return AiResult(score=score, comment=comment)
+    return AiResult(score=score, comment=comment, unreadable_links=unreadable_links)

@@ -191,6 +191,14 @@ def ai_evaluation_generate(request, pk):
     submission = get_object_or_404(Submission.objects.select_related("assignment"), pk=pk)
     try:
         result = ai_gemini.generate(submission)
+    except ai_gemini.NoReadableContent as exc:
+        detail = f": {', '.join(exc.links)}" if exc.links else " (코드/텍스트 파일이 아님)"
+        messages.error(
+            request,
+            "AI가 제출물 내용을 읽지 못했습니다" + detail
+            + ". 링크를 확인하거나 학생에게 재제출을 요청하세요.",
+        )
+        return redirect(_review_url(pk, request.POST))
     except ServerError:
         logger.warning("AI 1차 평가 — Gemini 서버 혼잡 (submission=%s)", pk)
         messages.error(request, "AI 채점 서버가 혼잡합니다. 잠시 후 '✨ AI 다시 채점'을 눌러주세요.")
@@ -204,6 +212,12 @@ def ai_evaluation_generate(request, pk):
         submission=submission,
         defaults={"score": result.score, "comment": result.comment},
     )
+    if result.unreadable_links:
+        messages.warning(
+            request,
+            f"읽지 못한 링크: {', '.join(result.unreadable_links)}. "
+            "AI 평가는 나머지 자료 기준입니다.",
+        )
     messages.success(
         request, "AI 1차 평가를 생성했습니다." if created else "AI 1차 평가를 다시 생성했습니다."
     )

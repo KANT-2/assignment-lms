@@ -133,6 +133,10 @@ GITHUB_OAUTH_CLIENT_SECRET = env("GITHUB_OAUTH_CLIENT_SECRET")
 GITHUB_TOKEN_ENC_KEY = env("GITHUB_TOKEN_ENC_KEY")
 GITHUB_SUBMISSION_REPO_NAME = env("GITHUB_SUBMISSION_REPO_NAME", "lms-assignments")
 
+# AI 채점이 학생 GitHub 공개 레포 단일 파일 링크를 읽을 때 rate limit 상향용 (apps.tutor.github_fetch).
+# 없어도 동작 (무인증, 60/hr). 있으면 5000/hr.
+GITHUB_API_TOKEN = env("GITHUB_API_TOKEN")
+
 # --- 인증 ---
 # 실제 로그인: ax_evaluation.accounts_user 이메일+비번 (AxPasswordBackend).
 # ModelBackend 는 dev 유저(DevAutoLoginMiddleware가 만든 로컬 계정)용으로 남겨둔다.
