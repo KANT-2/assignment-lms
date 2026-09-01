@@ -24,9 +24,18 @@ class SubmissionForm(forms.Form):
 
     def clean_file(self):
         uploaded_file = self.cleaned_data["file"]
-        if uploaded_file.size > MAX_UPLOAD_SIZE:
+        if uploaded_file and uploaded_file.size > MAX_UPLOAD_SIZE:
             raise forms.ValidationError("파일 크기는 30MB를 초과할 수 없습니다.")
         return uploaded_file
+
+
+class AssignmentSubmissionForm(SubmissionForm):
+    """파일 또는 링크를 복수로 받는 최초 제출 화면용 폼."""
+    file = forms.FileField(
+        label="제출 파일",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
+    )
 
 
 class ResubmissionForm(SubmissionForm):

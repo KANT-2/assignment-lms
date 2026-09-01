@@ -4,6 +4,8 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
 <style>
+  .app-topbar .crumb { display:none; }
+  .app-topbar .utils { margin-left:auto; }
   .student-card .preview-panel { margin-bottom:12px; }
   .student-card .preview-panel:last-child { margin-bottom:0; }
   .student-preview-details > summary { display:flex; align-items:center; gap:8px; padding:10px 12px; list-style:none; color:var(--color-text-muted); background:var(--color-surface-subtle); font-size:12px; font-weight:700; cursor:pointer; }
@@ -14,6 +16,9 @@
   .student-preview-details .preview-hint { margin-left:auto; color:var(--color-primary); font-weight:600; }
   .student-preview-details .preview-hint::after { content:"펼치기"; }
   .student-preview-details[open] .preview-hint::after { content:"접기"; }
+  .student-preview-scroll { max-height:420px; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
+  .student-preview-scroll .code-preview,
+  .student-preview-scroll .text-preview { max-height:none; }
   .student-submission-image { display:block; max-width:100%; max-height:640px; margin:0 auto; border-radius:10px; object-fit:contain; }
   .student-card .text-preview { max-height:420px; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
   .student-csv-preview { white-space:pre; }
@@ -22,6 +27,8 @@
   .submission-info-header .student-section-title { margin-bottom:0; }
   .submission-file-actions { display:flex; align-items:center; gap:12px; margin-left:auto; }
   .submission-download-button { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  .submission-link-preview { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px; }
+  .submission-link-url { min-width:0; overflow:hidden; color:var(--color-text-muted); font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
 </style>
 {% endblock %}
 {% block page_header %}
@@ -44,15 +51,24 @@
   <section class="student-card">
     <div class="submission-info-header">
       <h2 class="student-section-title">📄 내 제출 정보</h2>
-      {% if previews.0 %}
-        <a class="submission-download-button btn btn-outline-primary btn-sm" href="{% url 'student:submission-file-download' previews.0.file.id %}" download aria-label="{{ previews.0.file.file_name }} 다운로드">⬇ 다운로드</a>
+      {% if previews|length == 1 and not previews.0.is_link %}
+        <a class="submission-download-button btn btn-outline-primary btn-sm" href="{% url 'student:submission-file-download' previews.0.file.id %}" download aria-label="{{ previews.0.file.file_name }} 다운로드">다운로드</a>
       {% endif %}
     </div>
     {% for preview in previews %}
       <div class="file-meta">
-        <a class="fw-semibold text-decoration-none" href="{% url 'student:submission-file-download' preview.file.id %}" download>{{ preview.file.file_name }}</a>
+        {% if preview.is_link %}
+          <a class="fw-semibold text-decoration-none text-truncate" href="{{ preview.file.file_url }}" target="_blank" rel="noopener noreferrer">🔗 {{ preview.file.file_name }}</a>
+        {% else %}
+          <a class="fw-semibold text-decoration-none" href="{% url 'student:submission-file-download' preview.file.id %}" download>{{ preview.file.file_name }}</a>
+        {% endif %}
         <div class="submission-file-actions">
-          <span>{{ preview.file.file_size|filesizeformat }}</span>
+          {% if preview.is_link %}
+            <a class="btn btn-outline-primary btn-sm" href="{{ preview.file.file_url }}" target="_blank" rel="noopener noreferrer">링크 열기</a>
+          {% else %}
+            <span>{{ preview.file.file_size|filesizeformat }}</span>
+            {% if previews|length > 1 %}<a class="btn btn-outline-primary btn-sm" href="{% url 'student:submission-file-download' preview.file.id %}" download>다운로드</a>{% endif %}
+          {% endif %}
         </div>
       </div>
     {% endfor %}
@@ -74,20 +90,32 @@
     {% endif %}
   </section>
   <section class="student-card">
-    <h2 class="student-section-title">🔍 제출 파일 미리보기</h2>
+    <h2 class="student-section-title">🔍 제출 자료 미리보기</h2>
     <div>
       {% for preview in previews %}
         <div class="preview-panel">
           <div class="preview-file-name">{{ preview.file.file_name }}</div>
-          {% if preview.is_image %}
-            <img class="student-submission-image" src="{% url 'student:submission-file-image' preview.file.id %}" alt="{{ preview.file.file_name }} 미리보기" loading="lazy">
-          {% elif preview.kind == "PY" %}
-            {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% else %}<pre class="code-preview"><code>{{ preview.highlighted }}</code></pre>{% endif %}
-          {% elif preview.kind == "IPYNB" %}
-            {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% endif %}
-            {% if preview.cells %}
-              <details class="student-preview-details">
-                <summary>📓 노트북 미리보기 · {{ preview.cells|length }}개 셀<span class="preview-hint"></span></summary>
+          <details class="student-preview-details">
+            <summary>
+              {% if preview.is_link %}🔗 링크 미리보기
+              {% elif preview.is_image %}🖼️ 이미지 미리보기
+              {% elif preview.kind == "IPYNB" and preview.cells %}📓 노트북 미리보기 · {{ preview.cells|length }}개 셀
+              {% else %}📄 파일 미리보기{% endif %}
+              <span class="preview-hint"></span>
+            </summary>
+            <div class="student-preview-scroll">
+              {% if preview.is_link %}
+                <div class="submission-link-preview">
+                  <span class="submission-link-url">{{ preview.file.file_url }}</span>
+                  <a class="btn btn-outline-primary btn-sm" href="{{ preview.file.file_url }}" target="_blank" rel="noopener noreferrer">링크 열기</a>
+                </div>
+              {% elif preview.is_image %}
+                <img class="student-submission-image" src="{% url 'student:submission-file-image' preview.file.id %}" alt="{{ preview.file.file_name }} 미리보기" loading="lazy">
+              {% elif preview.kind == "PY" %}
+                {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% else %}<pre class="code-preview"><code>{{ preview.highlighted }}</code></pre>{% endif %}
+              {% elif preview.kind == "IPYNB" %}
+                {% if preview.error %}<p class="preview-message">{{ preview.error }}</p>{% endif %}
+                {% if preview.cells %}
                 <div class="notebook-preview">
                   {% for cell in preview.cells %}
                     <article class="notebook-cell">
@@ -97,22 +125,15 @@
                     </article>
                   {% empty %}<p class="text-muted mb-0">노트북에 표시할 셀이 없습니다.</p>{% endfor %}
                 </div>
-              </details>
-            {% elif preview.raw_text %}
-              <details class="student-preview-details">
-                <summary>📄 원본 미리보기<span class="preview-hint"></span></summary>
-                <pre class="text-preview">{{ preview.raw_text }}</pre>
-              </details>
-            {% endif %}
-          {% elif preview.raw_text %}
-            <details class="student-preview-details">
-              <summary>📄 텍스트 미리보기<span class="preview-hint"></span></summary>
-              <pre class="text-preview{% if preview.is_csv %} student-csv-preview{% endif %}"><code>{{ preview.raw_text }}</code></pre>
-            </details>
-            {% if preview.truncated %}<p class="preview-message">파일이 커서 앞 1MB만 표시합니다.</p>{% endif %}
-          {% else %}<div class="preview-message">📁 이 파일은 미리보기를 지원하지 않습니다. 위 파일명을 눌러 다운로드할 수 있습니다.</div>{% endif %}
+                {% elif preview.raw_text %}<pre class="text-preview">{{ preview.raw_text }}</pre>{% endif %}
+              {% elif preview.raw_text %}
+                <pre class="text-preview{% if preview.is_csv %} student-csv-preview{% endif %}"><code>{{ preview.raw_text }}</code></pre>
+                {% if preview.truncated %}<p class="preview-message">파일이 커서 앞 1MB만 표시합니다.</p>{% endif %}
+              {% else %}<div class="preview-message">📁 이 파일은 미리보기를 지원하지 않습니다. 위 파일명을 눌러 다운로드할 수 있습니다.</div>{% endif %}
+            </div>
+          </details>
         </div>
-      {% empty %}<div class="empty-state">첨부된 파일이 없습니다.</div>{% endfor %}
+      {% empty %}<div class="empty-state">첨부된 자료가 없습니다.</div>{% endfor %}
     </div>
   </section>
   {% if is_past %}

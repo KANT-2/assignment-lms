@@ -26,6 +26,7 @@ from apps.core.models import Assignment, Lesson, Submission
 
 FEEDBACK_QUEUE_LIMIT = 12
 LESSON_LIMIT = 12
+URGENT_DAYS = 1
 IMMINENT_DAYS = 3
 ONGOING_LIMIT = 8
 
@@ -65,8 +66,10 @@ def _ongoing_status(is_past, dday, sub_count, fb_count):
         return "피드백 완료", "done"
     if is_past:
         return "마감 · 검토 중", "closed"
-    if 0 <= dday <= IMMINENT_DAYS:
+    if 0 <= dday <= URGENT_DAYS:
         return "마감 임박", "imminent"
+    if dday <= IMMINENT_DAYS:
+        return "마감 임박", "soon"
     return "진행 중", "open"
 
 

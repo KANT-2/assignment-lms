@@ -7,6 +7,8 @@
 
 {% block extra_head %}
 <style>
+  .app-topbar .crumb { display:none; }
+  .app-topbar .utils { margin-left:auto; }
   .dash {
     --d-surface:#fff; --d-sunken:#eef1f8; --d-muted:#f4f6fb;
     --d-text:#1c2130; --d-tmuted:#6b7280; --d-tfaint:#9aa1b1;
@@ -299,7 +301,6 @@
           <a class="see-all" href="{% url 'student:assignment-list' %}">
             전체 과제 보기 <span aria-hidden="true">→</span>
           </a>
-          <div class="day-cap">날짜를 누르면 그날 일정(강의·과제)으로 바뀝니다. · 개수는 개인 과제 전체{% if team %} + 내 팀 과제{% endif %} 기준</div>
         {% endif %}
       </div>
     </div>
@@ -337,7 +338,6 @@
       {% endfor %}
       </div>
       {% if todos %}<div class="todo-foot">{{ todo_done }} / {{ todos|length }} 완료</div>{% endif %}
-      <div class="day-cap" style="margin-top:8px;">달력에서 날짜를 누르면 그 날의 할 일을 보고 추가할 수 있어요.</div>
     </div>
 
     <div class="card">
@@ -364,7 +364,7 @@
 
     <div class="card">
       <div class="card-head">
-        <div class="card-title">과제 제출 현황 <span class="info-mark" title="선택한 주에 마감하는 개인 과제와 내 팀 과제를 기준으로 계산합니다." aria-label="집계 기준 안내">ⓘ</span></div>
+        <div class="card-title">과제 제출 현황</div>
       </div>
       <div class="submission-status">
         <div class="submission-ring" style="--submission-pct:{{ submission_week.pct }}%" role="img" aria-label="과제 제출률 {{ submission_week.pct }}퍼센트">
