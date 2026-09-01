@@ -25,7 +25,7 @@
   };
 
   function loadLessons() {
-    lessons.sort((a, b) => a.order - b.order);
+    lessons.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     renderTable();
   }
 
@@ -86,32 +86,27 @@
     const query = document.getElementById("search-input").value.trim().toLowerCase();
 
     const filtered = lessons.filter((l) => {
+      const hasVideo = l.videos && l.videos.length > 0;
       // Tab filter
-      if (currentTab === "video-ok" && !l.videoUrl) return false;
-      if (currentTab === "video-wait" && l.videoUrl) return false;
+      if (currentTab === "video-ok" && !hasVideo) return false;
+      if (currentTab === "video-wait" && hasVideo) return false;
       // Search filter
       if (query) {
         return (
           l.title.toLowerCase().includes(query) ||
-          l.date.includes(query) ||
-          `${l.order}회차`.includes(query)
+          l.date.includes(query)
         );
       }
       return true;
     });
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 36px; color: var(--text-muted);">조건에 맞는 차시가 없습니다.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 36px; color: var(--text-muted);">조건에 맞는 차시가 없습니다.</td></tr>`;
       return;
     }
 
-    // Sort by date (descending), then by absolute order (ascending)
-    filtered.sort((a, b) => {
-      if (a.date === b.date) {
-        return a.order - b.order;
-      }
-      return new Date(b.date) - new Date(a.date);
-    });
+    // Sort by date (descending)
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const dateSpans = {};
     filtered.forEach((lesson) => {
@@ -124,17 +119,19 @@
     filtered.forEach((lesson) => {
       const tr = document.createElement("tr");
 
-      // Video Status & Thumbnail
-      const thumbUrl = getYouTubeThumbnail(lesson.videoUrl);
+      // Video Status & Thumbnail (uses videos array now)
+      const firstVideo = lesson.videos && lesson.videos.length > 0 ? lesson.videos[0] : null;
+      const thumbUrl = firstVideo ? getYouTubeThumbnail(firstVideo.url) : null;
       let videoCellHtml = "";
 
       if (thumbUrl) {
+        const videoCount = lesson.videos.length;
         videoCellHtml = `
           <div class="video-cell">
             <div class="table-thumb" title="유튜브 썸네일">
               <img src="${thumbUrl}" alt="썸네일" loading="lazy">
             </div>
-            <span class="badge video-ok">등록 완료</span>
+            <span class="badge video-ok">등록 완료${videoCount > 1 ? ` (${videoCount}개)` : ""}</span>
           </div>
         `;
       } else {
@@ -365,16 +362,21 @@
 
     function saveLesson() {
     const title = document.getElementById("form-title").value.trim();
-    const order = parseInt(document.getElementById("form-order").value) || 1;
     const date = document.getElementById("form-date").value;
-    const blogUrl = document.getElementById("form-blog").value.trim() || null;
-    const videoUrl = document.getElementById("form-video").value.trim() || null;
     const editId = document.getElementById("edit-lesson-id").value;
 
     if (!title || !date) {
       alert("수업 제목과 수업 일자를 입력해주세요.");
       return;
     }
+
+    // Collect videos from video-builder-list
+    const videos = [];
+    document.querySelectorAll("#video-builder-list .video-row").forEach((row) => {
+      const vTitle = (row.querySelector(".vid-title") ? row.querySelector(".vid-title").value.trim() : "");
+      const vUrl = (row.querySelector(".vid-url") ? row.querySelector(".vid-url").value.trim() : "");
+      if (vUrl) videos.push({ title: vTitle, url: vUrl });
+    });
 
     // Collect materials
     const materials = [];
@@ -388,7 +390,7 @@
         const fileInput = row.querySelector(".mat-file");
         if (fileInput && fileInput.files && fileInput.files.length > 0) {
           const file = fileInput.files[0];
-          matUrl = file.name; // Use filename for mockup display
+          matUrl = file.name;
           matSize = (file.size / 1024 / 1024).toFixed(1) + " MB";
           if (!matTitle) matTitle = file.name;
         } else {
@@ -398,7 +400,7 @@
             matSize = "기존 파일";
             if (!matTitle) matTitle = matUrl;
           } else {
-            matUrl = "#"; // Fallback
+            matUrl = "#";
           }
         }
       } else {
@@ -417,31 +419,27 @@
       if (idx !== -1) {
         lessons[idx] = {
           ...lessons[idx],
-          order,
           date,
           title,
-          blogUrl,
-          videoUrl,
+          videos,
           materials,
         };
       }
-      showToast(`${order}회차 수업 정보가 수정되었습니다. (학생 화면 즉시 반영)`);
+      showToast(`${date} 수업 정보가 수정되었습니다.`);
     } else {
       // Create
       const newLesson = {
         id: Date.now(),
-        order,
         date,
         title,
-        blogUrl,
-        videoUrl,
+        videos,
         materials,
       };
       lessons.push(newLesson);
-      showToast("새 차시가 등록되었습니다. (학생 화면 즉시 반영)");
+      showToast("새 일정이 등록되었습니다. (학생 화면 즉시 반영)");
     }
 
-    lessons.sort((a, b) => a.order - b.order);
+    lessons.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
     // UI 우선 반영
     renderTable();
@@ -461,18 +459,18 @@
     if (idx === -1) return;
 
     deletedLessonBackup = { index: idx, data: lessons[idx] };
-    const order = lessons[idx].order;
+    const dateStr = lessons[idx].date;
     lessons.splice(idx, 1);
     renderTable();
     saveToStorage().catch((e) => alert("삭제 저장에 실패했습니다."));
 
-    showToast(`${order}회차가 삭제되었습니다.`, true);
+    showToast(`${dateStr} 일정이 삭제되었습니다.`, true);
   }
 
   function undoDelete() {
     if (deletedLessonBackup) {
       lessons.splice(deletedLessonBackup.index, 0, deletedLessonBackup.data);
-      lessons.sort((a, b) => a.order - b.order);
+      lessons.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
       deletedLessonBackup = null;
       renderTable();
       saveToStorage().catch((e) => alert("복구 저장에 실패했습니다."));
@@ -522,9 +520,6 @@
     toggleMaterialInput,
     updateVideoPreview,
     saveLesson,
-    openQuickVideoModal,
-    updateQuickPreview,
-    saveQuickVideo,
     deleteLesson,
     undoDelete,
     openModal,

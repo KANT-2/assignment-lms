@@ -9,14 +9,13 @@ def student_lecture_view(request):
     # Format lessons for JSON
     lessons_data = []
     if lecture:
-        lessons = lecture.lessons.all().prefetch_related('materials')
+        lessons = lecture.lessons.all().prefetch_related('videos', 'materials')
         for idx, lesson in enumerate(lessons):
             materials_data = []
             for mat in lesson.materials.all():
                 materials_data.append({
                     'kind': mat.kind,
                     'title': mat.title,
-                    'size': '0 MB', # Dummy size for now, as DB lacks file size in LessonMaterial
                     'url': mat.file_url if mat.kind == 'FILE' else mat.link_url
                 })
             

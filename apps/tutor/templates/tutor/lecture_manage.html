@@ -85,5 +85,5 @@
 {{ lessons|json_script:"lecture-lessons-data" }}
 {{ revision|json_script:"lecture-revision-data" }}
 {{ csrf_token|stringformat:"s"|json_script:"csrf-token-data" }}
-<script src="{% static 'tutor/js/lecture_manage.js' %}" defer></script>
+<script src="{% static 'tutor/js/lecture_manage.js' %}?v=10" defer></script>
 {% endblock %}
