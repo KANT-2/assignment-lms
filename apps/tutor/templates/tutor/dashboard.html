@@ -64,8 +64,10 @@
   .tdash .badge.unit { background:var(--t-sunken); color:var(--t-tmuted); }
   .tdash .badge.unit.team { background:var(--t-purple-soft); color:var(--t-purple); }
   .tdash .badge.dday { background:var(--t-sunken); color:var(--t-tmuted); }
-  .tdash .badge.dday.soon { background:var(--t-red-soft); color:var(--t-red); }
-  .tdash .badge.st-imminent { background:var(--t-amber-soft); color:var(--t-amber); }
+  .tdash .badge.dday.soon { background:var(--t-amber-soft); color:var(--t-amber); }
+  .tdash .badge.dday.urgent { background:var(--t-red-soft); color:var(--t-red); }
+  .tdash .badge.st-imminent { background:var(--t-red-soft); color:var(--t-red); }
+  .tdash .badge.st-soon { background:var(--t-amber-soft); color:var(--t-amber); }
   .tdash .badge.st-open { background:var(--t-green-soft); color:#147a52; }
   .tdash .badge.st-done { background:var(--t-accent-soft); color:var(--t-accent-text); }
   .tdash .badge.st-closed { background:var(--t-sunken); color:var(--t-tfaint); }
@@ -171,7 +173,7 @@
             </td>
             <td><span class="badge unit {% if r.obj.is_team %}team{% endif %}">{% if r.obj.is_team %}팀{% else %}개인{% endif %}</span></td>
             <td>
-              <span class="badge dday {% if not r.is_past and r.dday <= 3 %}soon{% endif %}">
+              <span class="badge dday {% if not r.is_past %}{% if r.dday <= 1 %}urgent{% elif r.dday <= 3 %}soon{% endif %}{% endif %}">
                 {% if r.is_past %}마감됨{% elif r.dday == 0 %}오늘{% else %}D-{{ r.dday }}{% endif %}
               </span>
             </td>
