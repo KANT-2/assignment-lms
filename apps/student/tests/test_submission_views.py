@@ -120,7 +120,7 @@ class SubmissionViewTests(TestCase):
         preview_response = self.client.get(
             reverse("student:assignment-preview", args=[assignment.id])
         )
-        self.assertContains(preview_response, "GitHub에서 열기")
+        self.assertContains(preview_response, "링크 열기")
         self.assertContains(preview_response, "https://github.com/example/assignment")
 
     def test_submission_accepts_non_github_web_link(self):

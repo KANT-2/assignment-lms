@@ -493,16 +493,7 @@
       </div>
       <div class="page-sub">회차별 수업 교안, 블로그 요약 링크 및 다시보기 영상을 열람할 수 있습니다.</div>
     </div>
-    <div style="display: flex; gap: 8px;">
-      <a href="{% url 'student:dashboard' %}" class="btn" style="background:var(--surface);border:1px solid var(--border-strong);display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:0 12px;border-radius:12px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        학생 대시보드로 이동
-      </a>
-      <a href="{% url 'student:assignment-list' %}" class="btn" style="background:var(--surface);border:1px solid var(--border-strong);display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:0 12px;border-radius:12px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-        과제 확인·제출
-      </a>
-    </div>
+
   </div>
 </div>
 {% endblock %}
@@ -552,7 +543,7 @@
     <!-- Right: Playlist Navigation -->
     <div class="playlist-card">
       <div class="playlist-head">
-        <h3 class="playlist-title">회차 목록</h3>
+        <h3 class="playlist-title">일자별 목록</h3>
         <span class="playlist-count" id="list-total-count">총 8개 차시</span>
       </div>
 
@@ -606,6 +597,7 @@
   const lessonsData = {{ lessons_json|safe }};
   let currentLessonId = null;
   let selectedDateStr = null;
+  let currentVideoIndex = 0;
   let currentCalDate = new Date();
 
   function loadLessons() {
@@ -613,7 +605,8 @@
 
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get('date');
-    const lessonParam = parseInt(params.get('lesson'), 10);
+    const lessonParam = parseInt(params.get('lesson')) || null;
+    
     const targetLesson = lessonsData.find(l => l.id === lessonParam);
 
     if (targetLesson) {
@@ -630,14 +623,19 @@
         }
     }
 
+    if (selectedDateStr) {
+        const [y, m, d] = selectedDateStr.split('-');
+        currentCalDate = new Date(y, parseInt(m)-1, 1);
+    }
+
     renderCalendar();
     renderPlaylist();
     
     const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
     if (targetLesson) {
-        selectLesson(targetLesson.id);
+        selectVideo(0);
     } else if (dayLessons.length > 0) {
-        selectLesson(dayLessons[0].id);
+        selectVideo(0);
     }
   }
 
@@ -646,35 +644,38 @@
     const container = document.getElementById('playlist-container');
     container.innerHTML = '';
     
-    const filteredLessons = lessonsData.filter(l => l.date === selectedDateStr);
-    filteredLessons.sort((a, b) => a.order - b.order); // Ascending order
+    const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
+    const lesson = dayLessons.length > 0 ? dayLessons[0] : null;
     
-    totalCountSpan.textContent = `해당 일자 총 ${filteredLessons.length}개`;
+    if (!lesson) {
+        totalCountSpan.textContent = `해당 일자 총 0개`;
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-faint); font-size: 13px;">해당 일자에 등록된 강의가 없습니다.</div>';
+        return;
+    }
+    
+    const videos = lesson.videos || [];
+    totalCountSpan.textContent = `해당 일자 영상 ${videos.length}개`;
 
-    if (filteredLessons.length === 0) {
+    if (videos.length === 0) {
         container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-faint); font-size: 13px;">해당 일자에 등록된 영상이 없습니다.</div>';
         return;
     }
 
-    filteredLessons.forEach((lesson, index) => {
-      const vId = getYouTubeId(lesson.videoUrl);
+    videos.forEach((vid, index) => {
+      const vId = getYouTubeId(vid.url);
       const thumbHtml = vId 
         ? `<div class="playlist-item-thumb"><img src="https://img.youtube.com/vi/${vId}/mqdefault.jpg" alt="thumb"></div>`
         : `<div class="playlist-item-thumb" style="background:var(--surface-muted);display:flex;align-items:center;justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`;
 
       const item = document.createElement('div');
-      item.className = 'playlist-item' + (lesson.id === currentLessonId ? ' active' : '');
-      item.onclick = () => selectLesson(lesson.id);
+      item.className = 'playlist-item' + (index === currentVideoIndex ? ' active' : '');
+      item.onclick = () => selectVideo(index);
       
       item.innerHTML = `
         ${thumbHtml}
         <div class="playlist-info">
-          <div class="playlist-item-top">
-            <span class="playlist-item-order" style="font-size: 12px;">${lesson.date}</span>
-          </div>
-          <div class="playlist-item-title">${lesson.title}</div>
+          <div class="playlist-item-title">${vid.title || '강의 영상'}</div>
           <div class="playlist-item-meta">
-            <span>교안 ${lesson.materials ? lesson.materials.length : 0}건</span>
             <span class="status-indicator">영상 시청</span>
           </div>
         </div>
@@ -682,13 +683,7 @@
       container.appendChild(item);
     });
   }
-
   function renderCalendar() {
-    if (selectedDateStr) {
-       const [y, m, d] = selectedDateStr.split('-');
-       currentCalDate = new Date(y, parseInt(m)-1, 1);
-    }
-    
     const year = currentCalDate.getFullYear();
     const month = currentCalDate.getMonth();
     
@@ -722,7 +717,7 @@
           selectedDateStr = dateStr;
           renderCalendar();
           renderPlaylist();
-          selectLesson(lessonsOnDay[0].id);
+          currentVideoIndex = 0; selectVideo(0);
         };
       } else {
         el.onclick = () => showToast('해당 날짜에는 예정된 강의가 없습니다.');
@@ -746,6 +741,89 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  // selectVideo: 현재 선택된 날짜의 lesson에서 특정 인덱스 영상을 플레이어에 로드
+  function selectVideo(vidIndex) {
+    currentVideoIndex = vidIndex;
+    
+    const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
+    const lesson = dayLessons.length > 0 ? dayLessons[0] : null;
+    if (!lesson) return;
+    
+    const videos = lesson.videos || [];
+    const vid = videos.length > vidIndex ? videos[vidIndex] : null;
+    
+    // Update Player
+    const playerContainer = document.getElementById('player-container');
+    if (vid && vid.url) {
+      const vId = getYouTubeId(vid.url);
+      const embedUrl = vId ? `https://www.youtube-nocookie.com/embed/${vId}?rel=0` : vid.url;
+      playerContainer.innerHTML = `
+        <iframe src="${embedUrl}" title="${vid.title || lesson.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      `;
+    } else {
+      playerContainer.innerHTML = `
+        <div class="player-placeholder">
+          <div class="placeholder-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+          </div>
+          <h4 class="placeholder-title">강의 영상 준비중</h4>
+          <p class="placeholder-desc">수업 종료 후 다시보기 영상 링크가 이 곳에 업로드됩니다.</p>
+        </div>
+      `;
+    }
+
+    // Update Details
+    document.getElementById('cur-date').textContent = lesson.date;
+    document.getElementById('cur-title').textContent = lesson.title + (vid && vid.title ? ' — ' + vid.title : '');
+
+    const statusBadge = document.getElementById('cur-status-badge');
+    if (vid && vid.url) {
+      statusBadge.className = 'badge video-ok';
+      statusBadge.textContent = '영상 시청 가능';
+    } else {
+      statusBadge.className = 'badge video-wait';
+      statusBadge.textContent = '영상 준비중';
+    }
+
+    // Materials List
+    const matCountEl = document.getElementById('material-count');
+    const matListContainer = document.getElementById('material-list-container');
+    matCountEl.textContent = lesson.materials.length;
+    matListContainer.innerHTML = '';
+
+    if (lesson.materials.length === 0) {
+      matListContainer.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">등록된 교안 자료가 없습니다.</div>';
+    } else {
+      lesson.materials.forEach(mat => {
+        const isFile = mat.kind === 'FILE';
+        const item = document.createElement('div');
+        item.className = 'material-item';
+        item.innerHTML = `
+          <div class="material-left">
+            <div class="material-icon ${isFile ? '' : 'link'}">
+              ${isFile 
+                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>'
+                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>'
+              }
+            </div>
+            <div class="material-info">
+              <div class="material-name">${mat.title}</div>
+              <div class="material-meta">${isFile ? '파일 첨부' : '외부 참고 링크'}</div>
+            </div>
+          </div>
+          ${isFile 
+            ? `<button class="material-btn" onclick="downloadMockFile('${mat.title}')">다운로드</button>`
+            : `<a href="${mat.url}" target="_blank" class="material-btn">링크 열기</a>`
+          }
+        `;
+        matListContainer.appendChild(item);
+      });
+    }
+    
+    // Re-render playlist to update active state
+    renderPlaylist();
   }
 
   function selectLesson(id) {

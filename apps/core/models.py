@@ -46,14 +46,12 @@ class Lecture(models.Model):
 
 class Lesson(models.Model):
     """
-    강의 1회차(수업). 튜터가 제목·날짜·블로그링크·교안을 올리고,
-    수업 종료 후 유튜브 링크(video_url)를 추가.
+    일자별 강의. 튜터가 날짜와 제목, 교안을 올리고,
+    해당 일자에 여러 개의 유튜브 영상(LessonVideo)을 추가할 수 있다.
     """
     lecture = models.ForeignKey(Lecture, on_delete=models.CASCADE, related_name="lessons")
     title = models.CharField(max_length=200)
     lesson_date = models.DateField()
-    blog_link = models.URLField(blank=True, null=True)
-    video_url = models.URLField(blank=True, null=True, help_text="수업 종료 후 튜터가 추가, nullable")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -62,8 +60,24 @@ class Lesson(models.Model):
         ordering = ["lesson_date"]
 
     def __str__(self):
-        return self.title
+        return f"{self.lesson_date} - {self.title}"
 
+
+class LessonVideo(models.Model):
+    """
+    일자별 강의에 포함되는 개별 영상(다중 등록 가능)
+    """
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="videos")
+    title = models.CharField(max_length=200, blank=True, help_text="예: 1부 개념, 2부 실습")
+    video_url = models.URLField()
+    order = models.PositiveIntegerField(default=0, help_text="영상 재생 순서")
+
+    class Meta:
+        db_table = "lesson_video"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.lesson.lesson_date} 영상: {self.title}"
 
 class LessonMaterial(models.Model):
     """

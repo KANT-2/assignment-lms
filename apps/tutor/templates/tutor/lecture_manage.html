@@ -44,7 +44,7 @@
       </div>
 
       <div class="filter-tabs">
-        <button class="tab-btn active" onclick="setTab('all', this)">전체 차시</button>
+        <button class="tab-btn active" onclick="setTab('all', this)">전체 일정</button>
         <button class="tab-btn" onclick="setTab('video-ok', this)" id="tab-btn-ok">영상 완료</button>
         <button class="tab-btn" onclick="setTab('video-wait', this)" id="tab-btn-wait">영상 대기/미등록</button>
       </div>
@@ -55,12 +55,10 @@
       <table class="lesson-table">
         <thead>
           <tr>
-            <th style="width: 95px;">수업 일자</th>
-
-            <th>수업 제목</th>
-            <th style="width: 85px;">교안 자료</th>
-            <th style="width: 170px;">유튜브 영상</th>
-            <th style="width: 80px;">블로그</th>
+            <th style="width: 120px;">강의 일자</th>
+            <th>강의 제목</th>
+            <th style="width: 100px;">교안 자료</th>
+            <th style="width: 200px;">유튜브 영상</th>
             <th style="width: 155px; text-align: right;">관리 액션</th>
           </tr>
         </thead>
@@ -87,5 +85,5 @@
 {{ lessons|json_script:"lecture-lessons-data" }}
 {{ revision|json_script:"lecture-revision-data" }}
 {{ csrf_token|stringformat:"s"|json_script:"csrf-token-data" }}
-<script src="{% static 'tutor/js/lecture_manage.js' %}" defer></script>
+<script src="{% static 'tutor/js/lecture_manage.js' %}?v=10" defer></script>
 {% endblock %}

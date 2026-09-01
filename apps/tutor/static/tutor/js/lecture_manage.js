@@ -25,7 +25,7 @@
   };
 
   function loadLessons() {
-    lessons.sort((a, b) => a.order - b.order);
+    lessons.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     renderTable();
   }
 
@@ -86,32 +86,27 @@
     const query = document.getElementById("search-input").value.trim().toLowerCase();
 
     const filtered = lessons.filter((l) => {
+      const hasVideo = l.videos && l.videos.length > 0;
       // Tab filter
-      if (currentTab === "video-ok" && !l.videoUrl) return false;
-      if (currentTab === "video-wait" && l.videoUrl) return false;
+      if (currentTab === "video-ok" && !hasVideo) return false;
+      if (currentTab === "video-wait" && hasVideo) return false;
       // Search filter
       if (query) {
         return (
           l.title.toLowerCase().includes(query) ||
-          l.date.includes(query) ||
-          `${l.order}회차`.includes(query)
+          l.date.includes(query)
         );
       }
       return true;
     });
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 36px; color: var(--text-muted);">조건에 맞는 차시가 없습니다.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 36px; color: var(--text-muted);">조건에 맞는 차시가 없습니다.</td></tr>`;
       return;
     }
 
-    // Sort by date (descending), then by absolute order (ascending)
-    filtered.sort((a, b) => {
-      if (a.date === b.date) {
-        return a.order - b.order;
-      }
-      return new Date(b.date) - new Date(a.date);
-    });
+    // Sort by date (descending)
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const dateSpans = {};
     filtered.forEach((lesson) => {
@@ -124,17 +119,19 @@
     filtered.forEach((lesson) => {
       const tr = document.createElement("tr");
 
-      // Video Status & Thumbnail
-      const thumbUrl = getYouTubeThumbnail(lesson.videoUrl);
+      // Video Status & Thumbnail (uses videos array now)
+      const firstVideo = lesson.videos && lesson.videos.length > 0 ? lesson.videos[0] : null;
+      const thumbUrl = firstVideo ? getYouTubeThumbnail(firstVideo.url) : null;
       let videoCellHtml = "";
 
       if (thumbUrl) {
+        const videoCount = lesson.videos.length;
         videoCellHtml = `
           <div class="video-cell">
             <div class="table-thumb" title="유튜브 썸네일">
               <img src="${thumbUrl}" alt="썸네일" loading="lazy">
             </div>
-            <span class="badge video-ok">등록 완료</span>
+            <span class="badge video-ok">등록 완료${videoCount > 1 ? ` (${videoCount}개)` : ""}</span>
           </div>
         `;
       } else {
@@ -191,14 +188,8 @@
         </td>
         <td>${matHtml}</td>
         <td>${videoCellHtml}</td>
-        <td>${blogHtml}</td>
         <td style="text-align: right;">
           <div class="action-group" style="justify-content: flex-end;">
-            ${
-              !lesson.videoUrl
-                ? `<button class="btn btn-primary btn-sm" onclick="openQuickVideoModal(${lesson.id})">영상 등록</button>`
-                : `<button class="btn btn-outline btn-sm" onclick="openQuickVideoModal(${lesson.id})">영상 변경</button>`
-            }
             <button class="btn btn-outline btn-sm" onclick="openEditModal(${lesson.id})">수정</button>
             <button class="btn btn-danger btn-sm" onclick="deleteLesson(${lesson.id})">삭제</button>
           </div>
@@ -221,17 +212,17 @@
 
   // Modal handlers
   function openCreateModal() {
-    document.getElementById("modal-title").textContent = "새 차시 등록";
+    document.getElementById("modal-title").textContent = "새 일정 등록";
     document.getElementById("edit-lesson-id").value = "";
-    document.getElementById("form-order").value = lessons.length + 1;
     document.getElementById("form-date").value = new Date().toISOString().slice(0, 10);
     document.getElementById("form-title").value = "";
-    document.getElementById("form-blog").value = "";
-    document.getElementById("form-video").value = "";
+    
+    document.getElementById("video-builder-list").innerHTML = "";
+    addVideoRow("", "");
+    
     document.getElementById("material-builder-list").innerHTML = "";
     addMaterialRow("FILE", "", "");
 
-    updateVideoPreview();
     openModal("lesson-modal");
   }
 
@@ -239,13 +230,18 @@
     const lesson = lessons.find((l) => l.id === id);
     if (!lesson) return;
 
-    document.getElementById("modal-title").textContent = `${lesson.order}회차 수업 수정`;
+    document.getElementById("modal-title").textContent = `일정 수정`;
     document.getElementById("edit-lesson-id").value = lesson.id;
-    document.getElementById("form-order").value = lesson.order;
     document.getElementById("form-date").value = lesson.date;
     document.getElementById("form-title").value = lesson.title;
-    document.getElementById("form-blog").value = lesson.blogUrl || "";
-    document.getElementById("form-video").value = lesson.videoUrl || "";
+
+    const vidList = document.getElementById("video-builder-list");
+    vidList.innerHTML = "";
+    if (lesson.videos && lesson.videos.length > 0) {
+      lesson.videos.forEach((v) => addVideoRow(v.title, v.url));
+    } else {
+      addVideoRow("", "");
+    }
 
     const matList = document.getElementById("material-builder-list");
     matList.innerHTML = "";
@@ -255,8 +251,62 @@
       addMaterialRow("FILE", "", "");
     }
 
-    updateVideoPreview();
     openModal("lesson-modal");
+  }
+
+  window.addVideoRow = function(title = "", url = "") {
+    const list = document.getElementById("video-builder-list");
+    const rowId = "vid-" + Math.random().toString(36).substr(2, 9);
+    const row = document.createElement("div");
+    row.className = "video-row";
+    row.style.cssText = "border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:12px; background:#fafafa; position:relative;";
+    
+    row.innerHTML = `
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input type="text" class="form-control vid-title" placeholder="영상 제목 (예: 1부 개념)" value="${title}" style="flex:1;">
+        <input type="url" class="form-control vid-url" placeholder="유튜브 URL (https://...)" value="${url}" style="flex:2;" oninput="updateVideoPreview('${rowId}', this.value)">
+      </div>
+      
+      <!-- Live Preview -->
+      <div id="video-preview-${rowId}" class="video-preview-wrap" style="display:none; margin-top:8px;">
+        <div class="preview-media-container" style="gap:8px; display:flex;">
+          <div class="preview-box" style="flex:1;">
+            <img id="video-thumb-preview-${rowId}" src="" alt="유튜브 썸네일" style="width:100%; border-radius:4px;">
+          </div>
+          <div class="preview-box" style="flex:2;">
+            <iframe id="video-preview-iframe-${rowId}" src="" style="width:100%; aspect-ratio:16/9; border:none; border-radius:4px;" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="material-row-del" onclick="this.parentElement.remove()" style="position:absolute; top:-10px; right:-10px; background:var(--surface); border:1px solid var(--border); border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="삭제">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    `;
+    list.appendChild(row);
+    if(url) {
+      setTimeout(() => window.updateVideoPreview(rowId, url), 50);
+    }
+  }
+
+  window.updateVideoPreview = function(rowId, url) {
+    const box = document.getElementById("video-preview-" + rowId);
+    const iframe = document.getElementById("video-preview-iframe-" + rowId);
+    const thumbImg = document.getElementById("video-thumb-preview-" + rowId);
+
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+    const vId = match ? match[1] : null;
+
+    if (vId) {
+      box.style.display = "block";
+      const originParam = window.location.protocol === "file:" ? "?origin=http://localhost" : `?origin=${encodeURIComponent(window.location.origin)}`;
+      iframe.src = `https://www.youtube-nocookie.com/embed/${vId}${originParam}`;
+      thumbImg.src = `https://img.youtube.com/vi/${vId}/mqdefault.jpg`;
+    } else {
+      box.style.display = "none";
+      iframe.src = "";
+      thumbImg.src = "";
+    }
   }
 
   function addMaterialRow(kind = "FILE", title = "", url = "") {
@@ -310,43 +360,23 @@
     }
   }
 
-  function updateVideoPreview() {
-    const url = document.getElementById("form-video").value.trim();
-    const box = document.getElementById("video-preview");
-    const iframe = document.getElementById("video-preview-iframe");
-    const thumbImg = document.getElementById("video-thumb-preview");
-    const idDisplay = document.getElementById("video-id-display");
-
-    const vId = getYouTubeId(url);
-
-    if (vId) {
-      box.style.display = "flex";
-      const originParam =
-        window.location.protocol === "file:"
-          ? "?origin=http://localhost"
-          : `?origin=${encodeURIComponent(window.location.origin)}`;
-      iframe.src = `https://www.youtube-nocookie.com/embed/${vId}${originParam}`;
-      thumbImg.src = `https://img.youtube.com/vi/${vId}/mqdefault.jpg`;
-      idDisplay.textContent = `Video ID: ${vId}`;
-    } else {
-      box.style.display = "none";
-      iframe.src = "";
-      thumbImg.src = "";
-    }
-  }
-
-  function saveLesson() {
+    function saveLesson() {
     const title = document.getElementById("form-title").value.trim();
-    const order = parseInt(document.getElementById("form-order").value) || 1;
     const date = document.getElementById("form-date").value;
-    const blogUrl = document.getElementById("form-blog").value.trim() || null;
-    const videoUrl = document.getElementById("form-video").value.trim() || null;
     const editId = document.getElementById("edit-lesson-id").value;
 
     if (!title || !date) {
       alert("수업 제목과 수업 일자를 입력해주세요.");
       return;
     }
+
+    // Collect videos from video-builder-list
+    const videos = [];
+    document.querySelectorAll("#video-builder-list .video-row").forEach((row) => {
+      const vTitle = (row.querySelector(".vid-title") ? row.querySelector(".vid-title").value.trim() : "");
+      const vUrl = (row.querySelector(".vid-url") ? row.querySelector(".vid-url").value.trim() : "");
+      if (vUrl) videos.push({ title: vTitle, url: vUrl });
+    });
 
     // Collect materials
     const materials = [];
@@ -360,7 +390,7 @@
         const fileInput = row.querySelector(".mat-file");
         if (fileInput && fileInput.files && fileInput.files.length > 0) {
           const file = fileInput.files[0];
-          matUrl = file.name; // Use filename for mockup display
+          matUrl = file.name;
           matSize = (file.size / 1024 / 1024).toFixed(1) + " MB";
           if (!matTitle) matTitle = file.name;
         } else {
@@ -370,7 +400,7 @@
             matSize = "기존 파일";
             if (!matTitle) matTitle = matUrl;
           } else {
-            matUrl = "#"; // Fallback
+            matUrl = "#";
           }
         }
       } else {
@@ -389,31 +419,27 @@
       if (idx !== -1) {
         lessons[idx] = {
           ...lessons[idx],
-          order,
           date,
           title,
-          blogUrl,
-          videoUrl,
+          videos,
           materials,
         };
       }
-      showToast(`${order}회차 수업 정보가 수정되었습니다. (학생 화면 즉시 반영)`);
+      showToast(`${date} 수업 정보가 수정되었습니다.`);
     } else {
       // Create
       const newLesson = {
         id: Date.now(),
-        order,
         date,
         title,
-        blogUrl,
-        videoUrl,
+        videos,
         materials,
       };
       lessons.push(newLesson);
-      showToast("새 차시가 등록되었습니다. (학생 화면 즉시 반영)");
+      showToast("새 일정이 등록되었습니다. (학생 화면 즉시 반영)");
     }
 
-    lessons.sort((a, b) => a.order - b.order);
+    lessons.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
     // UI 우선 반영
     renderTable();
@@ -425,52 +451,7 @@
     });
   }
 
-  // Quick Video Modal
-  function openQuickVideoModal(id) {
-    const lesson = lessons.find((l) => l.id === id);
-    if (!lesson) return;
-
-    document.getElementById("quick-lesson-id").value = lesson.id;
-    document.getElementById("quick-lesson-target").textContent = `[${lesson.order}회차] ${lesson.title}`;
-    document.getElementById("quick-video-input").value = lesson.videoUrl || "";
-    updateQuickPreview();
-    openModal("quick-video-modal");
-  }
-
-  function updateQuickPreview() {
-    const url = document.getElementById("quick-video-input").value.trim();
-    const box = document.getElementById("quick-video-preview");
-    const thumbImg = document.getElementById("quick-thumb-preview");
-    const idDisplay = document.getElementById("quick-video-id");
-
-    const vId = getYouTubeId(url);
-
-    if (vId) {
-      box.style.display = "flex";
-      thumbImg.src = `https://img.youtube.com/vi/${vId}/mqdefault.jpg`;
-      idDisplay.textContent = `Video ID: ${vId}`;
-    } else {
-      box.style.display = "none";
-      thumbImg.src = "";
-    }
-  }
-
-  function saveQuickVideo() {
-    const id = parseInt(document.getElementById("quick-lesson-id").value);
-    const videoUrl = document.getElementById("quick-video-input").value.trim();
-
-    const idx = lessons.findIndex((l) => l.id === id);
-    if (idx > -1) {
-      lessons[idx].videoUrl = videoUrl || null;
-      showToast(`${lessons[idx].order}회차 유튜브 영상이 저장되었습니다. (학생 화면 즉시 반영)`);
-    }
-
-    renderTable();
-    closeModal("quick-video-modal");
-    saveToStorage().catch((e) => {
-      alert("저장에 실패했습니다.");
-    });
-  }
+  
 
   // Delete & Undo
   function deleteLesson(id) {
@@ -478,18 +459,18 @@
     if (idx === -1) return;
 
     deletedLessonBackup = { index: idx, data: lessons[idx] };
-    const order = lessons[idx].order;
+    const dateStr = lessons[idx].date;
     lessons.splice(idx, 1);
     renderTable();
     saveToStorage().catch((e) => alert("삭제 저장에 실패했습니다."));
 
-    showToast(`${order}회차가 삭제되었습니다.`, true);
+    showToast(`${dateStr} 일정이 삭제되었습니다.`, true);
   }
 
   function undoDelete() {
     if (deletedLessonBackup) {
       lessons.splice(deletedLessonBackup.index, 0, deletedLessonBackup.data);
-      lessons.sort((a, b) => a.order - b.order);
+      lessons.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
       deletedLessonBackup = null;
       renderTable();
       saveToStorage().catch((e) => alert("복구 저장에 실패했습니다."));
@@ -539,9 +520,6 @@
     toggleMaterialInput,
     updateVideoPreview,
     saveLesson,
-    openQuickVideoModal,
-    updateQuickPreview,
-    saveQuickVideo,
     deleteLesson,
     undoDelete,
     openModal,
