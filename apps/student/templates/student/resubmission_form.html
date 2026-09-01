@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{{ assignment.title }} 재제출 | AX 과제 시스템{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
+<style>.app-topbar .crumb{display:none}.app-topbar .utils{margin-left:auto}</style>
+{% endblock %}
 {% block page_header %}
 <div class="page-header">
   <a class="student-back-link" href="{% url 'student:assignment-preview' assignment.id %}">‹ 기존 제출물로 돌아가기</a>

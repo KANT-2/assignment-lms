@@ -58,6 +58,8 @@
   .smgmt .pill { background:var(--s-sunken); color:var(--s-tfaint); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
   .smgmt .dash-val { color:var(--s-tfaint); font-weight:700; }
   .smgmt .miss-tag { color:var(--s-red); font-weight:700; font-size:11px; }
+  .smgmt a.miss-link { text-decoration:none; cursor:pointer; }
+  .smgmt a.miss-link:hover { text-decoration:underline; }
   .smgmt .score-val { font-weight:800; font-size:14px; color:var(--s-text); font-variant-numeric:tabular-nums; margin-right:6px; }
   .smgmt .empty { text-align:center; color:var(--s-tfaint); font-size:12.5px; padding:26px 0; }
 
@@ -153,10 +155,15 @@
             <td>
               {% if r.final_score is not None %}
                 <span class="score-val">{{ r.final_score|floatformat:1 }}</span>
-                {% if r.score_ungraded %}<span class="miss-tag" title="채점되지 않은 제출물은 집계에서 제외됩니다">미채점 {{ r.score_ungraded }}건</span>{% endif %}
-              {% elif r.score_ungraded %}
-                <span class="dash-val" title="채점 완료된 과제가 없어 아직 산출되지 않았습니다">채점 미완료</span>
-              {% else %}
+              {% endif %}
+              {% if r.score_ungraded %}
+                {% if r.ungraded_url %}
+                  <a href="{{ r.ungraded_url }}" class="miss-tag miss-link" onclick="event.stopPropagation()"
+                     title="미채점 제출물 검토로 이동">미채점 {{ r.score_ungraded }}건</a>
+                {% else %}
+                  <span class="miss-tag" title="채점되지 않은 제출물은 집계에서 제외됩니다">미채점 {{ r.score_ungraded }}건</span>
+                {% endif %}
+              {% elif r.final_score is None %}
                 <span class="dash-val">—</span>
               {% endif %}
             </td>
