@@ -75,7 +75,7 @@
   .tdash .fq-row, .tdash .ns-row, .tdash .lc-row { display:flex; align-items:center; gap:11px;
     padding:9px 4px; border-bottom:1px solid var(--t-border); }
   .tdash .fq-row:last-child, .tdash .ns-row:last-child, .tdash .lc-row:last-child { border-bottom:0; }
-  .tdash .fq-row { text-decoration:none; color:inherit; }
+  .tdash .fq-row, .tdash .lc-row { text-decoration:none; color:inherit; }
   .tdash .fq-row:hover, .tdash .lc-row:hover { background:var(--t-muted); }
   .tdash .avatar { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:var(--t-accent-soft);
     color:var(--t-accent-text); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
@@ -119,11 +119,10 @@
   .tdash .note { font-size:11px; color:var(--t-tfaint); margin-top:12px; line-height:1.5; }
   .tdash .empty { text-align:center; color:var(--t-tfaint); font-size:12.5px; padding:22px 0; }
 
-  .tdash .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:stretch; }
+  .tdash .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
   .tdash .cols > .card { display:flex; flex-direction:column; max-height:420px; }
   .tdash .cols > .card > .list-scroll,
-  .tdash .cols > .card > .list-scroll.compact { flex:1 1 auto; min-height:0; max-height:none; }
-  .tdash .cols > .card > .empty { margin-top:auto; margin-bottom:auto; }
+  .tdash .cols > .card > .list-scroll.compact { flex:0 1 auto; min-height:0; max-height:none; }
   .tdash .cols > .card > .note { flex-shrink:0; }
   @media (max-width:900px){ .tdash .cols { grid-template-columns:1fr; }
     .tdash .cols > .card { max-height:360px; } }
@@ -274,7 +273,6 @@
       <a class="card-link" href="{% url 'tutor:lecture' %}">강의안 관리 →</a>
     </div>
     {% if lesson_rows %}
-    <p class="note" style="margin:0 0 6px;">교안 첨부는 선택입니다.</p>
     <div class="list-scroll">
       {% for l in lesson_rows %}
       <a class="lc-row" href="{% url 'tutor:lecture' %}">
