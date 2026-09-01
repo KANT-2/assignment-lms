@@ -57,7 +57,18 @@
   .sdet .dash-val { color:var(--s-tfaint); font-weight:700; }
   .sdet .score-val { font-weight:800; color:var(--s-text); font-variant-numeric:tabular-nums; }
   .sdet .miss-tag { color:var(--s-red); font-weight:700; font-size:11px; }
-  .sdet .note { font-size:11px; color:var(--s-tfaint); margin-top:12px; line-height:1.6; }
+  .sdet .field-help { position:relative; margin-top:12px; }
+  .sdet .field-help > summary { display:inline-flex; align-items:center; gap:4px; list-style:none;
+    font-size:11px; color:var(--s-tfaint); font-weight:600; cursor:pointer; user-select:none; }
+  .sdet .field-help > summary::-webkit-details-marker { display:none; }
+  .sdet .field-help > summary::before { content:"\24D8"; font-size:12px; }
+  .sdet .field-help[open] > summary { color:var(--s-tmuted); }
+  .sdet .field-help-body { position:absolute; left:0; top:calc(100% + 6px); z-index:20;
+    width:max-content; max-width:min(760px, 92vw); background:var(--s-surface); border:1px solid var(--s-border);
+    border-radius:var(--s-r-md); box-shadow:0 8px 24px rgba(24,30,51,.14);
+    padding:12px 14px; font-size:11.5px; line-height:1.65; color:var(--s-tmuted); }
+  .sdet .field-help-body p { margin:0 0 6px; }
+  .sdet .field-help-body p:last-child { margin:0; }
   .sdet a.go { color:var(--s-tmuted); font-weight:600; }
   .sdet a.go:hover { color:var(--s-accent-text); }
 </style>
@@ -132,11 +143,32 @@
     {% else %}
       <div class="dash-val" style="text-align:center;padding:24px 0;">등록된 과제가 없습니다.</div>
     {% endif %}
-    <p class="note">
-      상태 = 제출완료 / 지각 제출(마감 후·지각 허용) / 미제출 / 마감 전 / 팀 과제(학생 귀속 정보 없음).
-      점수는 튜터 평가가 등록된 개인 과제만 표시됩니다.
-      상단 <b>성적</b>은 마감된 과제 기준 최종 점수(성취도 70% + 제출률 30%)이며, 미채점 제출물은 집계에서 제외됩니다.
-    </p>
+    <details class="field-help">
+      <summary>표 항목 설명</summary>
+      <div class="field-help-body">
+        <p>· <b>상태</b> — 제출완료 / 지각 제출(마감 후·지각 허용) / 미제출 / 마감 전 / 팀 과제(학생 귀속 정보 없음).</p>
+        <p>· <b>점수</b> — 튜터 평가가 등록된 개인 과제만 표시.</p>
+        <p>· <b>성적</b>(상단) — 마감된 과제 기준 최종 점수(성취도 70% + 제출률 30%). 미채점 제출물 제외.</p>
+      </div>
+    </details>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  (function () {
+    function closeAll(except) {
+      document.querySelectorAll("details.field-help[open]").forEach(function (d) {
+        if (d !== except) d.removeAttribute("open");
+      });
+    }
+    document.addEventListener("click", function (e) {
+      closeAll(e.target.closest("details.field-help[open]"));
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeAll(null);
+    });
+  })();
+</script>
 {% endblock %}

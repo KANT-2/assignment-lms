@@ -268,7 +268,7 @@
       <a class="card-link" href="{% url 'tutor:lecture' %}">강의안 관리 →</a>
     </div>
     {% if lesson_rows %}
-    <p class="note" style="margin:0 0 6px;">차시별 영상·교안 등록 상태입니다. 교안 첨부는 선택이에요 — 필요한 차시에만 올리면 됩니다.</p>
+    <p class="note" style="margin:0 0 6px;">교안 첨부는 선택입니다.</p>
     <div class="list-scroll">
       {% for l in lesson_rows %}
       <a class="lc-row" href="{% url 'tutor:lecture' %}">

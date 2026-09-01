@@ -61,8 +61,20 @@
   .smgmt a.miss-link { text-decoration:none; cursor:pointer; }
   .smgmt a.miss-link:hover { text-decoration:underline; }
   .smgmt .score-val { font-weight:800; font-size:14px; color:var(--s-text); font-variant-numeric:tabular-nums; margin-right:6px; }
-  .smgmt .note { font-size:11px; color:var(--s-tfaint); margin-top:12px; line-height:1.7; }
   .smgmt .empty { text-align:center; color:var(--s-tfaint); font-size:12.5px; padding:26px 0; }
+
+  .smgmt .field-help { position:relative; margin-top:12px; }
+  .smgmt .field-help > summary { display:inline-flex; align-items:center; gap:4px; list-style:none;
+    font-size:11px; color:var(--s-tfaint); font-weight:600; cursor:pointer; user-select:none; }
+  .smgmt .field-help > summary::-webkit-details-marker { display:none; }
+  .smgmt .field-help > summary::before { content:"\24D8"; font-size:12px; }
+  .smgmt .field-help[open] > summary { color:var(--s-tmuted); }
+  .smgmt .field-help-body { position:absolute; left:0; top:calc(100% + 6px); z-index:20;
+    width:max-content; max-width:min(760px, 92vw); background:var(--s-surface); border:1px solid var(--s-border);
+    border-radius:var(--s-r-md); box-shadow:0 8px 24px rgba(24,30,51,.14);
+    padding:12px 14px; font-size:11.5px; line-height:1.65; color:var(--s-tmuted); }
+  .smgmt .field-help-body p { margin:0 0 6px; }
+  .smgmt .field-help-body p:last-child { margin:0; }
 </style>
 {% endblock %}
 
@@ -165,12 +177,33 @@
       <div class="empty">표시할 학생이 없습니다.</div>
     {% endif %}
 
-    <p class="note">
-      · <b>팀</b> — 현재 진행 중인 라운드(프로젝트)의 팀 편성 기준입니다. 라운드가 바뀌면 팀도 재편성됩니다. 라운드에 배정되지 않은 학생은 "—"로 표시됩니다.<br>
-      · <b>성적</b> — 마감된 과제 기준 최종 점수(과제 성취도 70% + 제출률 30%, 100점 만점). 채점되지 않은 제출물은 집계에서 제외됩니다.<br>
-      · <b>제출률</b> — 개인 과제 전체 기준입니다. 팀 과제는 학생 귀속 정보가 없어 분모에서 제외했습니다.<br>
-      · <b>마지막 제출</b> — 마지막 과제 제출 시각 기준입니다 (접속 기록은 수집하지 않음).
-    </p>
+    <details class="field-help">
+      <summary>표 항목 설명</summary>
+      <div class="field-help-body">
+        <p>· <b>팀</b> — 현재 라운드의 팀 편성. 라운드가 바뀌면 재편성되며, 미배정 학생은 "—".</p>
+        <p>· <b>성적</b> — 마감된 과제 기준 최종 점수(성취도 70% + 제출률 30%, 100점 만점). 미채점 제출물 제외.</p>
+        <p>· <b>제출률</b> — 개인 과제 전체 기준. 팀 과제는 학생 귀속 정보가 없어 분모에서 제외.</p>
+        <p>· <b>마지막 제출</b> — 마지막 과제 제출 시각 기준(접속 기록은 수집하지 않음).</p>
+      </div>
+    </details>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  (function () {
+    function closeAll(except) {
+      document.querySelectorAll("details.field-help[open]").forEach(function (d) {
+        if (d !== except) d.removeAttribute("open");
+      });
+    }
+    document.addEventListener("click", function (e) {
+      closeAll(e.target.closest("details.field-help[open]"));
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeAll(null);
+    });
+  })();
+</script>
 {% endblock %}
