@@ -173,9 +173,12 @@ def dashboard(request):
     lesson_rows = []
     prep_needed = 0
     for lesson in (
-        Lesson.objects.annotate(mat_count=Count("materials")).order_by("-lesson_date")[:LESSON_LIMIT]
+        Lesson.objects.annotate(
+            mat_count=Count("materials"),
+            video_count=Count("videos")
+        ).order_by("-lesson_date")[:LESSON_LIMIT]
     ):
-        has_video = bool(lesson.video_url)
+        has_video = lesson.video_count > 0
         is_past = lesson.lesson_date < today
         needs_attention = is_past and not has_video and lesson.mat_count == 0
         if needs_attention:
