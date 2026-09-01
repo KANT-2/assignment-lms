@@ -3,7 +3,13 @@ apps/tutor/models.py — 튜터팀
 
 GradingPolicy: 학생 성적 집계에 쓰는 상수 모음 (싱글턴). apps.tutor.grading 이 이 값으로 계산한다.
 수정은 당분간 Django admin 에서만 (전용 튜터 UI 는 후속). 항상 1행만 존재.
+
+RoundScore: 회차 점수 마감 스냅샷. 튜터가 "이번 회차 점수 마감"을 누르면 그 시점의
+grading.compute() 결과를 (회차 × 학생) 1행으로 박제한다. 재마감은 덮어쓰기.
+설계: docs/assignment-lms-round-close.md
 """
+from __future__ import annotations
+
 from django.db import models
 
 
@@ -45,7 +51,7 @@ class GradingPolicy(models.Model):
         return "성적 집계 정책"
 
     @classmethod
-    def get_solo(cls) -> "GradingPolicy":
+    def get_solo(cls) -> GradingPolicy:
         """싱글턴 — id 최소 행 고정 (없으면 기본값으로 생성)."""
         obj = cls.objects.order_by("id").first()
         if obj is None:
@@ -80,3 +86,64 @@ class GradingPolicy(models.Model):
 
     def floor_for(self, is_required: bool) -> int:
         return self.required_floor if is_required else self.optional_floor
+
+    def as_snapshot(self) -> dict:
+        """마감 시점 정책을 RoundScore.policy_snapshot 에 박제 (재현/감사용)."""
+        return {
+            "achievement_weight": self.achievement_weight,
+            "sincerity_weight": self.sincerity_weight,
+            "individual_ratio": self.individual_ratio,
+            "team_ratio": self.team_ratio,
+            "optional_ratio": self.optional_ratio,
+            "required_ratio": self.required_ratio,
+            "required_floor": self.required_floor,
+            "optional_floor": self.optional_floor,
+            "required_miss_penalty": self.required_miss_penalty,
+            "weight_high": self.weight_high,
+            "weight_mid": self.weight_mid,
+            "weight_low": self.weight_low,
+        }
+
+
+class RoundScore(models.Model):
+    """
+    회차 점수 마감 스냅샷 — (회차 × 학생) 1행. 재마감 시 (round_id, student_id) 행 덮어쓰기.
+    외부 학생/튜터는 accounts_user.id 값만 저장 (FK 아님). 설계: docs/assignment-lms-round-close.md
+    """
+
+    round_id = models.BigIntegerField(help_text="AX rounds_evaluationround.id")
+    round_title = models.CharField(max_length=200, blank=True, help_text="스냅샷")
+
+    student_id = models.IntegerField(help_text="accounts_user.id 참조, FK 아님")
+    student_name = models.CharField(max_length=150, blank=True, help_text="스냅샷")
+
+    total = models.FloatField(null=True, blank=True, help_text="최종 점수(0~100). AX2 전달값. None=산출 불가")
+    achievement = models.FloatField(null=True, blank=True)
+    sincerity = models.FloatField(null=True, blank=True)
+    team_included = models.BooleanField(
+        default=False, help_text="팀 과제 점수 반영 여부 (팀 미편성이면 False)"
+    )
+
+    graded_count = models.PositiveSmallIntegerField(default=0)
+    ungraded_count = models.PositiveSmallIntegerField(default=0)
+    total_count = models.PositiveSmallIntegerField(default=0)
+
+    breakdown = models.JSONField(default=dict, blank=True, help_text="영역별 내역 (감사용)")
+    assignment_ids = models.JSONField(default=list, blank=True, help_text="집계 대상 과제 id")
+    policy_snapshot = models.JSONField(default=dict, blank=True, help_text="마감 시점 GradingPolicy")
+
+    closed_at = models.DateTimeField(help_text="마감/재마감 시각")
+    closed_by = models.IntegerField(help_text="마감한 튜터 accounts_user.id")
+
+    class Meta:
+        db_table = "round_score"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["round_id", "student_id"], name="round_score_round_student_uniq"
+            ),
+        ]
+        indexes = [models.Index(fields=["round_id"], name="round_score_round_idx")]
+        ordering = ["-closed_at", "student_name"]
+
+    def __str__(self):
+        return f"round {self.round_id} · student {self.student_id} · {self.total}"

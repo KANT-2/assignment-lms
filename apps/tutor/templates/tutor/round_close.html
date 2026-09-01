@@ -1,0 +1,109 @@
+{# apps/tutor/templates/tutor/round_close.html — 회차 점수 마감 확인 #}
+{% extends "base.html" %}
+
+{% block title %}점수집계{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rclose { --c-surface:#fff; --c-sunken:#eef1f8; --c-text:#1c2130; --c-tmuted:#6b7280;
+    --c-tfaint:#9aa1b1; --c-border:#e4e8f1; --c-bstrong:#d5dbe8; --c-accent:#4f6df5;
+    --c-accent-text:#3a56d4; --c-amber:#c98a1a; --c-amber-soft:#fbf0dd; --c-red:#ef4b4b;
+    --c-red-soft:#fdecec; --c-green:#1fa971; --c-green-soft:#e5f7ee;
+    color:var(--c-text); max-width:820px; }
+  .rclose h1 { font-size:20px; font-weight:800; margin:0 0 4px; }
+  .rclose .sub { font-size:12.5px; color:var(--c-tmuted); margin-bottom:16px; }
+  .rclose .card { background:var(--c-surface); border:1px solid var(--c-border); border-radius:14px;
+    padding:16px 18px; margin-bottom:14px; box-shadow:0 1px 10px rgba(24,30,51,.03); }
+  .rclose .card h2 { font-size:13px; font-weight:800; margin:0 0 10px; }
+  .rclose .kv { display:flex; gap:8px; font-size:13px; padding:5px 0; border-bottom:1px dashed var(--c-border); }
+  .rclose .kv:last-child { border-bottom:0; }
+  .rclose .kv .k { width:120px; flex-shrink:0; color:var(--c-tmuted); font-weight:600; }
+  .rclose .banner { border-radius:10px; padding:11px 14px; font-size:12.5px; font-weight:600; margin-bottom:14px; line-height:1.6; }
+  .rclose .banner.warn { background:var(--c-amber-soft); color:#8a5a12; }
+  .rclose .banner.info { background:var(--c-sunken); color:var(--c-tmuted); }
+  .rclose table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .rclose th { text-align:left; font-size:11px; color:var(--c-tfaint); font-weight:700; padding:7px 8px; border-bottom:1px solid var(--c-border); }
+  .rclose td { padding:8px; border-bottom:1px solid var(--c-border); vertical-align:middle; }
+  .rclose tr:last-child td { border-bottom:0; }
+  .rclose .tag { font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:20px; background:var(--c-sunken); color:var(--c-tmuted); }
+  .rclose .tag.team { background:#f1e9ff; color:#7c4fd6; }
+  .rclose .tag.req { background:var(--c-green-soft); color:#147a52; }
+  .rclose .actions { display:flex; gap:10px; align-items:center; margin-top:6px; }
+  .rclose .btn { border:none; border-radius:8px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .rclose .btn-go { background:var(--c-accent); color:#fff; }
+  .rclose .btn-go:hover { background:var(--c-accent-text); }
+  .rclose .btn-cancel { background:var(--c-surface); border:1px solid var(--c-bstrong); color:var(--c-tmuted); text-decoration:none; }
+  .rclose .empty { color:var(--c-tfaint); font-size:12.5px; padding:18px 0; text-align:center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rclose">
+  <h1>점수집계 — 회차 마감</h1>
+  <p class="sub">이번 회차의 학생별 점수를 계산해 스냅샷으로 박제합니다. 나중에 다시 눌러 덮어쓸 수 있습니다.</p>
+
+  {% if existing %}
+    <div class="banner warn">
+      ⚠ 이미 마감된 회차입니다 (마지막 마감 {{ existing.closed_at|date:"Y.m.d H:i" }}).
+      실행하면 기존 스냅샷을 <b>덮어씁니다</b>.
+    </div>
+  {% endif %}
+  {% if not team_included %}
+    <div class="banner warn">
+      팀 편성 데이터가 없습니다 → <b>개인 점수만</b> 마감됩니다. 팀 편성 후 다시 마감하면 팀 점수가 합쳐집니다.
+    </div>
+  {% endif %}
+  {% if ungraded_total %}
+    <div class="banner warn">
+      아직 채점되지 않은 제출물 <b>{{ ungraded_total }}건</b> — 성취도 집계에서 제외됩니다. 채점을 마친 뒤 마감하는 것을 권장합니다.
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>대상 회차</h2>
+    <div class="kv"><span class="k">회차</span><span>{{ round.title }} <span class="tag">id {{ round.id }}</span></span></div>
+    {% if period %}
+      <div class="kv"><span class="k">평가 기간</span><span>{{ period.0|date:"Y.m.d H:i" }} ~ {{ period.1|date:"Y.m.d H:i" }}</span></div>
+    {% else %}
+      <div class="kv"><span class="k">평가 기간</span><span class="empty" style="padding:0;">정보 없음 — 마감 지난 전체 과제를 대상으로 합니다</span></div>
+    {% endif %}
+    <div class="kv"><span class="k">대상 학생</span><span>{{ student_count }}명 (점수 산출 가능 {{ computable_count }}명)</span></div>
+    <div class="kv"><span class="k">팀 과제</span><span>{{ team_assignment_count }}건 · 팀 점수 반영 {{ team_included|yesno:"예,아니오" }}</span></div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="card">
+      <h2>포함 과제 ({{ assignments|length }}건) — 체크된 과제만 집계</h2>
+      {% if assignments %}
+        <table>
+          <thead><tr><th style="width:32px;"></th><th>과제명</th><th style="width:80px;">유형</th><th style="width:130px;">마감</th><th style="width:70px;">중요도</th></tr></thead>
+          <tbody>
+            {% for a in assignments %}
+            <tr>
+              <td><input type="checkbox" name="assignment_ids" value="{{ a.id }}" checked></td>
+              <td>{{ a.title }}</td>
+              <td>
+                {% if a.is_team %}<span class="tag team">팀</span>{% else %}<span class="tag">개인</span>{% endif %}
+                {% if a.is_required %}<span class="tag req">필수</span>{% else %}<span class="tag">선택</span>{% endif %}
+              </td>
+              <td>{{ a.due_at|date:"Y.m.d H:i" }}</td>
+              <td>{{ a.get_weight_tier_display }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty">이 회차에 귀속되는 마감된 과제가 없습니다.</div>
+      {% endif %}
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-go" {% if not assignments %}disabled{% endif %}>
+        {% if existing %}재마감 실행{% else %}점수 마감 실행{% endif %}
+      </button>
+      <a href="{% url 'tutor:student-list' %}" class="btn btn-cancel">취소</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

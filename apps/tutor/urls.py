@@ -1,6 +1,13 @@
 from django.urls import path
 
-from . import views_dashboard, views_lecture, views_manage, views_review, views_student
+from . import (
+    views_dashboard,
+    views_lecture,
+    views_manage,
+    views_review,
+    views_round,
+    views_student,
+)
 
 app_name = "tutor"
 
@@ -9,6 +16,11 @@ urlpatterns = [
     path("dashboard/", views_dashboard.dashboard, name="dashboard-alt"),
     path("students/", views_student.student_list, name="student-list"),
     path("students/<int:student_id>/", views_student.student_detail, name="student-detail"),
+
+    # 회차 점수 마감 (docs/assignment-lms-round-close.md)
+    path("round-close/", views_round.round_close, name="round-close"),
+    path("round-close/<int:round_id>/result/", views_round.round_close_result, name="round-close-result"),
+    path("round-close/<int:round_id>/csv/", views_round.round_close_csv, name="round-close-csv"),
     path("assignments/", views_manage.assignment_list, name="assignment-list"),
     path("assignments/<int:pk>/edit/", views_manage.assignment_edit, name="assignment-edit"),
     path("assignments/<int:pk>/delete/", views_manage.assignment_delete, name="assignment-delete"),
