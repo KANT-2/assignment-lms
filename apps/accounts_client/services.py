@@ -17,10 +17,12 @@ apps/accounts_client/services.py — 공통 담당 전담
     user  → .id  .name  .email  .role("student"|"tutor"|"admin")
     team  → .id  .name  (.number)
 """
+from datetime import timedelta
 from functools import lru_cache
 from types import SimpleNamespace
 
 from django.conf import settings
+from django.utils import timezone
 
 
 def _dev() -> bool:
@@ -180,6 +182,47 @@ def get_current_round():
         .first()
     )
     return _ns(id=rid, title=title or f"round-{rid}")
+
+
+def get_round_period(round_id=None):
+    """회차의 (평가 시작, 평가 종료) datetime 튜플. 못 구하면 None.
+    회차 점수 마감(docs/assignment-lms-round-close.md)에서 과제 스코프 산정에 쓴다."""
+    if _dev():
+        now = timezone.now()
+        return (now - timedelta(days=14), now + timedelta(days=1))
+    from .models import EvaluationRound
+
+    rid = round_id or _current_round_id()
+    if rid is None:
+        return None
+    row = (
+        EvaluationRound.objects.filter(pk=rid)
+        .values_list("evaluation_start_at", "evaluation_end_at")
+        .first()
+    )
+    if not row or row[1] is None:
+        return None
+    return row
+
+
+def get_previous_round_end(round_id=None):
+    """이 회차 직전 회차의 평가 종료 datetime. 없으면(첫 회차) None.
+    과제 스코프 하한: 직전 회차 종료 < due_at ≤ 이 회차 종료."""
+    if _dev():
+        return None
+    from .models import EvaluationRound
+
+    rid = round_id or _current_round_id()
+    period = get_round_period(rid)
+    if rid is None or period is None:
+        return None
+    return (
+        EvaluationRound.objects.filter(evaluation_end_at__lt=period[1])
+        .exclude(pk=rid)
+        .order_by("-evaluation_end_at")
+        .values_list("evaluation_end_at", flat=True)
+        .first()
+    )
 
 
 def is_team_member(user_id, team_id):

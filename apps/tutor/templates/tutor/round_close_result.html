@@ -1,0 +1,82 @@
+{# apps/tutor/templates/tutor/round_close_result.html — 마감 결과 #}
+{% extends "base.html" %}
+
+{% block title %}점수집계 결과{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rres { --r-surface:#fff; --r-sunken:#eef1f8; --r-text:#1c2130; --r-tmuted:#6b7280;
+    --r-tfaint:#9aa1b1; --r-border:#e4e8f1; --r-bstrong:#d5dbe8; --r-accent:#4f6df5;
+    --r-accent-text:#3a56d4; --r-amber-soft:#fbf0dd;
+    color:var(--r-text); }
+  .rres h1 { font-size:20px; font-weight:800; margin:0 0 4px; }
+  .rres .sub { font-size:12.5px; color:var(--r-tmuted); margin-bottom:14px; }
+  .rres .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .rres .btn { border:none; border-radius:8px; padding:9px 16px; font-size:12.5px; font-weight:700;
+    cursor:pointer; font-family:inherit; text-decoration:none; display:inline-block; }
+  .rres .btn-csv { background:var(--r-accent); color:#fff; }
+  .rres .btn-csv:hover { background:var(--r-accent-text); }
+  .rres .btn-re { background:var(--r-surface); border:1px solid var(--r-bstrong); color:var(--r-tmuted); }
+  .rres .badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:var(--r-sunken); color:var(--r-tmuted); }
+  .rres .badge.partial { background:var(--r-amber-soft); color:#8a5a12; }
+  .rres .card { background:var(--r-surface); border:1px solid var(--r-border); border-radius:14px; padding:8px 4px; box-shadow:0 1px 10px rgba(24,30,51,.03); }
+  .rres table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .rres th { text-align:left; font-size:11px; color:var(--r-tfaint); font-weight:700; padding:8px 10px; border-bottom:1px solid var(--r-border); }
+  .rres td { padding:9px 10px; border-bottom:1px solid var(--r-border); font-variant-numeric:tabular-nums; }
+  .rres tr:last-child td { border-bottom:0; }
+  .rres .total { font-weight:800; font-size:13.5px; }
+  .rres .dash { color:var(--r-tfaint); }
+  .rres .note { font-size:11px; color:var(--r-tfaint); margin-top:10px; line-height:1.7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rres">
+  <h1>{{ round_title }} — 마감 결과</h1>
+  <p class="sub">
+    마감 {{ closed_at|date:"Y.m.d H:i" }} ·
+    {% if team_included %}
+      <span class="badge">팀 점수 포함</span>
+    {% else %}
+      <span class="badge partial">개인 점수만 (팀 미편성)</span>
+    {% endif %}
+    · 학생 {{ rows|length }}명
+  </p>
+
+  <div class="bar">
+    <a href="{% url 'tutor:round-close-csv' round_id %}" class="btn btn-csv">CSV 내려받기 (AX2 전달용)</a>
+    <a href="{% url 'tutor:round-close' %}" class="btn btn-re">다시 마감</a>
+    <a href="{% url 'tutor:student-list' %}" class="btn btn-re">학생 관리로</a>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>학생</th><th>최종</th><th>성취도</th><th>성실성</th>
+          <th>채점</th><th>미채점</th><th>대상 과제</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.student_name|default:r.student_id }}</td>
+          <td class="total">{% if r.total is not None %}{{ r.total|floatformat:1 }}{% else %}<span class="dash">—</span>{% endif %}</td>
+          <td>{% if r.achievement is not None %}{{ r.achievement|floatformat:1 }}{% else %}<span class="dash">—</span>{% endif %}</td>
+          <td>{% if r.sincerity is not None %}{{ r.sincerity|floatformat:1 }}{% else %}<span class="dash">—</span>{% endif %}</td>
+          <td>{{ r.graded_count }}</td>
+          <td>{% if r.ungraded_count %}{{ r.ungraded_count }}{% else %}<span class="dash">0</span>{% endif %}</td>
+          <td>{{ r.total_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">
+    · 이 표는 마감 시점의 스냅샷입니다. 이후 점수가 바뀌면 "다시 마감"으로 갱신하세요.<br>
+    · 집계 대상 과제 id: {{ assignment_ids|join:", " }}<br>
+    · "최종"이 &mdash;인 학생은 채점된 대상 과제가 없어 산출 불가입니다.
+  </p>
+</div>
+{% endblock %}

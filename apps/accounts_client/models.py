@@ -1,7 +1,7 @@
 """
 apps/accounts_client/models.py — 공통 담당 전담
 
-AX2 통합 플랫폼(`ax_evaluation` DB)이 제공하는 **VIEW 2개**를 읽기 전용으로 매핑한다.
+AX2 통합 플랫폼(`ax_evaluation` DB)이 제공하는 **VIEW 2개 + 회차 테이블 1개**를 읽기 전용으로 매핑한다.
 
 - managed = False : 이 앱은 마이그레이션을 만들지 않는다. `migrate` 도 이 DB 를 건드리지 않음
   (config.routers.AccountsRouter.allow_migrate → False).
@@ -78,6 +78,27 @@ class AccountsUser(models.Model):
     @property
     def is_login_allowed(self):
         return self.is_active and self.approval_status == "approved"
+
+
+class EvaluationRound(models.Model):
+    """
+    rounds_evaluationround 테이블 — 평가 회차(라운드) 자체. AX2 가 직접 읽기 승인.
+    회차 점수 마감(docs/assignment-lms-round-close.md)에서 회차 기간을 얻는 데만 쓴다.
+    필요한 컬럼만 매핑 (원본은 19컬럼). 절대 write 금지.
+    """
+
+    id = models.BigIntegerField(primary_key=True)
+    title = models.CharField(max_length=200)
+    status = models.CharField(max_length=20)  # "IN_PROGRESS" | "COMPLETED" 등
+    evaluation_start_at = models.DateTimeField(null=True)
+    evaluation_end_at = models.DateTimeField(null=True)
+
+    class Meta:
+        managed = False
+        db_table = "rounds_evaluationround"
+
+    def __str__(self):
+        return f"{self.title} (round {self.id})"
 
 
 class RoundTeamMember(models.Model):

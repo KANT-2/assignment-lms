@@ -14,17 +14,21 @@ apps/tutor/grading.py — 학생별 최종 점수 산출.
 - 마감 지난(due_at < now) · 삭제 안 된 과제만 대상.
 - 팀 과제는 학생 팀의 제출물/평가를 상속 (BR-005). 팀이 없으면 팀 과제는 전부 제외.
 - 실시간 계산 — 저장하지 않는다.
+
+회차 점수 마감(docs/assignment-lms-round-close.md): scope_assignments() 로 회차 과제를
+추려 compute(..., assignments=scope) 한 뒤 snapshot() 이 RoundScore 로 박제한다.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts_client import services as accounts
 from apps.core.models import Assignment, Submission
 
-from .models import GradingPolicy
+from .models import GradingPolicy, RoundScore
 
 
 @dataclass
@@ -55,19 +59,25 @@ class _Bucket:
         return self.weighted_sum / self.weight_total
 
 
-def compute(student_ids, *, now=None) -> dict[int, StudentScore]:
-    """{student_id: StudentScore}. 존재하지 않는 학생은 빈 StudentScore."""
+def compute(student_ids, *, now=None, assignments=None) -> dict[int, StudentScore]:
+    """{student_id: StudentScore}. 존재하지 않는 학생은 빈 StudentScore.
+
+    assignments=None  → 마감 지난 전체 과제 (기존 동작, 실시간 조회용).
+    assignments=[...]  → 그 과제 목록만 대상 (회차 점수 마감 — 회차 스코프).
+    """
     student_ids = list(dict.fromkeys(int(s) for s in student_ids))
     now = now or timezone.now()
     policy = GradingPolicy.get_solo()
 
-    assignments = list(Assignment.objects.filter(due_at__lt=now))
+    if assignments is None:
+        assignments = list(Assignment.objects.filter(due_at__lt=now))
+    else:
+        assignments = list(assignments)
     if not assignments:
         return {sid: StudentScore() for sid in student_ids}
 
     a_ids = [a.id for a in assignments]
     teams = _safe_student_teams()
-    team_ids = {t.id for t in teams.values() if t}
 
     # (student_id, assignment_id) → Submission,  (team_id, assignment_id) → Submission
     personal: dict[tuple[int, int], Submission] = {}
@@ -155,4 +165,103 @@ def _achievement(buckets: dict, policy: GradingPolicy) -> float | None:
         return None
     return round(
         sum(buckets[key].score * (weight / total) for key, weight in live.items()), 4
+    )
+
+
+# =========================================================
+# 회차 점수 마감 (docs/assignment-lms-round-close.md)
+# =========================================================
+
+@dataclass
+class SnapshotResult:
+    scores: list = field(default_factory=list)        # list[RoundScore]
+    assignments: list = field(default_factory=list)   # 집계 대상 Assignment
+    team_included: bool = False
+    student_count: int = 0
+    ungraded_total: int = 0                            # 전 학생 미채점 합
+
+
+def scope_assignments(round_id, *, now=None) -> list[Assignment]:
+    """이 회차에 귀속되는 과제: 직전 회차 종료 < due_at ≤ 이 회차 종료, 미삭제, 이미 마감(now 이전).
+
+    회차 기간 정보를 못 구하면 마감 지난 전체 과제로 폴백한다 (튜터가 확인 화면에서 조정).
+    """
+    now = now or timezone.now()
+    period = accounts.get_round_period(round_id)
+    if period is None:
+        return list(Assignment.objects.filter(due_at__lt=now))
+
+    end = period[1]
+    qs = Assignment.objects.filter(due_at__lte=end, due_at__lt=now)
+    prev_end = accounts.get_previous_round_end(round_id)
+    if prev_end is not None:
+        qs = qs.filter(due_at__gt=prev_end)
+    return list(qs.order_by("due_at"))
+
+
+def _team_included(assignments, teams: dict) -> bool:
+    """팀 과제가 스코프에 있고 팀 편성 데이터가 있으면 True.
+    팀 과제가 없으면(반영할 게 없음) True. 팀 과제는 있는데 팀이 없으면 False → 재마감 필요."""
+    has_team_assignment = any(a.is_team for a in assignments)
+    if not has_team_assignment:
+        return True
+    return any(t for t in teams.values())
+
+
+def snapshot(round_obj, closed_by, *, assignment_ids=None, now=None) -> SnapshotResult:
+    """이번 회차 점수를 계산해 RoundScore 로 박제한다. 재마감이면 (round_id, student_id) 덮어쓰기.
+
+    round_obj : accounts.get_current_round() 반환값 (.id / .title).
+    closed_by : 마감 실행 튜터의 accounts_user.id.
+    assignment_ids : 튜터가 확인 화면에서 조정한 과제 id 목록 (None 이면 scope_assignments 전체).
+    """
+    now = now or timezone.now()
+    students = list(accounts.get_students() or [])
+
+    assignments = scope_assignments(round_obj.id, now=now)
+    if assignment_ids is not None:
+        allowed = {int(i) for i in assignment_ids}
+        assignments = [a for a in assignments if a.id in allowed]
+
+    teams = _safe_student_teams()
+    team_included = _team_included(assignments, teams)
+
+    scores = compute([s.id for s in students], now=now, assignments=assignments)
+    a_ids = [a.id for a in assignments]
+    policy_snap = GradingPolicy.get_solo().as_snapshot()
+
+    rows = []
+    ungraded_total = 0
+    with transaction.atomic():
+        for stu in students:
+            sc = scores.get(stu.id) or StudentScore()
+            ungraded_total += sc.ungraded_count
+            row, _ = RoundScore.objects.update_or_create(
+                round_id=round_obj.id,
+                student_id=stu.id,
+                defaults={
+                    "round_title": getattr(round_obj, "title", "") or "",
+                    "student_name": getattr(stu, "name", "") or "",
+                    "total": sc.final,
+                    "achievement": sc.achievement,
+                    "sincerity": sc.sincerity,
+                    "team_included": team_included,
+                    "graded_count": sc.graded_count,
+                    "ungraded_count": sc.ungraded_count,
+                    "total_count": sc.total_count,
+                    "breakdown": {},
+                    "assignment_ids": a_ids,
+                    "policy_snapshot": policy_snap,
+                    "closed_at": now,
+                    "closed_by": int(closed_by),
+                },
+            )
+            rows.append(row)
+
+    return SnapshotResult(
+        scores=rows,
+        assignments=assignments,
+        team_included=team_included,
+        student_count=len(students),
+        ungraded_total=ungraded_total,
     )
