@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}피드백 확인 | AX 과제 시스템{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
+<style>.app-topbar .crumb{display:none}.app-topbar .utils{margin-left:auto}</style>
+{% endblock %}
 {% block page_header %}
 <div class="page-header">
   <p class="student-eyebrow mb-1">AX 프로젝트 평가</p>

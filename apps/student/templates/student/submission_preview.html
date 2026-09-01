@@ -4,6 +4,8 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
 <style>
+  .app-topbar .crumb { display:none; }
+  .app-topbar .utils { margin-left:auto; }
   .student-card .preview-panel { margin-bottom:12px; }
   .student-card .preview-panel:last-child { margin-bottom:0; }
   .student-preview-details > summary { display:flex; align-items:center; gap:8px; padding:10px 12px; list-style:none; color:var(--color-text-muted); background:var(--color-surface-subtle); font-size:12px; font-weight:700; cursor:pointer; }
