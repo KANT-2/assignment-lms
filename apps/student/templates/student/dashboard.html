@@ -299,7 +299,6 @@
           <a class="see-all" href="{% url 'student:assignment-list' %}">
             전체 과제 보기 <span aria-hidden="true">→</span>
           </a>
-          <div class="day-cap">날짜를 누르면 그날 일정(강의·과제)으로 바뀝니다. · 개수는 개인 과제 전체{% if team %} + 내 팀 과제{% endif %} 기준</div>
         {% endif %}
       </div>
     </div>
@@ -337,7 +336,6 @@
       {% endfor %}
       </div>
       {% if todos %}<div class="todo-foot">{{ todo_done }} / {{ todos|length }} 완료</div>{% endif %}
-      <div class="day-cap" style="margin-top:8px;">달력에서 날짜를 누르면 그 날의 할 일을 보고 추가할 수 있어요.</div>
     </div>
 
     <div class="card">

@@ -278,11 +278,6 @@
         {{ form.is_team.errors }}
       </div>
 
-      <div class="field">
-        <label class="field-label">제출 형식</label>
-        <div class="static-note">학생은 .py / .ipynb 등 파일 업로드로 제출합니다 (업로드 시 자동 미리보기 제공). 이 화면에서 설정할 항목은 아닙니다.</div>
-      </div>
-
       <div class="modal-actions">
         <a href="{% url 'tutor:assignment-list' %}" class="btn btn-ghost">취소</a>
         <button type="submit" class="btn btn-primary">{% if form_mode == 'edit' %}과제 수정{% else %}과제 등록{% endif %}</button>
