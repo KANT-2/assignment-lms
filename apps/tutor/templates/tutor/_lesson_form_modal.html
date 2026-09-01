@@ -13,45 +13,24 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">차시 번호<span class="req">*</span></label>
-          <input type="number" id="form-order" class="form-control" min="1" max="50" value="9">
-        </div>
-        <div class="form-group">
-          <label class="form-label">수업 일자<span class="req">*</span></label>
+          <label class="form-label">강의 일자<span class="req">*</span></label>
           <input type="date" id="form-date" class="form-control" value="2026-09-05">
         </div>
+        <div class="form-group">
+          <label class="form-label">강의 제목<span class="req">*</span></label>
+          <input type="text" id="form-title" class="form-control" placeholder="예: LangChain을 활용한 RAG 에이전트 구축">
+        </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">수업 제목<span class="req">*</span></label>
-        <input type="text" id="form-title" class="form-control" placeholder="예: LangChain을 활용한 RAG 에이전트 구축">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">블로그 요약 링크 (URL)</label>
-        <input type="url" id="form-blog" class="form-control" placeholder="https://blog.example.com/...">
-        <span class="form-hint">수업 내용 정리 및 참고자료 블로그 포스팅 링크</span>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">유튜브 다시보기 영상 링크 (URL)</label>
-        <input type="url" id="form-video" class="form-control" placeholder="https://www.youtube.com/watch?v=..." oninput="updateVideoPreview()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+          <label class="form-label">유튜브 다시보기 영상 (LessonVideo)</label>
+          <button type="button" class="btn btn-outline btn-sm" onclick="addVideoRow()">+ 영상 추가</button>
+        </div>
         <span class="form-hint">URL 입력 시 썸네일이 자동 감지되고 학생 화면에 임베드 영상이 공개됩니다.</span>
 
-        <!-- Live Preview -->
-        <div id="video-preview" class="video-preview-wrap">
-          <div class="thumb-info-bar">
-            <span class="thumb-info-badge">유튜브 썸네일 &amp; 플레이어 자동 감지</span>
-            <span id="video-id-display" style="color:var(--text-muted); font-size:11px;"></span>
-          </div>
-          <div class="preview-media-container">
-            <div class="preview-box">
-              <img id="video-thumb-preview" src="" alt="유튜브 썸네일">
-            </div>
-            <div class="preview-box">
-              <iframe id="video-preview-iframe" src="" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-            </div>
-          </div>
+        <div class="material-builder" id="video-builder-list">
+          <!-- Dynamic Video Rows -->
         </div>
       </div>
 

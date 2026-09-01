@@ -22,11 +22,15 @@ def student_lecture_view(request):
             
             lessons_data.append({
                 'id': lesson.id,
-                'order': idx + 1, # Order based on date
                 'title': lesson.title,
                 'date': lesson.lesson_date.strftime('%Y-%m-%d'),
-                'blogUrl': lesson.blog_link,
-                'videoUrl': lesson.video_url,
+                'videos': [
+                    {
+                        'title': v.title,
+                        'url': v.video_url
+                    }
+                    for v in lesson.videos.all()
+                ],
                 'materials': materials_data
             })
     

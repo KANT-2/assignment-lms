@@ -541,7 +541,7 @@
     <!-- Right: Playlist Navigation -->
     <div class="playlist-card">
       <div class="playlist-head">
-        <h3 class="playlist-title">회차 목록</h3>
+        <h3 class="playlist-title">일자별 목록</h3>
         <span class="playlist-count" id="list-total-count">총 8개 차시</span>
       </div>
 
@@ -595,6 +595,7 @@
   const lessonsData = {{ lessons_json|safe }};
   let currentLessonId = null;
   let selectedDateStr = null;
+  let currentVideoIndex = 0;
   let currentCalDate = new Date();
 
   function loadLessons() {
@@ -602,7 +603,7 @@
 
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get('date');
-    const lessonParam = parseInt(params.get('lesson'), 10);
+    
     const targetLesson = lessonsData.find(l => l.id === lessonParam);
 
     if (targetLesson) {
@@ -629,9 +630,9 @@
     
     const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
     if (targetLesson) {
-        selectLesson(targetLesson.id);
+        selectVideo(0);
     } else if (dayLessons.length > 0) {
-        selectLesson(dayLessons[0].id);
+        selectVideo(0);
     }
   }
 
@@ -640,35 +641,38 @@
     const container = document.getElementById('playlist-container');
     container.innerHTML = '';
     
-    const filteredLessons = lessonsData.filter(l => l.date === selectedDateStr);
-    filteredLessons.sort((a, b) => a.order - b.order); // Ascending order
+    const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
+    const lesson = dayLessons.length > 0 ? dayLessons[0] : null;
     
-    totalCountSpan.textContent = `해당 일자 총 ${filteredLessons.length}개`;
+    if (!lesson) {
+        totalCountSpan.textContent = `해당 일자 총 0개`;
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-faint); font-size: 13px;">해당 일자에 등록된 강의가 없습니다.</div>';
+        return;
+    }
+    
+    const videos = lesson.videos || [];
+    totalCountSpan.textContent = `해당 일자 영상 ${videos.length}개`;
 
-    if (filteredLessons.length === 0) {
+    if (videos.length === 0) {
         container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-faint); font-size: 13px;">해당 일자에 등록된 영상이 없습니다.</div>';
         return;
     }
 
-    filteredLessons.forEach((lesson, index) => {
-      const vId = getYouTubeId(lesson.videoUrl);
+    videos.forEach((vid, index) => {
+      const vId = getYouTubeId(vid.url);
       const thumbHtml = vId 
         ? `<div class="playlist-item-thumb"><img src="https://img.youtube.com/vi/${vId}/mqdefault.jpg" alt="thumb"></div>`
         : `<div class="playlist-item-thumb" style="background:var(--surface-muted);display:flex;align-items:center;justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`;
 
       const item = document.createElement('div');
-      item.className = 'playlist-item' + (lesson.id === currentLessonId ? ' active' : '');
-      item.onclick = () => selectLesson(lesson.id);
+      item.className = 'playlist-item' + (index === currentVideoIndex ? ' active' : '');
+      item.onclick = () => selectVideo(index);
       
       item.innerHTML = `
         ${thumbHtml}
         <div class="playlist-info">
-          <div class="playlist-item-top">
-            <span class="playlist-item-order" style="font-size: 12px;">${lesson.date}</span>
-          </div>
-          <div class="playlist-item-title">${lesson.title}</div>
+          <div class="playlist-item-title">${vid.title || '강의 영상'}</div>
           <div class="playlist-item-meta">
-            <span>교안 ${lesson.materials ? lesson.materials.length : 0}건</span>
             <span class="status-indicator">영상 시청</span>
           </div>
         </div>
@@ -676,7 +680,6 @@
       container.appendChild(item);
     });
   }
-
   function renderCalendar() {
     const year = currentCalDate.getFullYear();
     const month = currentCalDate.getMonth();
@@ -711,7 +714,7 @@
           selectedDateStr = dateStr;
           renderCalendar();
           renderPlaylist();
-          selectLesson(lessonsOnDay[0].id);
+          currentVideoIndex = 0; selectVideo(0);
         };
       } else {
         el.onclick = () => showToast('해당 날짜에는 예정된 강의가 없습니다.');

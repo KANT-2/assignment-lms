@@ -13,17 +13,21 @@ from .views_manage import tutor_required
 def _serialize_lessons(lecture):
     """템플릿 JS의 `lessons` 배열 형태로 직렬화. 날짜 오름차순(회차 순)."""
     lessons = (
-        lecture.lessons.all().order_by("lesson_date", "id").prefetch_related("materials")
+        lecture.lessons.all().order_by("lesson_date", "id").prefetch_related("materials", "videos")
     )
     out = []
-    for idx, lesson in enumerate(lessons, start=1):
+    for lesson in lessons:
         out.append({
             "id": lesson.id,
-            "order": idx,
             "title": lesson.title,
             "date": lesson.lesson_date.strftime("%Y-%m-%d"),
-            "blogUrl": lesson.blog_link,
-            "videoUrl": lesson.video_url,
+            "videos": [
+                {
+                    "title": v.title,
+                    "url": v.video_url,
+                }
+                for v in lesson.videos.all()
+            ],
             "materials": [
                 {
                     "kind": mat.kind,
@@ -85,13 +89,13 @@ def tutor_lecture_update_api(request):
         existing_ids = set(lecture.lessons.values_list("id", flat=True))
         seen_ids = set()
 
+        from apps.core.models import Lesson, LessonMaterial, LessonVideo
+
         for item in lessons_list:
             title = (item.get("title") or "").strip()
             date = item.get("date") or None
             if not title or not date:
                 continue
-            blog = item.get("blogUrl") or None
-            video = item.get("videoUrl") or None
 
             raw_id = item.get("id")
             lesson_id = raw_id if raw_id in existing_ids else None
@@ -100,16 +104,27 @@ def tutor_lecture_update_api(request):
                 lesson = Lesson.objects.get(pk=lesson_id)
                 lesson.title = title
                 lesson.lesson_date = date
-                lesson.blog_link = blog
-                lesson.video_url = video
                 lesson.save()
             else:
                 lesson = Lesson.objects.create(
-                    lecture=lecture, title=title, lesson_date=date,
-                    blog_link=blog, video_url=video,
+                    lecture=lecture, title=title, lesson_date=date
                 )
             seen_ids.add(lesson.id)
 
+            # Sync videos
+            lesson.videos.all().delete()
+            for idx, vid in enumerate(item.get("videos", [])):
+                v_title = (vid.get("title") or "").strip()
+                v_url = (vid.get("url") or "").strip()
+                if v_url:
+                    LessonVideo.objects.create(
+                        lesson=lesson,
+                        title=v_title,
+                        video_url=v_url,
+                        order=idx
+                    )
+
+            # Sync materials
             lesson.materials.all().delete()
             for mat in item.get("materials", []):
                 kind = mat.get("kind", "FILE")
