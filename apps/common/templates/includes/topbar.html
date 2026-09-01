@@ -3,8 +3,16 @@ apps/common/templates/includes/topbar.html — 공통 담당 전담 (LAYOUT.md �
 전역 유틸리티만. 페이지 제목·페이지별 액션은 여기 두지 않는다 (page_header 블록).
 {% endcomment %}
 <header class="app-topbar">
+  {% if nav_role == "TUTOR" %}
+    <button class="sidebar-toggle" type="button"
+            aria-label="메뉴 열기" aria-controls="app-sidebar" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+        <path d="M3 6h18M3 12h18M3 18h18"></path>
+      </svg>
+    </button>
+  {% endif %}
   <div class="crumb">
-    {% if nav_role == "TUTOR" %}튜터 콘솔{% elif nav_role == "STUDENT" %}학생{% endif %}
+    {% if nav_role == "STUDENT" %}학생{% endif %}
   </div>
   <div class="utils">
 
