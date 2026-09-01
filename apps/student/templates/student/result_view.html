@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{{ assignment.title }} 평가 결과 | AX 과제 시스템{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
+<style>.app-topbar .crumb{display:none}.app-topbar .utils{margin-left:auto}</style>
+{% endblock %}
 {% block page_header %}
 <div class="page-header">
   <a class="student-back-link" href="{% url 'student:assignment-list' %}">‹ 과제 목록으로 돌아가기</a>
