@@ -106,7 +106,86 @@ body {
 
 .page-header { margin-bottom: var(--space-lg); }
 
+.sidebar-toggle,
+.sidebar-overlay { display: none; }
+
 @media (max-width: 992px) {
-  .app-sidebar { display: none; }
+  .app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1060;
+  }
+  .sidebar-toggle {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--color-navigation);
+    background: transparent;
+    cursor: pointer;
+  }
+  .sidebar-toggle:hover,
+  .sidebar-toggle:focus-visible {
+    color: var(--color-primary);
+    background: var(--color-primary-container);
+    outline: none;
+  }
+  .sidebar-toggle svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+  .app-sidebar {
+    display: flex;
+    position: fixed;
+    top: var(--topbar-height);
+    left: 0;
+    z-index: 1050;
+    width: min(var(--sidebar-width), 82vw);
+    height: calc(100vh - var(--topbar-height));
+    height: calc(100dvh - var(--topbar-height));
+    transform: translateX(-100%);
+    pointer-events: none;
+    box-shadow: 12px 0 32px rgba(8, 42, 75, 0.28);
+    transition: transform 0.22s ease;
+  }
+  .app-sidebar.open {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: var(--topbar-height);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1040;
+    padding: 0;
+    border: 0;
+    background: rgba(17, 24, 39, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+  }
+  .sidebar-overlay.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+  body.sidebar-open { overflow: hidden; }
   .app-main { padding: var(--space-md); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar,
+  .sidebar-overlay { transition: none; }
 }
