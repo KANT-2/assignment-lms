@@ -87,6 +87,59 @@ class SubmissionViewTests(TestCase):
         self.assertContains(preview_response, "report.sql")
         self.assertContains(preview_response, "SELECT id, title FROM assignment")
 
+    def test_submission_accepts_multiple_files_and_github_link(self):
+        assignment = self.assignment()
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {
+                "description": "복수 자료 제출",
+                "files": [
+                    SimpleUploadedFile("first.txt", b"first"),
+                    SimpleUploadedFile("second.sql", b"SELECT 2;"),
+                ],
+                "links": ["https://github.com/example/assignment"],
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("student:assignment-preview", args=[assignment.id]),
+        )
+        submission = Submission.objects.get(assignment=assignment)
+        self.assertEqual(submission.files.count(), 3)
+        self.assertSetEqual(
+            set(submission.files.values_list("file_name", flat=True)),
+            {
+                "first.txt",
+                "second.sql",
+                "https://github.com/example/assignment",
+            },
+        )
+
+        preview_response = self.client.get(
+            reverse("student:assignment-preview", args=[assignment.id])
+        )
+        self.assertContains(preview_response, "GitHub에서 열기")
+        self.assertContains(preview_response, "https://github.com/example/assignment")
+
+    def test_submission_accepts_non_github_web_link(self):
+        assignment = self.assignment()
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {"links": ["https://example.com/reference"]},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("student:assignment-preview", args=[assignment.id]),
+        )
+        submission = Submission.objects.get(assignment=assignment)
+        self.assertTrue(
+            submission.files.filter(file_url="https://example.com/reference").exists()
+        )
+
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
     def test_assignment_list_filters_by_submission_status(self, _get_user_team):
         submitted_assignment = self.assignment(title="제출한 과제")

@@ -4,6 +4,8 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
 <style>
+  .app-topbar .crumb { display:none; }
+  .app-topbar .utils { margin-left:auto; }
   .assignment-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 24px; margin-bottom:14px; }
   .assignment-list-summary { display:flex; align-items:center; gap:8px; order:1; transform:translateY(20px); }
   .assignment-list-summary .student-section-title { font-size:18px; }
@@ -48,7 +50,6 @@
   /* Header matching dashboard */
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
   .page-head-text { display: flex; flex-direction: column; gap: 6px; }
-  .breadcrumb { font-size: 12.5px; color: #9aa1b1; font-weight: 600; }
   .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   h1.page-title { font-size: 21px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
   .page-sub { font-size: 13px; color: var(--color-text-muted); }
@@ -57,7 +58,10 @@
 {% block page_header %}
 <div class="page-head">
   <div class="page-head-text">
+<<<<<<< HEAD
+=======
 
+>>>>>>> develop
     <div class="title-row">
       <h1 class="page-title">과제 목록</h1>
     </div>

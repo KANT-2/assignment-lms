@@ -3,6 +3,7 @@
 from datetime import date
 from functools import wraps
 from pathlib import Path
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from django.contrib import messages
@@ -31,7 +32,7 @@ from apps.common.preview import (  # noqa: F401
 from apps.core.models import Assignment, Submission, SubmissionFile
 from apps.github_sync import services as github_services
 
-from .forms import SubmissionForm
+from .forms import AssignmentSubmissionForm, MAX_UPLOAD_SIZE
 from .identity import external_student_id
 
 IMAGE_CONTENT_TYPES = {
@@ -44,11 +45,34 @@ IMAGE_CONTENT_TYPES = {
     ".png": "image/png",
     ".webp": "image/webp",
 }
-
-
 def _preview(submission_file):
     """이전 import 경로를 유지하면서 공통 미리보기 데이터를 사용한다."""
-    return _common_preview(submission_file)
+    preview = _common_preview(submission_file)
+    parsed = urlparse(submission_file.file_url)
+    preview["is_link"] = (
+        submission_file.file_size == 0
+        and submission_file.file_name == submission_file.file_url
+        and parsed.scheme in {"http", "https"}
+        and bool(parsed.hostname)
+    )
+    return preview
+
+
+def _submitted_resources(request):
+    uploaded_files = request.FILES.getlist("files") or request.FILES.getlist("file")
+    links = [value.strip() for value in request.POST.getlist("links") if value.strip()]
+    if not uploaded_files and not links:
+        return uploaded_files, links, "파일 또는 링크를 하나 이상 추가해 주세요."
+    for uploaded_file in uploaded_files:
+        if uploaded_file.size > MAX_UPLOAD_SIZE:
+            return uploaded_files, links, f"{uploaded_file.name}: 파일 크기는 30MB를 초과할 수 없습니다."
+    for link in links:
+        parsed = urlparse(link)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            return uploaded_files, links, "http 또는 https로 시작하는 올바른 링크를 입력해 주세요."
+        if len(link) > 200:
+            return uploaded_files, links, "링크는 200자 이하로 입력해 주세요."
+    return uploaded_files, links, None
 
 
 def student_required(view_func):
@@ -213,12 +237,17 @@ def assignment_submit(request, assignment_id):
         )
         return redirect("student:assignment-preview", assignment_id=assignment.id)
 
-    form = SubmissionForm(request.POST or None, request.FILES or None)
+    form = AssignmentSubmissionForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        uploaded_file = form.cleaned_data["file"]
-        safe_name = Path(uploaded_file.name).name
-        storage_name = f"submissions/{student_id}/{uuid4().hex}_{safe_name}"
-        saved_name = None
+        uploaded_files, links, resource_error = _submitted_resources(request)
+        if resource_error:
+            return render(request, "student/submission_form.html", {
+                "assignment": assignment,
+                "form": form,
+                "resource_error": resource_error,
+                "submitted_links": links,
+            })
+        saved_files = []
         try:
             with transaction.atomic():
                 locked_assignment = Assignment.objects.select_for_update().get(
@@ -240,7 +269,6 @@ def assignment_submit(request, assignment_id):
                     return redirect(
                         "student:assignment-preview", assignment_id=assignment.id
                     )
-                saved_name = default_storage.save(storage_name, uploaded_file)
                 submission = Submission.objects.create(
                     assignment=locked_assignment,
                     student_id=None if assignment.is_team else student_id,
@@ -248,15 +276,30 @@ def assignment_submit(request, assignment_id):
                     description=form.cleaned_data["description"],
                     last_editor_id=external_student_id(request),
                 )
-                SubmissionFile.objects.create(
-                    submission=submission,
-                    kind=_submission_kind(safe_name),
-                    file_url=default_storage.url(saved_name),
-                    file_name=safe_name,
-                    file_size=uploaded_file.size,
-                )
+                for uploaded_file in uploaded_files:
+                    safe_name = Path(uploaded_file.name).name
+                    storage_name = (
+                        f"submissions/{student_id}/{uuid4().hex}_{safe_name}"
+                    )
+                    saved_name = default_storage.save(storage_name, uploaded_file)
+                    saved_files.append(saved_name)
+                    SubmissionFile.objects.create(
+                        submission=submission,
+                        kind=_submission_kind(safe_name),
+                        file_url=default_storage.url(saved_name),
+                        file_name=safe_name,
+                        file_size=uploaded_file.size,
+                    )
+                for link in links:
+                    SubmissionFile.objects.create(
+                        submission=submission,
+                        kind=SubmissionFile.Kind.OTHER,
+                        file_url=link,
+                        file_name=link,
+                        file_size=0,
+                    )
         except Exception:
-            if saved_name:
+            for saved_name in saved_files:
                 default_storage.delete(saved_name)
             raise
 
@@ -266,6 +309,7 @@ def assignment_submit(request, assignment_id):
     return render(request, "student/submission_form.html", {
         "assignment": assignment,
         "form": form,
+        "submitted_links": request.POST.getlist("links") if request.method == "POST" else [],
     })
 
 
