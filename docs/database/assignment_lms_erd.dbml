@@ -1,0 +1,216 @@
+// Assignment LMS owned schema (PostgreSQL)
+// Generated from current Django models on 2026-09-02.
+// Import this file at https://dbdiagram.io or another DBML-compatible tool.
+// External account/team/round IDs are logical references only and intentionally have no Ref.
+
+Table lecture {
+  id bigint [pk, increment]
+  title varchar(200) [not null]
+  created_at timestamptz [not null]
+
+  Note: '단일 강의 과정. 애플리케이션 규칙상 항상 1행을 사용한다.'
+}
+
+Table lesson {
+  id bigint [pk, increment]
+  lecture_id bigint [not null]
+  title varchar(200) [not null]
+  lesson_date date [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Note: '날짜별 강의 차시. 기본 정렬은 lesson_date 오름차순.'
+}
+
+Table lesson_video {
+  id bigint [pk, increment]
+  lesson_id bigint [not null]
+  title varchar(200) [not null, default: '']
+  video_url varchar(200) [not null]
+  order integer [not null, default: 0]
+
+  Note: '차시별 복수 영상. order, id 순으로 정렬한다.'
+}
+
+Table lesson_material {
+  id bigint [pk, increment]
+  lesson_id bigint [not null]
+  kind varchar(10) [not null, note: 'FILE 또는 LINK']
+  title varchar(200) [not null]
+  file_url varchar(200) [null, note: 'kind=FILE일 때 사용']
+  link_url varchar(200) [null, note: 'kind=LINK일 때 사용']
+
+  Note: '차시별 수업 교안 및 실습 자료.'
+}
+
+Table assignment {
+  id bigint [pk, increment]
+  title varchar(200) [not null]
+  description text [not null, default: '']
+  due_at timestamptz [not null]
+  is_required boolean [not null, default: true]
+  allow_late boolean [not null, default: true]
+  is_team boolean [not null, default: false]
+  weight_tier varchar(10) [not null, default: 'MID', note: 'HIGH, MID, LOW']
+  late_penalty smallint [not null, default: 0]
+  created_by integer [not null, note: 'LOGICAL REF: external accounts_user.id (튜터)']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz [null, note: 'NULL=활성, 값 존재=소프트 삭제']
+
+  Note: '개인/팀 과제. 삭제 시 행을 지우지 않고 deleted_at을 기록한다.'
+}
+
+Table submission {
+  id bigint [pk, increment]
+  assignment_id bigint [not null]
+  student_id integer [null, note: 'LOGICAL REF: external accounts_user.id']
+  team_id integer [null, note: 'LOGICAL REF: external teams_team.id']
+  description text [not null, default: '']
+  submitted_at timestamptz [not null]
+  last_editor_id integer [null, note: 'LOGICAL REF: external accounts_user.id']
+  is_locked boolean [not null, default: false]
+  final_score integer [null, note: 'evaluation.score 동기화 캐시']
+
+  Note: '과제 제출 단위. student_id와 team_id 중 정확히 하나만 값이 있어야 한다. 재제출은 같은 제출 행과 첨부자료를 갱신한다.'
+
+}
+
+Table submission_file {
+  id bigint [pk, increment]
+  submission_id bigint [not null]
+  kind varchar(10) [not null, note: 'PY, IPYNB, OTHER']
+  file_url varchar(200) [not null, note: '업로드 파일 경로 또는 제출 링크 URL']
+  file_name varchar(255) [not null]
+  file_size integer [not null, note: 'byte 단위. 링크는 0']
+
+  Note: '제출물별 복수 파일 또는 복수 링크. 링크도 동일 테이블에 저장한다.'
+}
+
+Table ai_evaluation {
+  id bigint [pk, increment]
+  submission_id bigint [not null, unique]
+  score integer [not null, note: '0~100']
+  comment text [not null, default: '']
+  updated_at timestamptz [not null]
+
+  Note: '제출물당 최대 1개의 AI 1차 평가. 재평가 시 덮어쓴다.'
+}
+
+Table evaluation {
+  id bigint [pk, increment]
+  submission_id bigint [not null, unique]
+  score integer [not null, note: '0~100']
+  feedback text [not null, default: '']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Note: '제출물당 최대 1개의 튜터 공식 평가. 최초 평가 저장 시 제출물을 잠근다.'
+}
+
+Table todo {
+  id bigint [pk, increment]
+  student_id integer [not null, note: 'LOGICAL REF: external accounts_user.id']
+  content varchar(500) [not null]
+  is_done boolean [not null, default: false]
+  due_date date [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (student_id, due_date) [name: 'todo_student_due_idx']
+  }
+
+  Note: '학생 개인 할 일. 기본 정렬은 미완료 우선, 최신 생성순.'
+}
+
+Table grading_policy {
+  id bigint [pk, increment]
+  achievement_weight double [not null, default: 0.70]
+  sincerity_weight double [not null, default: 0.30]
+  individual_ratio double [not null, default: 0.70]
+  team_ratio double [not null, default: 0.30]
+  optional_ratio double [not null, default: 0.60]
+  required_ratio double [not null, default: 0.40]
+  required_floor smallint [not null, default: 40]
+  optional_floor smallint [not null, default: 20]
+  required_miss_penalty smallint [not null, default: 10]
+  weight_high double [not null, default: 1.5]
+  weight_mid double [not null, default: 1.0]
+  weight_low double [not null, default: 0.5]
+  updated_at timestamptz [not null]
+
+  Note: '성적 집계 정책. 애플리케이션 규칙상 최소 id의 1행을 싱글턴으로 사용한다.'
+}
+
+Table round_score {
+  id bigint [pk, increment]
+  round_id bigint [not null, note: 'LOGICAL REF: external rounds_evaluationround.id']
+  round_title varchar(200) [not null, default: '']
+  student_id integer [not null, note: 'LOGICAL REF: external accounts_user.id']
+  student_name varchar(150) [not null, default: '']
+  total double [null, note: '최종 점수 0~100. 산출 불가 시 NULL']
+  achievement double [null]
+  sincerity double [null]
+  team_included boolean [not null, default: false]
+  graded_count smallint [not null, default: 0]
+  ungraded_count smallint [not null, default: 0]
+  total_count smallint [not null, default: 0]
+  breakdown jsonb [not null, default: '{}']
+  assignment_ids jsonb [not null, default: '[]']
+  policy_snapshot jsonb [not null, default: '{}']
+  closed_at timestamptz [not null]
+  closed_by integer [not null, note: 'LOGICAL REF: external accounts_user.id (튜터)']
+
+  indexes {
+    (round_id, student_id) [unique, name: 'round_score_round_student_uniq']
+    round_id [name: 'round_score_round_idx']
+  }
+
+  Note: '회차 마감 당시 학생별 점수와 정책을 보존하는 스냅샷. 재마감 시 같은 회차·학생 행을 갱신한다.'
+}
+
+Table github_student_account {
+  id bigint [pk, increment]
+  student_id integer [not null, unique, note: 'LOGICAL REF: external accounts_user.id']
+  github_user_id bigint [not null]
+  github_login varchar(100) [not null]
+  github_name varchar(200) [not null, default: '']
+  access_token_encrypted text [not null]
+  token_scope varchar(200) [not null, default: '']
+  repo_full_name varchar(200) [not null, default: '']
+  connected_at timestamptz [not null]
+  last_synced_at timestamptz [null]
+  last_error text [not null, default: '']
+
+  Note: '학생당 1개의 GitHub OAuth 연결. 액세스 토큰은 Fernet 암호문만 저장한다.'
+}
+
+Table github_submission_push {
+  id bigint [pk, increment]
+  submission_id bigint [not null, unique]
+  state varchar(12) [not null, default: 'PENDING', note: 'PENDING, SYNCED, FAILED, NO_ACCOUNT']
+  attempts integer [not null, default: 0]
+  last_attempt_at timestamptz [null]
+  synced_at timestamptz [null]
+  committed_path varchar(500) [not null, default: '']
+  commit_sha varchar(64) [not null, default: '']
+  is_finalized boolean [not null, default: false]
+  finalized_commit_sha varchar(64) [not null, default: '']
+  error_message text [not null, default: '']
+  updated_at timestamptz [not null]
+
+  indexes {
+    state [name: 'github_subm_state_9814de_idx']
+  }
+
+  Note: '제출물당 1개의 GitHub push 상태 및 결과.'
+}
+
+Ref: lesson.lecture_id > lecture.id [delete: cascade]
+Ref: lesson_video.lesson_id > lesson.id [delete: cascade]
+Ref: lesson_material.lesson_id > lesson.id [delete: cascade]
+Ref: submission.assignment_id > assignment.id [delete: cascade]
+Ref: submission_file.submission_id > submission.id [delete: cascade]
+Ref: ai_evaluation.submission_id - submission.id [delete: cascade]
+Ref: evaluation.submission_id - submission.id [delete: cascade]
+Ref: github_submission_push.submission_id - submission.id [delete: cascade]
