@@ -1,0 +1,27 @@
+{% if github_enabled %}
+<div class="card">
+  <div class="card-head">
+    <div class="card-title">🐙 GitHub 백업</div>
+    {% if github_account %}<span class="pill accent">연결됨</span>{% endif %}
+  </div>
+  {% if github_account %}
+    <div class="day-cap" style="margin-top:0;">
+      <b>@{{ github_account.github_login }}</b> 계정에 제출물이 자동 커밋됩니다.
+    </div>
+    <div class="d-flex gap-2" style="margin-top:10px; flex-wrap:wrap;">
+      {% if github_account.repo_url %}
+        <a class="see-all" style="margin:0;" href="{{ github_account.repo_url }}" target="_blank" rel="noopener">내 저장소 열기 →</a>
+      {% endif %}
+      <form method="post" action="{% url 'github_sync:disconnect' %}" onsubmit="return confirm('GitHub 연결을 해제할까요? 이미 올라간 커밋은 남습니다.');">
+        {% csrf_token %}
+        <button type="submit" class="see-all" style="margin:0; border:none; background:none; cursor:pointer; color:var(--d-tmuted);">연결 해제</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="day-cap" style="margin-top:0;">
+      GitHub를 연결하면 제출한 과제가 <b>내 공개 저장소</b>에 자동 백업되어 포트폴리오로 쓸 수 있어요.
+    </div>
+    <a class="see-all" style="margin-top:10px;" href="{% url 'github_sync:connect' %}">GitHub 연결하기 →</a>
+  {% endif %}
+</div>
+{% endif %}
