@@ -99,6 +99,27 @@
   .tt-scope .modal-actions{display:flex;gap:10px;margin-top:20px;}
   .tt-scope .modal-actions .btn{flex:1;justify-content:center;}
 
+  /* 첨부 자료 */
+  .tt-scope .attach-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--accent-text);background:var(--surface-sunken);border:1px dashed var(--border-strong);border-radius:var(--radius-sm);padding:8px 13px;cursor:pointer;font-family:inherit;width:fit-content;}
+  .tt-scope [data-attach-field].is-open .attach-toggle{display:none;}
+  .tt-scope .attach-box{border:1px solid var(--border-strong);background:var(--surface-sunken);border-radius:var(--radius-sm);padding:10px 11px;}
+  .tt-scope [data-attach-field]:not(.is-open) .attach-box{display:none;}
+  .tt-scope .attach-row{display:flex;gap:8px;align-items:center;}
+  .tt-scope .attach-pick{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;background:var(--surface);border:1px solid var(--border-strong);color:var(--accent-text);border-radius:var(--radius-sm);padding:7px 12px;cursor:pointer;}
+  .tt-scope .attach-linkinput{flex:1;min-width:0;border:1px solid var(--border-strong);background:var(--surface);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--text);}
+  .tt-scope .attach-chips{display:flex;flex-direction:column;gap:6px;margin-top:9px;}
+  .tt-scope .attach-chips:empty{display:none;}
+  .tt-scope .achip{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 9px;font-size:12px;}
+  .tt-scope .achip .aic{flex-shrink:0;width:22px;height:22px;border-radius:5px;color:#fff;font-size:7.5px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .tt-scope .achip .aic.file{background:#6b7280;} .tt-scope .achip .aic.link{background:var(--accent);}
+  .tt-scope .achip .anm{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tt-scope .achip .asz{color:var(--text-faint);font-size:10.5px;flex-shrink:0;}
+  .tt-scope .achip .ax{flex-shrink:0;border:none;background:none;color:var(--text-faint);font-size:13px;cursor:pointer;padding:0 2px;line-height:1;font-family:inherit;}
+  .tt-scope .achip .ax:hover{color:var(--red);}
+  .tt-scope .achip.marked{opacity:.5;} .tt-scope .achip.marked .anm{text-decoration:line-through;}
+  .tt-scope .achip .adel{flex-shrink:0;border:none;background:none;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .tt-scope .achip input[type=checkbox]{display:none;}
+
   /* toast (Django messages) */
   .tt-toast-wrap{position:fixed;right:22px;bottom:22px;display:flex;flex-direction:column;gap:8px;z-index:1090;}
   .tt-toast{background:var(--text);color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,.25);max-width:340px;}
@@ -197,7 +218,7 @@
       <button type="button" class="tt-modal-close" data-tt-close>✕</button>
     </div>
 
-    <form method="post"
+    <form method="post" enctype="multipart/form-data"
           action="{% if form_mode == 'edit' %}{% url 'tutor:assignment-edit' editing.pk %}{% else %}{% url 'tutor:assignment-list' %}{% endif %}"
           novalidate>
       {% csrf_token %}
@@ -276,6 +297,32 @@
         <div class="team-note {% if form.is_team.value %}show{% endif %}" data-tt-team-note>팀원 중 한 명이 제출하면 팀 전체 제출로 처리됩니다. 피드백도 팀 전체에 동일하게 적용됩니다.</div>
         <div class="unit-lock-note {% if form.has_submissions %}show{% endif %}">이미 제출물이 있어 과제 구분(개인/팀)을 변경할 수 없습니다.</div>
         {{ form.is_team.errors }}
+      </div>
+
+      {# 첨부 자료 — AssignmentFile (복수). 자료 없으면 접힘, 있으면 펼침 #}
+      <div class="field" data-attach-field{% if form_mode == 'edit' and editing.attachments.all %} data-attach-open{% endif %}>
+        <label class="field-label">첨부 자료 <span style="color:var(--text-faint);font-weight:600;">· 선택</span></label>
+        <button type="button" class="attach-toggle" data-attach-toggle>📎 파일·링크 추가</button>
+        <div class="attach-box">
+          <div class="attach-chips" data-attach-chips>
+            {% for f in editing.attachments.all %}
+              <label class="achip" data-existing>
+                <input type="checkbox" name="delete_attach" value="{{ f.id }}">
+                <span class="aic {{ f.kind|lower }}">{{ f.ext }}</span>
+                <span class="anm">{{ f.display_name }}</span>
+                <span class="asz">{% if f.is_link %}링크{% else %}{{ f.file_size|filesizeformat }}{% endif %}</span>
+                <button type="button" class="adel" data-toggle-del>삭제</button>
+              </label>
+            {% endfor %}
+          </div>
+          <div class="attach-row" style="margin-top:9px;">
+            <label class="attach-pick">📎 파일 선택
+              <input type="file" name="attach_files" multiple hidden data-attach-fileinput>
+            </label>
+            <input type="url" class="attach-linkinput" placeholder="링크 붙여넣고 Enter" data-attach-linkinput>
+          </div>
+          <div class="field-hint">파일당 최대 50MB · 링크는 http/https. 학생 제출 화면에서 내려받을 수 있습니다.</div>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -364,6 +411,96 @@
   setTimeout(function () {
     document.querySelectorAll(".tt-toast").forEach(function (t) { t.style.transition = "opacity .3s"; t.style.opacity = "0"; });
   }, 5000);
+
+  // ── 첨부 자료 필드 ──
+  (function () {
+    var field = document.querySelector("[data-attach-field]");
+    if (!field) return;
+    var box = field.querySelector(".attach-box");
+    var chips = field.querySelector("[data-attach-chips]");
+    var fileInput = field.querySelector("[data-attach-fileinput]");
+    var linkInput = field.querySelector("[data-attach-linkinput]");
+    var dt = new DataTransfer();
+
+    field.querySelector("[data-attach-toggle]").addEventListener("click", function () {
+      field.classList.add("is-open");
+    });
+    if (field.hasAttribute("data-attach-open")) field.classList.add("is-open");
+
+    function fmtSize(bytes) {
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1048576) return (bytes / 1024).toFixed(0) + " KB";
+      return (bytes / 1048576).toFixed(1) + " MB";
+    }
+    function syncFileInput() {
+      var next = new DataTransfer();
+      Array.prototype.forEach.call(dt.files, function (f) { next.items.add(f); });
+      dt = next;
+      fileInput.files = dt.files;
+    }
+    function addPendingChip(label, sub, onRemove) {
+      var chip = document.createElement("div");
+      chip.className = "achip";
+      chip.innerHTML = '<span class="aic file"></span><span class="anm"></span>'
+        + '<span class="asz"></span><button type="button" class="ax">✕</button>';
+      chip.querySelector(".anm").textContent = label;
+      chip.querySelector(".asz").textContent = sub;
+      chip.querySelector(".ax").addEventListener("click", function () { onRemove(); chip.remove(); });
+      chips.appendChild(chip);
+      return chip;
+    }
+
+    fileInput.addEventListener("change", function () {
+      Array.prototype.forEach.call(fileInput.files, function (f) {
+        var dup = false;
+        Array.prototype.forEach.call(dt.files, function (x) {
+          if (x.name === f.name && x.size === f.size) dup = true;
+        });
+        if (dup) return;
+        dt.items.add(f);
+        var chip = addPendingChip(f.name, fmtSize(f.size), function () {
+          var keep = new DataTransfer();
+          Array.prototype.forEach.call(dt.files, function (x) {
+            if (!(x.name === f.name && x.size === f.size)) keep.items.add(x);
+          });
+          dt = keep; fileInput.files = dt.files;
+        });
+        chip.querySelector(".aic").textContent = (f.name.split(".").pop() || "FILE").toUpperCase().slice(0, 4);
+      });
+      syncFileInput();
+    });
+
+    function addLink() {
+      var v = linkInput.value.trim();
+      if (!v) return;
+      if (!/^https?:\/\/.+/i.test(v)) { linkInput.reportValidity && linkInput.reportValidity(); return; }
+      var exists = false;
+      chips.querySelectorAll('input[name="attach_links"]').forEach(function (h) { if (h.value === v) exists = true; });
+      if (exists) { linkInput.value = ""; return; }
+      var hidden = document.createElement("input");
+      hidden.type = "hidden"; hidden.name = "attach_links"; hidden.value = v;
+      var chip = addPendingChip(v, "링크", function () { hidden.remove(); });
+      chip.querySelector(".aic").textContent = "URL";
+      chip.querySelector(".aic").className = "aic link";
+      chip.appendChild(hidden);
+      linkInput.value = "";
+    }
+    linkInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); addLink(); }
+    });
+
+    // 기존 첨부 삭제 토글 (수정 모드)
+    chips.querySelectorAll("[data-existing]").forEach(function (label) {
+      var cb = label.querySelector('input[type="checkbox"]');
+      var btn = label.querySelector("[data-toggle-del]");
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        cb.checked = !cb.checked;
+        label.classList.toggle("marked", cb.checked);
+        btn.textContent = cb.checked ? "되돌리기" : "삭제";
+      });
+    });
+  })();
 })();
 </script>
 {% endblock %}

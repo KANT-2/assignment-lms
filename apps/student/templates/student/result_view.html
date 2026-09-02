@@ -18,6 +18,7 @@
 {% endblock %}
 {% block content %}
 <div class="student-form-stack">
+  {% include "student/_assignment_materials.html" %}
   <section class="student-card">
     <h2 class="student-section-title">🏆 공식 평가</h2>
     {% if evaluation %}
