@@ -35,6 +35,9 @@
 {% block content %}
 <form method="post" enctype="multipart/form-data" class="student-form-stack" novalidate>
   {% csrf_token %}
+  {% if is_late %}
+    <div class="alert alert-warning mb-0">제출 마감이 지난 과제입니다. 지금 제출하면 <strong>지각 제출</strong>로 처리됩니다.</div>
+  {% endif %}
   <section class="student-card">
     <h2 class="student-section-title">📌 과제 안내</h2>
     <div class="description-view">{{ assignment.description|default:"등록된 과제 설명이 없습니다."|linebreaksbr }}</div>
@@ -94,7 +97,7 @@
   {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
   <div class="d-flex justify-content-end gap-2">
     <a class="btn btn-outline-secondary" href="{% url 'student:assignment-list' %}">취소</a>
-    <button class="btn btn-primary px-4" type="submit">과제 제출</button>
+    <button class="btn btn-primary px-4" type="submit">{% if is_late %}지각 제출{% else %}과제 제출{% endif %}</button>
   </div>
 </form>
 {% endblock %}

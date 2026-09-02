@@ -42,6 +42,7 @@
   .deadline-state { display:inline-flex; align-items:center; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; white-space:nowrap; }
   .deadline-open { color:#1858b8; background:#dceaff; }
   .deadline-closed { color:#b42318; background:#fee4e2; }
+  .status-warning { color:#9a6700; background:#fff1cc; }
   @media (max-width: 575px) {
     .assignment-date-view { width:100%; margin-left:0; justify-content:flex-start; }
     .assignment-filters { width:100%; margin-left:0; }
@@ -112,7 +113,7 @@
     {% for group in row_groups %}
       {% if group.label %}<h3 class="assignment-date-heading">{{ group.label }}</h3>{% endif %}
       {% for row in group.rows %}
-      <article class="assignment-row{% if row.is_past %} is-past{% else %} is-open{% endif %}"{% if row.submission %} data-href="{% url 'student:assignment-preview' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 제출 보기"{% elif row.can_submit %} data-href="{% url 'student:assignment-submit' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 제출하기"{% endif %}>
+      <article class="assignment-row{% if row.is_past %} is-past{% else %} is-open{% endif %}"{% if row.submission %} data-href="{% url 'student:assignment-preview' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 제출 보기"{% elif row.can_submit %} data-href="{% url 'student:assignment-submit' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} {% if row.is_late_available %}지각 제출{% else %}제출하기{% endif %}"{% endif %}>
         <div class="flex-grow-1 min-width-0">
           <h3 class="assignment-title">{{ row.assignment.title }}</h3>
           <div class="d-flex flex-wrap align-items-center gap-2">
@@ -126,7 +127,7 @@
         {% if row.submission %}
           <a class="btn btn-outline-primary btn-sm" href="{% url 'student:assignment-preview' row.assignment.id %}">제출 보기</a>
         {% elif row.can_submit %}
-          <a class="btn btn-primary btn-sm" href="{% url 'student:assignment-submit' row.assignment.id %}">제출하기</a>
+          <a class="btn btn-primary btn-sm" href="{% url 'student:assignment-submit' row.assignment.id %}">{% if row.is_late_available %}지각 제출{% else %}제출하기{% endif %}</a>
         {% endif %}
       </article>
       {% endfor %}
