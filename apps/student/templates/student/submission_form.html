@@ -39,6 +39,7 @@
     <h2 class="student-section-title">📌 과제 안내</h2>
     <div class="description-view">{{ assignment.description|default:"등록된 과제 설명이 없습니다."|linebreaksbr }}</div>
   </section>
+  {% include "student/_assignment_materials.html" %}
   {% if assignment.is_team %}
     <div class="alert alert-info mb-0">팀원 중 한 명이 제출하면 팀 제출이 완료되며, 다른 팀원은 추가로 제출할 수 없습니다.</div>
   {% endif %}

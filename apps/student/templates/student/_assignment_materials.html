@@ -1,0 +1,27 @@
+{# 과제 첨부 자료 목록 (튜터가 등록). 자료가 없으면 카드 자체를 렌더하지 않음. #}
+{% if assignment.attachments.all %}
+<section class="student-card assignment-materials">
+  <h2 class="student-section-title">📎 과제 자료</h2>
+  <div class="am-list">
+    {% for f in assignment.attachments.all %}
+      {% if f.is_link %}
+        <div class="am-row">
+          <span class="am-ic link">URL</span>
+          <span class="am-name">{{ f.display_name }}</span>
+          <span class="am-sub">링크</span>
+          <a class="am-dl" href="{{ f.link_url }}" target="_blank" rel="noopener"
+             title="새 탭에서 열기" aria-label="{{ f.display_name }} 새 탭에서 열기">↗</a>
+        </div>
+      {% else %}
+        <div class="am-row">
+          <span class="am-ic">{{ f.ext }}</span>
+          <span class="am-name">{{ f.display_name }}</span>
+          <span class="am-sub">{{ f.file_size|filesizeformat }}</span>
+          <a class="am-dl" href="{% url 'core:assignment-file-download' f.id %}"
+             title="내려받기" aria-label="{{ f.display_name }} 내려받기">↓</a>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

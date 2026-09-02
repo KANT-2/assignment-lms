@@ -44,6 +44,7 @@
 {% endblock %}
 {% block content %}
 <div class="student-form-stack">
+  {% include "student/_assignment_materials.html" %}
   <section class="student-card">
     <h2 class="student-section-title">📝 내가 작성한 설명</h2>
     <div class="description-view">{{ submission.description|default:"작성한 설명이 없습니다."|linebreaksbr }}</div>

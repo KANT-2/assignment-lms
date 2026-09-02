@@ -40,11 +40,15 @@
 # ────────────────────────────────────────────────────────────────────────────
 
 from functools import wraps
+from pathlib import Path
+from urllib.parse import urlparse
+from uuid import uuid4
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+from django.core.files.storage import default_storage
+from django.db.models import Count, Max
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -52,9 +56,78 @@ from django.utils.html import format_html
 from django.views.decorators.http import require_POST
 
 from apps.accounts_client import services as accounts
-from apps.core.models import Assignment
+from apps.common.preview import _storage_name
+from apps.core.models import Assignment, AssignmentFile
 
 from .forms import AssignmentForm
+
+# 과제 첨부 자료(AssignmentFile) 파일 1개당 크기 상한.
+MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024  # 50MB
+
+
+def _save_attachments(assignment, request):
+    """과제 등록/수정 POST 에서 첨부 자료를 처리한다.
+
+    - delete_attach: 체크된 기존 AssignmentFile id 삭제 (수정 모드).
+    - attach_files: 업로드 파일 (복수). 50MB 초과분은 건너뛰고 이름을 돌려준다.
+    - attach_links: 링크 (복수, http/https). 빈 값·중복·형식 오류는 무시.
+
+    반환: 건너뛴 파일명 리스트 (뷰가 messages.warning 으로 안내).
+    """
+    # 1) 삭제
+    del_ids = [v for v in request.POST.getlist("delete_attach") if v.isdigit()]
+    if del_ids:
+        doomed = list(assignment.attachments.filter(id__in=del_ids))
+        for af in doomed:
+            if af.kind == AssignmentFile.Kind.FILE and af.file_url:
+                try:
+                    default_storage.delete(_storage_name(af.file_url))
+                except (OSError, ValueError):
+                    pass
+        assignment.attachments.filter(id__in=del_ids).delete()
+
+    order = (assignment.attachments.aggregate(m=Max("order"))["m"] or 0) + 1
+    existing_links = set(
+        assignment.attachments.filter(kind=AssignmentFile.Kind.LINK).values_list("link_url", flat=True)
+    )
+    skipped = []
+
+    # 2) 파일
+    for uploaded in request.FILES.getlist("attach_files"):
+        if uploaded.size > MAX_ATTACHMENT_SIZE:
+            skipped.append(uploaded.name)
+            continue
+        safe_name = Path(uploaded.name).name
+        storage_name = f"assignment_files/{assignment.id}/{uuid4().hex}_{safe_name}"
+        saved = default_storage.save(storage_name, uploaded)
+        AssignmentFile.objects.create(
+            assignment=assignment,
+            kind=AssignmentFile.Kind.FILE,
+            file_url=default_storage.url(saved),
+            file_name=safe_name,
+            file_size=uploaded.size,
+            order=order,
+        )
+        order += 1
+
+    # 3) 링크
+    for raw in request.POST.getlist("attach_links"):
+        link = raw.strip()
+        if not link or link in existing_links:
+            continue
+        parsed = urlparse(link)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname or len(link) > 200:
+            continue
+        AssignmentFile.objects.create(
+            assignment=assignment,
+            kind=AssignmentFile.Kind.LINK,
+            link_url=link,
+            order=order,
+        )
+        existing_links.add(link)
+        order += 1
+
+    return skipped
 
 
 # =========================================================
@@ -110,12 +183,15 @@ def _assignment_rows():
 def assignment_list(request):
     """GET: 과제 목록,  POST: 신규 과제 등록 (FR-001)."""
     if request.method == "POST":
-        form = AssignmentForm(request.POST, has_submissions=False)
+        form = AssignmentForm(request.POST, request.FILES, has_submissions=False)
         if form.is_valid():
             assignment = form.save(commit=False)
             assignment.created_by = request.user.id
             assignment.save()
+            skipped = _save_attachments(assignment, request)
             messages.success(request, f"과제 '{assignment.title}'을(를) 등록했습니다.")
+            if skipped:
+                messages.warning(request, f"50MB 초과로 제외된 파일: {', '.join(skipped)}")
             return redirect("tutor:assignment-list")
         messages.error(request, "입력값을 확인해 주세요.")
     else:
@@ -140,10 +216,13 @@ def assignment_edit(request, pk):
     assignment = get_object_or_404(Assignment.objects, pk=pk)
 
     if request.method == "POST":
-        form = AssignmentForm(request.POST, instance=assignment)
+        form = AssignmentForm(request.POST, request.FILES, instance=assignment)
         if form.is_valid():
             form.save()
+            skipped = _save_attachments(assignment, request)
             messages.success(request, f"과제 '{assignment.title}'을(를) 수정했습니다.")
+            if skipped:
+                messages.warning(request, f"50MB 초과로 제외된 파일: {', '.join(skipped)}")
             return redirect("tutor:assignment-list")
         messages.error(request, "입력값을 확인해 주세요.")
     else:

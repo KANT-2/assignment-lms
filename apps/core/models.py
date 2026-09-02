@@ -11,6 +11,8 @@ ERD v6 기준. 이 프로젝트 전용 PostgreSQL('default' DB)에 실제로 생
 ⚠ 이 파일은 공통 담당자 전담 영역입니다. 필드 변경/추가 시 팀 공유 후 진행해주세요.
 """
 
+from pathlib import Path
+
 from django.db import models
 from django.utils import timezone
 
@@ -288,6 +290,57 @@ class Evaluation(models.Model):
 
     class Meta:
         db_table = "evaluation"
+
+
+class AssignmentFile(models.Model):
+    """
+    과제 첨부 자료 (복수). 튜터가 명세서·스타터코드·데이터셋 등을 올리면
+    학생이 제출 화면에서 내려받는다. 제출물(SubmissionFile)과는 무관.
+    업로드 파일(kind=FILE) 또는 외부 링크(kind=LINK).
+    """
+
+    class Kind(models.TextChoices):
+        FILE = "FILE", "파일"
+        LINK = "LINK", "링크"
+
+    assignment = models.ForeignKey(
+        Assignment, on_delete=models.CASCADE, related_name="attachments"
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    title = models.CharField(max_length=200, blank=True, help_text="비우면 파일명/URL 사용")
+    file_url = models.URLField(blank=True, help_text="kind=FILE")
+    file_name = models.CharField(max_length=255, blank=True)
+    file_size = models.PositiveBigIntegerField(default=0, help_text="바이트")
+    link_url = models.URLField(blank=True, help_text="kind=LINK")
+    order = models.PositiveIntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "assignment_file"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"AssignmentFile#{self.pk} ({self.assignment_id}) {self.display_name}"
+
+    @property
+    def is_link(self):
+        return self.kind == self.Kind.LINK
+
+    @property
+    def display_name(self):
+        return self.title or self.file_name or self.link_url
+
+    @property
+    def url(self):
+        return self.link_url if self.is_link else self.file_url
+
+    @property
+    def ext(self):
+        """아이콘 라벨용 — LINK 는 'URL', 파일은 확장자 대문자(최대 4자)."""
+        if self.is_link:
+            return "URL"
+        suffix = Path(self.file_name).suffix.lstrip(".").upper()
+        return suffix[:4] or "FILE"
 
 
 # =========================================================
