@@ -1,0 +1,31 @@
+<div class="card">
+  <div class="card-head">
+    <div class="card-title">📝 {% if todo_is_today %}오늘{% else %}{{ todo_date|date:"n월 j일" }}{% endif %} 할 일</div>
+    {% if not todo_is_today %}<a class="card-sub" href="?y={{ cal.year }}&m={{ cal.month }}&d={{ today|date:'Y-m-d' }}" style="text-decoration:none;">오늘로</a>{% endif %}
+  </div>
+  <form class="todo-input" method="post" action="{% url 'student:todo-add' %}">
+    {% csrf_token %}
+    <input type="hidden" name="date" value="{{ todo_date|date:'Y-m-d' }}">
+    <input type="text" name="content" maxlength="80"
+           placeholder="{% if todo_is_today %}오늘{% else %}{{ todo_date|date:'n/j' }}에{% endif %} 할 일 추가" required>
+    <button type="submit" aria-label="추가">+</button>
+  </form>
+  <div class="todo-list">
+  {% for t in todos %}
+    <div class="todo-item {% if t.is_done %}done{% endif %}">
+      <form method="post" action="{% url 'student:todo-toggle' t.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="chk {% if t.is_done %}done{% endif %}" aria-label="완료 토글">{% if t.is_done %}✓{% endif %}</button>
+      </form>
+      <span class="txt">{{ t.content }}</span>
+      <form method="post" action="{% url 'student:todo-delete' t.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="del" aria-label="삭제">×</button>
+      </form>
+    </div>
+  {% empty %}
+    <div class="todo-empty">{% if todo_is_today %}오늘{% else %}이 날{% endif %} 할 일이 없습니다.</div>
+  {% endfor %}
+  </div>
+  {% if todos %}<div class="todo-foot">{{ todo_done }} / {{ todos|length }} 완료</div>{% endif %}
+</div>

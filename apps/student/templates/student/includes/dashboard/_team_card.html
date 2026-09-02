@@ -1,0 +1,20 @@
+<div class="card">
+  <div class="card-head">
+    <div class="card-title">👥 내 팀</div>
+    {% if team %}<span class="pill accent">{{ team.name }}</span>{% endif %}
+  </div>
+  {% if team_members %}
+    <div class="team-list">
+      {% for m in team_members %}
+        <div class="team-row">
+          <span class="avatar">{{ m.name|slice:":1" }}</span>
+          <span class="info">
+            <span class="name">{{ m.name }}</span>
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="muted-empty">배정된 팀이 없습니다.</div>
+  {% endif %}
+</div>
