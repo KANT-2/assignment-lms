@@ -1,13 +1,36 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.core.models import Assignment, Evaluation, Lesson, Lecture, Submission
+from apps.core.models import Assignment, Evaluation, Lecture, Lesson, Submission
+from apps.tutor.views_dashboard import _greeting
+
+
+class GreetingTests(SimpleTestCase):
+    def _at(self, hour, minute=0):
+        return _greeting(datetime(2026, 9, 2, hour, minute))
+
+    def test_each_bucket(self):
+        self.assertIn("아침", self._at(7))
+        self.assertIn("점심", self._at(12))
+        self.assertIn("오후", self._at(15))
+        self.assertIn("퇴근", self._at(17))
+        self.assertIn("수고 많으셨어요", self._at(20))
+        self.assertIn("늦게까지", self._at(2))
+        self.assertIn("늦게까지", self._at(23))
+
+    def test_boundaries(self):
+        self.assertIn("늦게까지", self._at(4, 59))
+        self.assertIn("아침", self._at(5, 0))
+        self.assertIn("아침", self._at(10, 59))
+        self.assertIn("점심", self._at(11, 0))
+        self.assertIn("수고 많으셨어요", self._at(22, 59))
+        self.assertIn("늦게까지", self._at(23, 0))
 
 
 class TutorDashboardTests(TestCase):
@@ -79,6 +102,12 @@ class TutorDashboardTests(TestCase):
                               lesson_date=timezone.localdate() - timedelta(days=3))
         response = self.client.get(reverse("tutor:dashboard"))
         self.assertEqual(response.context["lesson_prep_needed"], 1)
+
+    def test_greeting_in_context_and_rendered(self):
+        with patch("apps.tutor.views_dashboard._greeting", return_value="👋 테스트 인사말"):
+            response = self.client.get(reverse("tutor:dashboard"))
+        self.assertEqual(response.context["greeting"], "👋 테스트 인사말")
+        self.assertContains(response, "👋 테스트 인사말")
 
     def test_renders_team_assignment_and_prepared_lesson(self):
         team_a = self._assignment(title="팀 과제", is_team=True,

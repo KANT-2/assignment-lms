@@ -30,6 +30,27 @@ URGENT_DAYS = 1
 IMMINENT_DAYS = 3
 ONGOING_LIMIT = 8
 
+# 대시보드 상단 인사말 — 접속 시각(Asia/Seoul)의 '시'로 구간을 나눈다.
+# (시작 시각 오름차순. 마지막 구간이 자정을 넘어 다음날 새벽까지 이어진다.)
+_GREETINGS = [
+    (5, "☀️ 좋은 아침입니다. 오늘도 힘차게 시작해요"),
+    (11, "🍚 점심 든든히 드셨나요? 오후도 화이팅이에요"),
+    (14, "☕ 나른한 오후네요. 커피 한 잔 어떠세요"),
+    (17, "🌆 곧 퇴근이에요! 오늘 마무리 화이팅"),
+    (19, "🌙 오늘도 수고 많으셨어요"),
+    (23, "🌛 늦게까지 고생이 많으세요. 무리하지 마세요"),
+]
+
+
+def _greeting(now_local) -> str:
+    """접속 시각에 맞는 인사말. now_local 은 이미 로컬타임인 datetime."""
+    hour = now_local.hour
+    text = _GREETINGS[-1][1]  # 23시~04시 (자정 넘김)
+    for start, message in _GREETINGS:
+        if hour >= start:
+            text = message
+    return text
+
 
 def tutor_required(view_func):
     """로그인 + role=TUTOR (accounts.is_tutor)."""
@@ -77,6 +98,7 @@ def _ongoing_status(is_past, dday, sub_count, fb_count):
 def dashboard(request):
     now = timezone.now()
     today = timezone.localdate()
+    greeting = _greeting(timezone.localtime(now))
     student_total, team_total = _roster_totals()
 
     active = list(
@@ -205,6 +227,7 @@ def dashboard(request):
         request,
         "tutor/dashboard.html",
         {
+            "greeting": greeting,
             "summary": summary,
             "ongoing_rows": ongoing_rows,
             "feedback_queue": feedback_queue,
