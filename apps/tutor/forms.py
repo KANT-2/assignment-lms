@@ -80,13 +80,17 @@ class AssignmentForm(forms.ModelForm):
             "late_penalty": "지각 제출 시 튜터 점수에서 차감할 고정 점수. 0이면 감점 없음.",
         }
 
-    def __init__(self, *args, has_submissions=None, **kwargs):
+    def __init__(self, *args, has_submissions=None, team_deadline=None, **kwargs):
         """
         has_submissions:
             None  → instance 로부터 자동 판단 (기본).
             bool  → 호출 측에서 명시적으로 주입 (테스트/조회 최적화용).
+        team_deadline:
+            팀 과제 마감일 상한 (aware datetime). 뷰에서 accounts.get_team_period()
+            로 주입. None 이면 상한 검증을 건너뛴다 (외부 데이터 없음).
         """
         super().__init__(*args, **kwargs)
+        self.team_deadline = team_deadline
 
         self.fields["due_at"].input_formats = _DATETIME_LOCAL_FORMATS
         # 목업 기준: 과제 설명도 필수 입력 (모델은 blank 허용이나 화면에서는 요구)
@@ -118,6 +122,18 @@ class AssignmentForm(forms.ModelForm):
 
     def clean_late_penalty(self):
         return self.cleaned_data.get("late_penalty") or 0
+
+    def clean(self):
+        cleaned = super().clean()
+        due_at = cleaned.get("due_at")
+        # 팀 과제는 팀 활동 기한 이후로 마감일을 잡을 수 없다.
+        if cleaned.get("is_team") and due_at and self.team_deadline and due_at > self.team_deadline:
+            local = timezone.localtime(self.team_deadline)
+            self.add_error(
+                "due_at",
+                f"팀 과제 마감일은 팀 활동 기한({local:%Y-%m-%d %H:%M}) 이후로 지정할 수 없습니다.",
+            )
+        return cleaned
 
     def clean_is_team(self):
         value = self.cleaned_data.get("is_team")

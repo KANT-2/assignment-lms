@@ -49,6 +49,41 @@ class AssignmentFormFieldTests(TestCase):
         self.assertEqual(form.initial["weight_tier"], Assignment.WeightTier.MID)
         self.assertEqual(form.initial["late_penalty"], 0)
 
+    # --- 팀 과제 마감일 상한 (team_deadline) ---
+
+    def _deadline(self, days):
+        return timezone.localtime() + timedelta(days=days)
+
+    def test_team_assignment_due_after_deadline_rejected(self):
+        form = AssignmentForm(
+            self._data(is_team="1", due_at=self._deadline(5).strftime("%Y-%m-%dT%H:%M")),
+            team_deadline=self._deadline(2),
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("due_at", form.errors)
+        self.assertIn("팀 활동 기한", form.errors["due_at"][0])
+
+    def test_team_assignment_due_within_deadline_ok(self):
+        form = AssignmentForm(
+            self._data(is_team="1", due_at=self._deadline(1).strftime("%Y-%m-%dT%H:%M")),
+            team_deadline=self._deadline(3),
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_individual_assignment_ignores_deadline(self):
+        form = AssignmentForm(
+            self._data(is_team="", due_at=self._deadline(10).strftime("%Y-%m-%dT%H:%M")),
+            team_deadline=self._deadline(2),
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_no_deadline_skips_check(self):
+        form = AssignmentForm(
+            self._data(is_team="1", due_at=self._deadline(30).strftime("%Y-%m-%dT%H:%M")),
+            team_deadline=None,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
 
 @override_settings(DEV_SKIP_AUTH=True)
 class AssignmentCreateViewTests(TestCase):
