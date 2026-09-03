@@ -170,7 +170,7 @@
         </thead>
         <tbody>
           {% for r in ongoing_rows %}
-          <tr onclick="location.href='{% url 'tutor:submission-dashboard' r.obj.id %}'">
+          <tr> onclick="location.href='{% url 'tutor:submission-dashboard' r.obj.id %}'"
             <td>
               <a class="row-link" href="{% url 'tutor:submission-dashboard' r.obj.id %}">
                 <span class="dot"></span>{{ r.obj.title }}
@@ -235,7 +235,22 @@
     <div class="card">
       <div class="card-head">
         <div class="card-title">🚨 미제출 학생 현황</div>
-        <span class="btn btn-slack is-disabled" title="Slack 연동이 필요합니다 (설정 예정)"><svg viewBox="0 0 122.8 122.8" width="13" height="13" aria-hidden="true"><path d="M25.8 77.6a12.9 12.9 0 1 1-12.9-12.9h12.9zm6.5 0a12.9 12.9 0 0 1 25.8 0v32.3a12.9 12.9 0 0 1-25.8 0z" fill="#E01E5A"/><path d="M45.2 25.8a12.9 12.9 0 1 1 12.9-12.9v12.9zm0 6.5a12.9 12.9 0 0 1 0 25.8H12.9a12.9 12.9 0 0 1 0-25.8z" fill="#36C5F0"/><path d="M97 45.2a12.9 12.9 0 1 1 12.9 12.9H97zm-6.5 0a12.9 12.9 0 0 1-25.8 0V12.9a12.9 12.9 0 0 1 25.8 0z" fill="#2EB67D"/><path d="M77.6 97a12.9 12.9 0 1 1-12.9 12.9V97zm0-6.5a12.9 12.9 0 0 1 0-25.8h32.3a12.9 12.9 0 0 1 0 25.8z" fill="#ECB22E"/></svg> 전체 독려</span>
+        <form
+  method="post"
+  action="{% url 'tutor:submission-remind-all-assignments' %}"
+  style="display:inline;"
+>
+  {% csrf_token %}
+  <button type="submit" class="btn btn-slack">
+    <svg viewBox="0 0 122.8 122.8" width="13" height="13" aria-hidden="true">
+      <path d="M25.8 77.6a12.9 12.9 0 1 1-12.9-12.9h12.9zm6.5 0a12.9 12.9 0 0 1 25.8 0v32.3a12.9 12.9 0 0 1-25.8 0z" fill="#E01E5A"/>
+      <path d="M45.2 25.8a12.9 12.9 0 1 1 12.9-12.9v12.9zm0 6.5a12.9 12.9 0 0 1 0 25.8H12.9a12.9 12.9 0 0 1 0-25.8z" fill="#36C5F0"/>
+      <path d="M97 45.2a12.9 12.9 0 1 1 12.9 12.9H97zm-6.5 0a12.9 12.9 0 0 1-25.8 0V12.9a12.9 12.9 0 0 1 25.8 0z" fill="#2EB67D"/>
+      <path d="M77.6 97a12.9 12.9 0 1 1-12.9 12.9V97zm0-6.5a12.9 12.9 0 0 1 0-25.8h32.3a12.9 12.9 0 0 1 0-25.8z" fill="#ECB22E"/>
+    </svg>
+    전체 독려
+  </button>
+</form>
       </div>
       {% if not_submitted %}
       <div class="list-scroll">
@@ -250,7 +265,22 @@
             </div>
           </div>
           <span class="ns-count">{{ n.missing }}{{ n.unit_label }} <small>미제출</small></span>
-          <span class="btn btn-slack is-disabled" title="Slack 연동이 필요합니다 (설정 예정)"><svg viewBox="0 0 122.8 122.8" width="13" height="13" aria-hidden="true"><path d="M25.8 77.6a12.9 12.9 0 1 1-12.9-12.9h12.9zm6.5 0a12.9 12.9 0 0 1 25.8 0v32.3a12.9 12.9 0 0 1-25.8 0z" fill="#E01E5A"/><path d="M45.2 25.8a12.9 12.9 0 1 1 12.9-12.9v12.9zm0 6.5a12.9 12.9 0 0 1 0 25.8H12.9a12.9 12.9 0 0 1 0-25.8z" fill="#36C5F0"/><path d="M97 45.2a12.9 12.9 0 1 1 12.9 12.9H97zm-6.5 0a12.9 12.9 0 0 1-25.8 0V12.9a12.9 12.9 0 0 1 25.8 0z" fill="#2EB67D"/><path d="M77.6 97a12.9 12.9 0 1 1-12.9 12.9V97zm0-6.5a12.9 12.9 0 0 1 0-25.8h32.3a12.9 12.9 0 0 1 0 25.8z" fill="#ECB22E"/></svg> Slack 독려</span>
+          <form
+            method="post"
+            action="{% url 'tutor:submission-remind-all' n.assignment_id %}"
+            style="display:inline;"
+          >
+            {% csrf_token %}
+            <button type="submit" class="btn btn-slack">
+              <svg viewBox="0 0 122.8 122.8" width="13" height="13" aria-hidden="true">
+              <path d="M25.8 77.6a12.9 12.9 0 1 1-12.9-12.9h12.9zm6.5 0a12.9 12.9 0 0 1 25.8 0v32.3a12.9 12.9 0 0 1-25.8 0z" fill="#E01E5A"/>
+              <path d="M45.2 25.8a12.9 12.9 0 1 1 12.9-12.9v12.9zm0 6.5a12.9 12.9 0 0 1 0 25.8H12.9a12.9 12.9 0 0 1 0-25.8z" fill="#36C5F0"/>
+              <path d="M97 45.2a12.9 12.9 0 1 1 12.9 12.9H97zm-6.5 0a12.9 12.9 0 0 1-25.8 0V12.9a12.9 12.9 0 0 1 25.8 0z" fill="#2EB67D"/>
+              <path d="M77.6 97a12.9 12.9 0 1 1-12.9 12.9V97zm0-6.5a12.9 12.9 0 0 1 0-25.8h32.3a12.9 12.9 0 0 1 0-25.8z" fill="#ECB22E"/>
+            </svg>
+            Slack 독려
+            </button>
+          </form>
         </div>
         {% endfor %}
       </div>

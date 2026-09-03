@@ -80,6 +80,18 @@ class AccountsUser(models.Model):
         return self.is_active and self.approval_status == "approved"
 
 
+class SlackIdentity(models.Model):
+    user_id = models.BigIntegerField(null=True)
+    slack_user_id = models.CharField(max_length=32, unique=True)
+    slack_email = models.EmailField(blank=True, default="")
+    slack_display_name = models.CharField(max_length=150, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    synced_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "notifications_slackidentity"
+
 class EvaluationRound(models.Model):
     """
     rounds_evaluationround 테이블 — 평가 회차(라운드) 자체. AX2 가 직접 읽기 승인.

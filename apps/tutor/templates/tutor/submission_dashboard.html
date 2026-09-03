@@ -146,9 +146,17 @@
                 {# 튜터B(views_review): 검토 화면. 현재 필터/정렬을 그대로 넘겨 이전/다음 이동에 사용 #}
                 <a class="btn" href="{% url 'tutor:submission-review' row.submission.pk %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}">제출확인하기</a>
               {% else %}
-                <span class="not-submitted-label">미제출</span>
+                <form
+                  method="post"
+                  action="{% url 'tutor:submission-remind' assignment.pk row.unit_id %}"
+                >
+                {% csrf_token %}
+                  <button type="submit" class="btn btn-remind">
+                    제출 독려
+                  </button>
+                  </form>
               {% endif %}
-            </div>
+          </div>
           </div>
           {% if assignment.is_team %}
             <div class="team-members">

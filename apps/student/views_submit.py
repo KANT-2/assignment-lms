@@ -35,6 +35,8 @@ from apps.github_sync import services as github_services
 from .forms import AssignmentSubmissionForm, MAX_UPLOAD_SIZE
 from .identity import external_student_id
 
+from apps.notifications.slack import send_slack_dm_ax
+
 IMAGE_CONTENT_TYPES = {
     ".avif": "image/avif",
     ".bmp": "image/bmp",
@@ -316,10 +318,13 @@ def assignment_submit(request, assignment_id):
                 default_storage.delete(saved_name)
             raise
 
-        messages.success(
-            request,
-            "과제가 지각 제출되었습니다." if submitted_late else "과제가 제출되었습니다.",
-        )
+        send_slack_dm_ax(
+            request.user.id,
+            "과제가 제출되었습니다.",
+            f"과제명: {assignment.title}",
+        )     
+
+        messages.success(request, "과제가 제출되었습니다.")
         return redirect("student:assignment-preview", assignment_id=assignment.id)
 
     return render(request, "student/submission_form.html", {

@@ -16,7 +16,7 @@ from pathlib import Path
 
 from django.contrib import messages
 from django.core.files.storage import default_storage
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, request
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -26,6 +26,7 @@ from google.genai.errors import ServerError
 from apps.accounts_client import services as accounts
 from apps.common.preview import IMAGE_PREVIEW_EXTENSIONS, _preview, _storage_name
 from apps.core.models import AiEvaluation, Evaluation, Submission, SubmissionFile
+from apps.notifications.slack import send_slack_dm_ax
 
 from . import ai_gemini
 from .forms import EvaluationForm
@@ -129,9 +130,37 @@ def submission_review(request, pk):
         if form.is_valid():
             ev = form.save(commit=False)
             ev.submission = submission
-            ev.save()  # post_save 시그널 → Submission.final_score / is_locked 동기화
+            ev.save()
+
+            # 평가 완료 Slack 개인 DM
+            title = "과제 평가가 완료되었습니다."
+            message = (
+                f"과제명: {assignment.title}\n"
+                "튜터님의 피드백이 등록되었습니다.\n"
+                "과제 상세 화면에서 점수와 피드백을 확인해주세요."
+            )
+
+            if assignment.is_team:
+                # 팀 과제 → 해당 팀의 모든 팀원에게 DM
+                members = accounts.get_team_members(submission.team_id) or []
+
+                for member in members:
+                    send_slack_dm_ax(
+                        member.id,
+                        title,
+                        message,
+                    )
+            else:
+                # 개인 과제 → 해당 학생에게 DM
+                send_slack_dm_ax(
+                    submission.student_id,
+                    title,
+                    message,
+                )
+
             messages.success(request, "평가를 저장했습니다.")
             return redirect(_review_url(pk, request.POST))
+
         messages.error(request, "입력값을 확인해주세요.")
     else:
         form = EvaluationForm(instance=evaluation)
