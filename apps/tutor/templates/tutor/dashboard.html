@@ -170,7 +170,7 @@
         </thead>
         <tbody>
           {% for r in ongoing_rows %}
-          <tr> onclick="location.href='{% url 'tutor:submission-dashboard' r.obj.id %}'"
+          <tr onclick="location.href='{% url 'tutor:submission-dashboard' r.obj.id %}'">
             <td>
               <a class="row-link" href="{% url 'tutor:submission-dashboard' r.obj.id %}">
                 <span class="dot"></span>{{ r.obj.title }}
