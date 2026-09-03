@@ -24,18 +24,19 @@ from apps.accounts_client import services as accounts
 from apps.common.preview import (  # noqa: F401
     IMAGE_PREVIEW_EXTENSIONS,
     _notebook_cells,
-    _preview as _common_preview,
     _read_text,
     _storage_name,
     _submission_kind,
 )
+from apps.common.preview import (
+    _preview as _common_preview,
+)
 from apps.core.models import Assignment, Submission, SubmissionFile
 from apps.github_sync import services as github_services
-
-from .forms import AssignmentSubmissionForm, MAX_UPLOAD_SIZE
-from .identity import external_student_id
-
 from apps.notifications.slack import send_slack_dm_ax
+
+from .forms import MAX_UPLOAD_SIZE, AssignmentSubmissionForm
+from .identity import external_student_id
 
 IMAGE_CONTENT_TYPES = {
     ".avif": "image/avif",
@@ -318,13 +319,11 @@ def assignment_submit(request, assignment_id):
                 default_storage.delete(saved_name)
             raise
 
-        send_slack_dm_ax(
-            request.user.id,
-            "과제가 제출되었습니다.",
-            f"과제명: {assignment.title}",
-        )     
-
-        messages.success(request, "과제가 제출되었습니다.")
+        submit_msg = (
+            "과제가 지각 제출되었습니다." if submitted_late else "과제가 제출되었습니다."
+        )
+        send_slack_dm_ax(request.user.id, submit_msg, f"과제명: {assignment.title}")
+        messages.success(request, submit_msg)
         return redirect("student:assignment-preview", assignment_id=assignment.id)
 
     return render(request, "student/submission_form.html", {
