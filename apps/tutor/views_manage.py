@@ -148,6 +148,12 @@ def tutor_required(view_func):
     return _wrapped
 
 
+def _team_deadline():
+    """팀 과제 마감일 상한 (없으면 None). AssignmentForm 에 주입한다."""
+    period = accounts.get_team_period()
+    return period[1] if period else None
+
+
 def _roster_totals():
     """개인 과제 대상 학생 수 / 팀 과제 대상 팀 수 (제출률 분모)."""
     try:
@@ -183,7 +189,10 @@ def _assignment_rows():
 def assignment_list(request):
     """GET: 과제 목록,  POST: 신규 과제 등록 (FR-001)."""
     if request.method == "POST":
-        form = AssignmentForm(request.POST, request.FILES, has_submissions=False)
+        form = AssignmentForm(
+            request.POST, request.FILES, has_submissions=False,
+            team_deadline=_team_deadline(),
+        )
         if form.is_valid():
             assignment = form.save(commit=False)
             assignment.created_by = request.user.id
@@ -195,7 +204,7 @@ def assignment_list(request):
             return redirect("tutor:assignment-list")
         messages.error(request, "입력값을 확인해 주세요.")
     else:
-        form = AssignmentForm()
+        form = AssignmentForm(team_deadline=_team_deadline())
 
     return render(
         request,
@@ -216,7 +225,10 @@ def assignment_edit(request, pk):
     assignment = get_object_or_404(Assignment.objects, pk=pk)
 
     if request.method == "POST":
-        form = AssignmentForm(request.POST, request.FILES, instance=assignment)
+        form = AssignmentForm(
+            request.POST, request.FILES, instance=assignment,
+            team_deadline=_team_deadline(),
+        )
         if form.is_valid():
             form.save()
             skipped = _save_attachments(assignment, request)
@@ -226,7 +238,7 @@ def assignment_edit(request, pk):
             return redirect("tutor:assignment-list")
         messages.error(request, "입력값을 확인해 주세요.")
     else:
-        form = AssignmentForm(instance=assignment)
+        form = AssignmentForm(instance=assignment, team_deadline=_team_deadline())
 
     return render(
         request,

@@ -17,7 +17,7 @@ apps/accounts_client/services.py — 공통 담당 전담
     user  → .id  .name  .email  .role("student"|"tutor"|"admin")
     team  → .id  .name  (.number)
 """
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from functools import lru_cache
 from types import SimpleNamespace
 
@@ -203,6 +203,34 @@ def get_round_period(round_id=None):
     if not row or row[1] is None:
         return None
     return row
+
+
+def get_team_period(round_id=None):
+    """회차의 팀 프로젝트 (시작, 종료) datetime 튜플. 못 구하면 None.
+
+    user_round_team_view 의 team_start / team_end (date, 라운드별 동일)를 읽어
+    시작=그날 00:00, 종료=그날 23:59:59 (로컬 타임존)로 돌려준다.
+    팀 과제 마감일 상한 검증(AssignmentForm)에서 쓴다.
+    """
+    if _dev():
+        now = timezone.localtime()
+        return (now - timedelta(days=30), now + timedelta(days=60))
+    from .models import RoundTeamMember
+
+    rid = round_id or _current_round_id()
+    if rid is None:
+        return None
+    row = (
+        RoundTeamMember.objects.filter(round_id=rid)
+        .values_list("team_start", "team_end")
+        .first()
+    )
+    if not row or row[0] is None or row[1] is None:
+        return None
+    tz = timezone.get_current_timezone()
+    start = timezone.make_aware(datetime.combine(row[0], time.min), tz)
+    end = timezone.make_aware(datetime.combine(row[1], time.max), tz)
+    return (start, end)
 
 
 def get_previous_round_end(round_id=None):
