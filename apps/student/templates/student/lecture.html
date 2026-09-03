@@ -499,6 +499,12 @@
 
 {% block page_header %}
 <div class="wrap">
+  <div class="nav-links" style="margin-bottom: -10px;">
+    <a href="{% url 'student:lecture-list' %}" class="back-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      목록으로 돌아가기
+    </a>
+  </div>
   <div class="page-head">
     <div class="page-head-text">
 
@@ -619,7 +625,7 @@
 
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get('date');
-    const lessonParam = parseInt(params.get('lesson')) || null;
+    const lessonParam = {{ target_lesson_id|default:"null" }};
     
     const targetLesson = lessonsData.find(l => l.id === lessonParam);
 
@@ -782,7 +788,7 @@
           <div class="placeholder-icon">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
           </div>
-          <h4 class="placeholder-title">강의 영상 준비중</h4>
+          <h4 class="placeholder-title">영상이 준비중 입니다</h4>
           <p class="placeholder-desc">수업 종료 후 다시보기 영상 링크가 이 곳에 업로드됩니다.</p>
         </div>
       `;

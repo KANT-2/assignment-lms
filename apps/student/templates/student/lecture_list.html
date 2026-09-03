@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}강의 및 교안 | AX 과제 시스템{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
+<style>
+  .app-topbar .crumb { display:none; }
+  .app-topbar .utils { margin-left:auto; }
+
+  /* Header matching dashboard */
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .page-head-text { display: flex; flex-direction: column; gap: 6px; }
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1.page-title { font-size: 21px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+  .page-sub { font-size: 13px; color: var(--color-text-muted); }
+
+  .lecture-list-summary { margin-bottom: 24px; font-size: 15px; font-weight: 700; color: var(--text); }
+  
+  .assignment-row { background: var(--color-surface); cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  .assignment-row:hover { border-color:#adc8f5; box-shadow:0 4px 12px rgb(45 92 170 / 10%); transform:translateY(-1px); }
+  .assignment-row:focus-visible { outline:3px solid rgb(40 112 230 / 25%); outline-offset:2px; }
+
+  .badge-video { color: #1858b8; background: #dceaff; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+  .badge-material { color: #16734a; background: #e9f8f0; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+  .badge-empty { color: #687386; background: #f1f3f6; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-head">
+  <div class="page-head-text">
+    <div class="title-row">
+      <h1 class="page-title">강의 및 교안 학습</h1>
+    </div>
+    <div class="page-sub">회차별 수업 교안, 외부 참고 링크 및 다시보기 영상을 열람할 수 있습니다.</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="student-card" aria-labelledby="lecture-list-heading">
+  <div class="lecture-list-summary" id="lecture-list-heading">
+    전체 강의 목록 (총 {{ lessons|length }}개)
+  </div>
+
+  <div class="assignment-list">
+    {% for lesson in lessons %}
+      <article class="assignment-row" data-href="{% url 'student:lecture-detail' lesson.id %}" role="link" tabindex="0" aria-label="{{ lesson.title }} 강의 보기">
+        <div class="flex-grow-1 min-width-0">
+          <h3 class="assignment-title">{{ lesson.title }}</h3>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="assignment-due">{{ lesson.lesson_date|date:"Y.m.d (D)" }}</span>
+            
+            {% if lesson.videos.count > 0 %}
+                <span class="badge-video">영상 {{ lesson.videos.count }}개</span>
+            {% else %}
+                <span class="badge-empty">영상 미등록</span>
+            {% endif %}
+
+            {% if lesson.materials.count > 0 %}
+                <span class="badge-material">자료 {{ lesson.materials.count }}개</span>
+            {% else %}
+                <span class="badge-empty">자료 없음</span>
+            {% endif %}
+          </div>
+        </div>
+        <a class="btn btn-outline-primary btn-sm" href="{% url 'student:lecture-detail' lesson.id %}">학습하기</a>
+      </article>
+    {% empty %}
+      <div class="empty-state" style="padding: 40px; text-align: center; color: var(--color-text-muted);">
+        등록된 강의가 없습니다.
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+(() => {
+  document.querySelectorAll(".assignment-row[data-href]").forEach((row) => {
+    const navigate = () => { window.location.href = row.dataset.href; };
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("a, button")) return;
+      navigate();
+    });
+    row.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      navigate();
+    });
+  });
+})();
+</script>
+{% endblock %}
