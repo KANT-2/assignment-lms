@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
+from google.genai.errors import ServerError
 
 from apps.tutor import ai_gemini
 
@@ -16,6 +17,23 @@ def _fake_client(parsed, text="{}"):
     response = SimpleNamespace(parsed=parsed, text=text)
     models = SimpleNamespace(generate_content=lambda **kw: response)
     return lambda **kw: SimpleNamespace(models=models)
+
+
+def _server_error(code=503):
+    return ServerError(code, {"error": {"message": "busy", "status": "UNAVAILABLE"}})
+
+
+def _fake_client_by_model(outcomes):
+    """outcomes: {model_name: _GeminiResult | Exception}. 모델별로 다르게 응답."""
+    def generate_content(**kw):
+        result = outcomes[kw["model"]]
+        if isinstance(result, Exception):
+            raise result
+        return SimpleNamespace(parsed=result, text="{}")
+
+    return lambda **kw: SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content)
+    )
 
 
 @override_settings(GEMINI_API_KEY="test")
@@ -59,4 +77,34 @@ class GenerateMappingTests(SimpleTestCase):
         with patch("apps.tutor.ai_gemini._read_text", return_value="code"), \
              patch("apps.tutor.ai_gemini.genai.Client", side_effect=_fake_client(parsed)):
             with self.assertRaises(ValueError):
+                ai_gemini.generate(self._submission())
+
+    @override_settings(GEMINI_MODEL="primary", GEMINI_FALLBACK_MODELS=["backup"])
+    def test_falls_back_to_next_model_on_server_error(self):
+        outcomes = {
+            "primary": _server_error(503),
+            "backup": ai_gemini._GeminiResult(score=77, comment="폴백 모델 채점."),
+        }
+        with patch("apps.tutor.ai_gemini._read_text", return_value="code"), \
+             patch("apps.tutor.ai_gemini.genai.Client",
+                   side_effect=_fake_client_by_model(outcomes)):
+            result = ai_gemini.generate(self._submission())
+        self.assertEqual(result.score, 77)
+
+    @override_settings(GEMINI_MODEL="primary", GEMINI_FALLBACK_MODELS=["backup"])
+    def test_all_models_server_error_reraises(self):
+        outcomes = {"primary": _server_error(503), "backup": _server_error(504)}
+        with patch("apps.tutor.ai_gemini._read_text", return_value="code"), \
+             patch("apps.tutor.ai_gemini.genai.Client",
+                   side_effect=_fake_client_by_model(outcomes)):
+            with self.assertRaises(ServerError):
+                ai_gemini.generate(self._submission())
+
+    @override_settings(GEMINI_MODEL="only", GEMINI_FALLBACK_MODELS=[])
+    def test_no_fallback_configured(self):
+        outcomes = {"only": _server_error(503)}
+        with patch("apps.tutor.ai_gemini._read_text", return_value="code"), \
+             patch("apps.tutor.ai_gemini.genai.Client",
+                   side_effect=_fake_client_by_model(outcomes)):
+            with self.assertRaises(ServerError):
                 ai_gemini.generate(self._submission())
