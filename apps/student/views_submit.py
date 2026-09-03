@@ -118,13 +118,21 @@ def assignment_list(request):
     rows = []
     for assignment in Assignment.objects.all():
         submission = submissions.get(assignment.id)
+        is_past = assignment.due_at < now
+        is_late_available = bool(
+            is_past and assignment.allow_late and submission is None
+        )
         if assignment.is_team and team is None:
             status, status_class = "소속 팀 없음", "secondary"
         elif submission and submission.final_score is not None:
             status, status_class = "평가완료", "primary"
+        elif submission and submission.submitted_at > assignment.due_at:
+            status, status_class = "지각 제출완료", "warning"
         elif submission:
             status, status_class = "제출완료", "success"
-        elif assignment.due_at < now:
+        elif is_late_available:
+            status, status_class = "지각 제출 가능", "warning"
+        elif is_past:
             status, status_class = "미제출로 마감", "danger"
         else:
             status, status_class = "미제출", "secondary"
@@ -133,11 +141,12 @@ def assignment_list(request):
             "submission": submission,
             "status": status,
             "status_class": status_class,
-            "is_past": assignment.due_at < now,
+            "is_past": is_past,
+            "is_late_available": is_late_available,
             "can_submit": (
                 submission is None
                 and (not assignment.is_team or team is not None)
-                and assignment.due_at >= now
+                and (not is_past or assignment.allow_late)
             ),
             "due_date_str": timezone.localtime(assignment.due_at).strftime('%Y-%m-%d'),
         })
@@ -220,7 +229,8 @@ def assignment_submit(request, assignment_id):
     if assignment.is_team and team is None:
         messages.error(request, "소속된 팀이 없어 팀 과제를 제출할 수 없습니다.")
         return redirect("student:assignment-list")
-    if timezone.now() > assignment.due_at:
+    is_late = timezone.now() > assignment.due_at
+    if is_late and not assignment.allow_late:
         messages.error(request, "마감되어 더 이상 제출할 수 없는 과제입니다.")
         return redirect("student:assignment-list")
 
@@ -248,14 +258,17 @@ def assignment_submit(request, assignment_id):
                 "form": form,
                 "resource_error": resource_error,
                 "submitted_links": links,
+                "is_late": is_late,
             })
         saved_files = []
+        submitted_late = False
         try:
             with transaction.atomic():
                 locked_assignment = Assignment.objects.select_for_update().get(
                     pk=assignment.id
                 )
-                if timezone.now() > locked_assignment.due_at:
+                submitted_late = timezone.now() > locked_assignment.due_at
+                if submitted_late and not locked_assignment.allow_late:
                     messages.error(
                         request,
                         "제출 처리 중 마감 시각이 지나 과제를 제출할 수 없습니다.",
@@ -317,6 +330,7 @@ def assignment_submit(request, assignment_id):
     return render(request, "student/submission_form.html", {
         "assignment": assignment,
         "form": form,
+        "is_late": is_late,
         "submitted_links": request.POST.getlist("links") if request.method == "POST" else [],
     })
 

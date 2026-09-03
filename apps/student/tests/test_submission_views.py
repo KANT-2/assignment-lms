@@ -336,7 +336,7 @@ class SubmissionViewTests(TestCase):
         self.assertRedirects(response, reverse("student:assignment-list"))
         self.assertFalse(Submission.objects.filter(assignment=assignment).exists())
 
-    def test_closed_assignment_is_blocked_even_if_late_submission_is_enabled(self):
+    def test_closed_assignment_accepts_late_submission_when_enabled(self):
         assignment = self.assignment(
             due_at=timezone.now() - timedelta(minutes=1),
             allow_late=True,
@@ -350,8 +350,28 @@ class SubmissionViewTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("student:assignment-list"))
-        self.assertFalse(Submission.objects.filter(assignment=assignment).exists())
+        self.assertRedirects(
+            response,
+            reverse("student:assignment-preview", args=[assignment.id]),
+        )
+        submission = Submission.objects.get(assignment=assignment)
+        self.assertGreater(submission.submitted_at, assignment.due_at)
+        self.assertEqual(submission.description, "지각 제출 시도")
+
+    def test_assignment_list_offers_late_submission_when_enabled(self):
+        assignment = self.assignment(
+            due_at=timezone.now() - timedelta(minutes=1),
+            allow_late=True,
+        )
+
+        response = self.client.get(reverse("student:assignment-list"))
+
+        self.assertContains(response, assignment.title)
+        self.assertContains(response, "지각 제출 가능")
+        self.assertContains(
+            response,
+            reverse("student:assignment-submit", args=[assignment.id]),
+        )
 
     def test_student_cannot_preview_another_students_submission(self):
         assignment = self.assignment()

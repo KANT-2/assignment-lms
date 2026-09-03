@@ -182,6 +182,12 @@ def tutor_required(view_func):
     return _wrapped
 
 
+def _team_deadline():
+    """팀 과제 마감일 상한 (없으면 None). AssignmentForm 에 주입한다."""
+    period = accounts.get_team_period()
+    return period[1] if period else None
+
+
 def _roster_totals():
     """개인 과제 대상 학생 수 / 팀 과제 대상 팀 수."""
 
@@ -283,7 +289,7 @@ def assignment_list(request):
         )
 
     else:
-        form = AssignmentForm()
+        form = AssignmentForm(team_deadline=_team_deadline())
 
     return render(
         request,

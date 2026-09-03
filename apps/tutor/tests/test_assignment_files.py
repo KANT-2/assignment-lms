@@ -42,6 +42,7 @@ class AssignmentFileTutorTests(TestCase):
             ("apps.tutor.views_manage.accounts.is_tutor", True),
             ("apps.tutor.views_manage.accounts.get_students", []),
             ("apps.tutor.views_manage.accounts.get_teams", []),
+            ("apps.tutor.views_manage.accounts.get_team_period", None),
         ]:
             p = patch(target, return_value=ret)
             p.start()

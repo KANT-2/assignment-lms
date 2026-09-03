@@ -22,8 +22,8 @@ role(nav_role: TUTOR|STUDENT)?메뉴 분기. active ?시??url_namespace 기?.
       <div class="nav-group-label">학생</div>
       <a href="{% url 'student:dashboard' %}"
          class="{% if url_name == 'dashboard' or url_name == 'home' %}active{% endif %}">대시보드</a>
-      <a href="{% url 'student:lecture' %}"
-         class="{% if url_name == 'lecture' %}active{% endif %}">강의 및 교안 학습</a>
+      <a href="{% url 'student:lecture-list' %}"
+         class="{% if url_name == 'lecture-list' or url_name == 'lecture-detail' %}active{% endif %}">강의 및 교안 학습</a>
       <a href="{% url 'student:assignment-list' %}"
          class="{% if url_name == 'assignment-list' or url_name == 'assignment-submit' or url_name == 'assignment-preview' or url_name == 'submission-resubmit' %}active{% endif %}">과제 확인</a>
     {% else %}

@@ -131,6 +131,10 @@ class RoundTeamMember(models.Model):
     team_id = models.BigIntegerField()
     team_number = models.SmallIntegerField(null=True)
     team_name = models.CharField(max_length=100)
+    # 프로젝트(팀 활동) 회차 식별자 + 기간. 라운드별로 동일 (팀 무관).
+    project_info_id = models.BigIntegerField(null=True)
+    team_start = models.DateField(null=True)
+    team_end = models.DateField(null=True)
 
     class Meta:
         managed = False
