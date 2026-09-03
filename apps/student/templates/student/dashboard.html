@@ -236,7 +236,7 @@
             <a class="back-link" href="?y={{ cal.year }}&m={{ cal.month }}">← 다가오는 마감</a>
           </div>
           {% for lec in day_lectures %}
-            <a href="{% url 'student:lecture' %}?date={{ selected|date:'Y-m-d' }}&lesson={{ lec.id }}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
+            <a href="{% url 'student:lecture-detail' lec.id %}" class="sched-item" style="text-decoration:none; color:inherit; border:1px solid var(--d-border); margin-bottom:6px;">
               <span class="chip b"></span>
               <span class="t">{{ lec.title }}</span>
               <span class="stag b" style="margin-left:auto;">강의</span>
