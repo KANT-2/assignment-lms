@@ -58,6 +58,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts_client import services as accounts
 from apps.common.preview import _storage_name
 from apps.core.models import Assignment, AssignmentFile
+from apps.notifications.slack import send_slack_message
 
 from .forms import AssignmentForm
 
@@ -189,6 +190,13 @@ def assignment_list(request):
             assignment.created_by = request.user.id
             assignment.save()
             skipped = _save_attachments(assignment, request)
+
+            # [추가] 과제 등록 완료 후 Slack 채널 알림 
+            send_slack_message(
+                title="새 과제가 등록되었습니다.",
+                message=f"과제명: {assignment.title}",
+            )
+            
             messages.success(request, f"과제 '{assignment.title}'을(를) 등록했습니다.")
             if skipped:
                 messages.warning(request, f"50MB 초과로 제외된 파일: {', '.join(skipped)}")
