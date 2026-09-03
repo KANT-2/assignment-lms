@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from django.conf import settings
 from google import genai
 from google.genai import types
+from google.genai.errors import ServerError
 from pydantic import BaseModel
 
 from apps.common.preview import _notebook_cells, _read_text
@@ -167,8 +168,43 @@ def _build_prompt(submission: Submission) -> tuple[str, int, list[str]]:
     return "\n\n".join(parts), read_count, unreadable_links
 
 
+def _models() -> list[str]:
+    """1순위 모델 + 폴백 모델들 (중복 제거, 순서 유지)."""
+    ordered = [settings.GEMINI_MODEL, *settings.GEMINI_FALLBACK_MODELS]
+    seen: dict[str, None] = {}
+    for name in ordered:
+        if name:
+            seen.setdefault(name, None)
+    return list(seen)
+
+
+def _call(client, model: str, prompt: str) -> tuple[int, str]:
+    """모델 1개로 채점 1회. (점수, 코멘트). 5xx 는 ServerError 로 올라간다."""
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=_SYSTEM_INSTRUCTION,
+            response_mime_type="application/json",
+            response_schema=_GeminiResult,
+            temperature=0.3,
+        ),
+    )
+    parsed = response.parsed
+    if not isinstance(parsed, _GeminiResult):
+        raise ValueError(f"Gemini 응답 파싱 실패: {response.text!r}")
+    comment = (parsed.comment or "").strip()
+    if not comment:
+        raise ValueError("Gemini 응답에 코멘트가 비어 있음")
+    return max(0, min(100, int(parsed.score))), comment
+
+
 def generate(submission: Submission) -> AiResult:
-    """제출물 하나에 대한 Gemini 1차 평가. 실패 시 예외를 그대로 올린다."""
+    """제출물 하나에 대한 Gemini 1차 평가. 실패 시 예외를 그대로 올린다.
+
+    설정 모델이 5xx(혼잡)면 GEMINI_FALLBACK_MODELS 를 순서대로 재시도하고,
+    전부 실패하면 마지막 ServerError 를 올린다 (뷰가 "혼잡" 메시지).
+    """
     if not settings.GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY 가 설정되지 않았습니다.")
 
@@ -178,28 +214,17 @@ def generate(submission: Submission) -> AiResult:
 
     client = genai.Client(
         api_key=settings.GEMINI_API_KEY,
-        # 워커가 오래 매달리지 않도록 (ms). 초과 시 예외 → 뷰가 "실패" 메시지.
-        # 모델 혼잡 시 보통 15~20초 안에 504 가 돌아온다.
-        http_options=types.HttpOptions(timeout=25_000),
-    )
-    response = client.models.generate_content(
-        model=settings.GEMINI_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=_SYSTEM_INSTRUCTION,
-            response_mime_type="application/json",
-            response_schema=_GeminiResult,
-            temperature=0.3,
-        ),
+        # 워커가 오래 매달리지 않도록 (ms). 폴백까지 고려해 모델당 20초.
+        http_options=types.HttpOptions(timeout=20_000),
     )
 
-    parsed = response.parsed
-    if not isinstance(parsed, _GeminiResult):
-        raise ValueError(f"Gemini 응답 파싱 실패: {response.text!r}")
+    last_error: ServerError | None = None
+    for model in _models():
+        try:
+            score, comment = _call(client, model, prompt)
+        except ServerError as exc:  # 5xx (503 UNAVAILABLE / 504 DEADLINE) — 다음 모델로
+            last_error = exc
+            continue
+        return AiResult(score=score, comment=comment, unreadable_links=unreadable_links)
 
-    score = max(0, min(100, int(parsed.score)))
-    comment = (parsed.comment or "").strip()
-    if not comment:
-        raise ValueError("Gemini 응답에 코멘트가 비어 있음")
-
-    return AiResult(score=score, comment=comment, unreadable_links=unreadable_links)
+    raise last_error  # 모든 모델이 혼잡

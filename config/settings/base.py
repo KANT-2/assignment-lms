@@ -122,6 +122,9 @@ AX_ROUND_ID = env("AX_ROUND_ID", None)
 # 키 미설정 / 호출 실패 시엔 뷰가 "AI 평가 생성에 실패했습니다" 메시지를 띄운다 (가짜 점수 저장 안 함).
 GEMINI_API_KEY = env("GEMINI_API_KEY")
 GEMINI_MODEL = env("GEMINI_MODEL", "gemini-3.6-flash")
+# 1순위 모델이 5xx(혼잡)일 때 순서대로 재시도할 폴백 모델. 무료 티어는 모델별로
+# 혼잡이 오락가락해서 하나 걸어두면 성공률이 올라간다. 비우면 재시도 없음.
+GEMINI_FALLBACK_MODELS = env_list("GEMINI_FALLBACK_MODELS", "gemini-flash-latest")
 
 # --- GitHub 제출물 동기화 (apps.github_sync) ---
 # 세 값이 모두 있어야 기능 활성화 (services.enabled()). 없으면 시그널·UI 모두 no-op.
