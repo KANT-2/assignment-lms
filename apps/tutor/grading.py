@@ -199,6 +199,42 @@ def scope_assignments(round_id, *, now=None) -> list[Assignment]:
     return list(qs.order_by("due_at"))
 
 
+def closed_round_windows():
+    """마감된 적 있는 회차별 스코프 창.
+
+    반환: [(prev_end, period_end, round_id, closed_at), ...]  (회차 기간 못 구하면 제외)
+    회차 수가 적어(보통 1~3) 요청당 1회 계산으로 충분하다.
+    """
+    windows = []
+    rows = (
+        RoundScore.objects.order_by("round_id", "-closed_at")
+        .distinct("round_id")
+        .values_list("round_id", "closed_at")
+    )
+    for round_id, closed_at in rows:
+        period = accounts.get_round_period(round_id)
+        if not period or period[1] is None:
+            continue
+        prev_end = accounts.get_previous_round_end(round_id)
+        windows.append((prev_end, period[1], round_id, closed_at))
+    return windows
+
+
+def score_locked_close(assignment, *, windows=None):
+    """assignment 이 이미 마감된 회차 스코프에 속하면 (round_id, closed_at), 아니면 None.
+
+    학생 뷰에서 "이 회차는 점수 집계가 마감됐다 → 지금 제출해도 회차 점수 미반영" 경고에 쓴다.
+    스코프 판정은 scope_assignments 와 동일한 규칙(직전 회차 종료 < due_at ≤ 회차 종료).
+    """
+    due = assignment.due_at
+    for prev_end, period_end, round_id, closed_at in (
+        windows if windows is not None else closed_round_windows()
+    ):
+        if due <= period_end and (prev_end is None or due > prev_end):
+            return (round_id, closed_at)
+    return None
+
+
 def _team_included(assignments, teams: dict) -> bool:
     """팀 과제가 스코프에 있고 팀 편성 데이터가 있으면 True.
     팀 과제가 없으면(반영할 게 없음) True. 팀 과제는 있는데 팀이 없으면 False → 재마감 필요."""

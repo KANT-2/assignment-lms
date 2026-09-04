@@ -70,6 +70,12 @@
       실행하면 기존 스냅샷을 <b>덮어씁니다</b>.
     </div>
   {% endif %}
+  {% if stale_count %}
+    <div class="banner warn">
+      🔄 마지막 마감 이후 점수가 달라진 학생 <b>{{ stale_count }}명</b> —
+      마감 후 들어온 제출이나 채점입니다. <b>재마감</b>하면 최신 값이 반영됩니다.
+    </div>
+  {% endif %}
   {% if not team_included %}
     <div class="banner warn">
       팀 편성 데이터가 없습니다 → <b>개인 점수만</b> 마감됩니다. 팀 편성 후 다시 마감하면 팀 점수가 합쳐집니다.

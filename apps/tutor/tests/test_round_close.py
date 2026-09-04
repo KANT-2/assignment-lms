@@ -142,6 +142,192 @@ class SnapshotTests(TestCase):
         self.assertEqual(row.achievement, direct.achievement)
 
 
+class ScoreLockTests(TestCase):
+    """score_locked_close / closed_round_windows — 학생 뷰의 '점수 미반영' 경고 판정."""
+
+    databases = {"default"}
+
+    def _windows(self):
+        with patch("apps.tutor.grading.accounts.get_round_period", return_value=(R_START, R_END)), \
+             patch("apps.tutor.grading.accounts.get_previous_round_end", return_value=PREV_END):
+            return grading.closed_round_windows()
+
+    def _close_round(self, round_id=61):
+        RoundScore.objects.create(
+            round_id=round_id, student_id=11, total=50.0, closed_at=NOW, closed_by=2,
+        )
+
+    def test_no_closed_rounds_no_windows(self):
+        self.assertEqual(grading.closed_round_windows(), [])
+        self.assertIsNone(grading.score_locked_close(A("x")))
+
+    def test_locked_when_due_in_closed_round_scope(self):
+        self._close_round()
+        a = A("scoped", due=R_END - timedelta(days=1))
+        match = grading.score_locked_close(a, windows=self._windows())
+        self.assertIsNotNone(match)
+        self.assertEqual(match[0], 61)
+
+    def test_not_locked_for_gap_assignment_due_after_closed_round(self):
+        self._close_round()
+        gap = A("gap", due=R_END + timedelta(days=1))
+        self.assertIsNone(grading.score_locked_close(gap, windows=self._windows()))
+
+    def test_not_locked_when_due_before_previous_round_end(self):
+        self._close_round()
+        old = A("older", due=PREV_END - timedelta(days=1))
+        self.assertIsNone(grading.score_locked_close(old, windows=self._windows()))
+
+    def test_round_without_period_is_skipped(self):
+        self._close_round()
+        with patch("apps.tutor.grading.accounts.get_round_period", return_value=None):
+            self.assertEqual(grading.closed_round_windows(), [])
+
+
+class MultiRoundAccumulationTests(TestCase):
+    """회차가 마감된 뒤 새 회차가 시작될 때 점수가 회차별로 독립 누적되는지."""
+
+    databases = {"default"}
+
+    PREV_61 = NOW - timedelta(days=40)
+    START_61 = NOW - timedelta(days=35)
+    END_61 = NOW - timedelta(days=20)
+    START_62 = NOW - timedelta(days=10)
+    END_62 = NOW + timedelta(days=5)
+
+    R61 = SimpleNamespace(id=61, title="3차")
+    R62 = SimpleNamespace(id=62, title="4차")
+
+    def _periods(self, round_id=None):
+        return {61: (self.START_61, self.END_61), 62: (self.START_62, self.END_62)}[round_id]
+
+    def _prev_end(self, round_id=None):
+        return {61: self.PREV_61, 62: self.END_61}[round_id]
+
+    def _mk(self, title, due, *, required=True):
+        return Assignment.objects.create(
+            title=title, due_at=due, is_team=False, is_required=required,
+            weight_tier="MID", created_by=1,
+        )
+
+    def _sub(self, a, student, score, submitted_at):
+        s = Submission.objects.create(assignment=a, student_id=student, final_score=score)
+        Submission.objects.filter(pk=s.pk).update(submitted_at=submitted_at)
+        return s
+
+    def _snapshot(self, round_obj, students):
+        with patch("apps.tutor.grading.accounts.get_students", return_value=students), \
+             patch("apps.tutor.grading.accounts.get_round_period", side_effect=self._periods), \
+             patch("apps.tutor.grading.accounts.get_previous_round_end", side_effect=self._prev_end), \
+             patch("apps.tutor.grading.accounts.get_student_teams", return_value={}):
+            return grading.snapshot(round_obj, closed_by=2, now=NOW)
+
+    def _scope(self, round_id):
+        with patch("apps.tutor.grading.accounts.get_round_period", side_effect=self._periods), \
+             patch("apps.tutor.grading.accounts.get_previous_round_end", side_effect=self._prev_end):
+            return {a.title for a in grading.scope_assignments(round_id, now=NOW)}
+
+    def setUp(self):
+        self.students = [SimpleNamespace(id=11, name="김학생")]
+
+    def test_gap_assignment_does_not_land_in_closed_round(self):
+        x = self._mk("X-회차61", self.END_61 - timedelta(days=2))
+        self._sub(x, 11, 90, self.END_61 - timedelta(days=3))
+        self._snapshot(self.R61, self.students)
+        row_before = RoundScore.objects.get(round_id=61, student_id=11)
+
+        # gap 에 과제 생성 + 제출
+        g = self._mk("G-gap", self.END_61 + timedelta(days=3))
+        self._sub(g, 11, 100, self.END_61 + timedelta(days=4))
+
+        self.assertNotIn("G-gap", self._scope(61))
+        self._snapshot(self.R61, self.students)  # 재마감
+        row_after = RoundScore.objects.get(round_id=61, student_id=11)
+        self.assertEqual(row_after.total, row_before.total)
+        self.assertEqual(sorted(row_after.assignment_ids), [x.id])
+
+    def test_late_submission_to_closed_round_assignment_is_orphaned(self):
+        x = self._mk("X-회차61", self.END_61 - timedelta(days=2))
+        self._snapshot(self.R61, self.students)  # X 미제출 상태로 마감
+        locked_total = RoundScore.objects.get(round_id=61, student_id=11).total
+
+        # 회차 62 가 current — 학생이 X 를 지각 제출
+        self._sub(x, 11, 80, NOW - timedelta(days=2))
+
+        self.assertNotIn("X-회차61", self._scope(62))
+        self._snapshot(self.R62, self.students)
+        self.assertFalse(
+            RoundScore.objects.filter(round_id=62, student_id=11)
+            .first().assignment_ids
+        )
+        self.assertEqual(
+            RoundScore.objects.get(round_id=61, student_id=11).total, locked_total
+        )
+
+    def test_new_round_accumulates_from_its_own_scope(self):
+        x = self._mk("X-회차61", self.END_61 - timedelta(days=2))
+        self._sub(x, 11, 90, self.END_61 - timedelta(days=3))
+        self._snapshot(self.R61, self.students)
+        r61_rows_before = RoundScore.objects.filter(round_id=61).count()
+        r61_total_before = RoundScore.objects.get(round_id=61, student_id=11).total
+
+        g = self._mk("G-gap", self.END_61 + timedelta(days=3))
+        h = self._mk("H-회차62", self.START_62 + timedelta(days=2))
+        self._sub(g, 11, 70, self.END_61 + timedelta(days=4))
+        self._sub(h, 11, 60, self.START_62 + timedelta(days=3))
+
+        self.assertEqual(self._scope(62), {"G-gap", "H-회차62"})
+        self._snapshot(self.R62, self.students)
+
+        r62 = RoundScore.objects.get(round_id=62, student_id=11)
+        self.assertEqual(sorted(r62.assignment_ids), sorted([g.id, h.id]))
+        with patch("apps.tutor.grading.accounts.get_student_teams", return_value={}), \
+             patch("apps.tutor.grading.accounts.get_round_period", side_effect=self._periods), \
+             patch("apps.tutor.grading.accounts.get_previous_round_end", side_effect=self._prev_end):
+            direct = grading.compute(
+                [11], now=NOW, assignments=grading.scope_assignments(62, now=NOW)
+            )[11]
+        self.assertEqual(r62.total, direct.final)
+        # 회차 61 스냅샷은 그대로
+        self.assertEqual(RoundScore.objects.filter(round_id=61).count(), r61_rows_before)
+        self.assertEqual(
+            RoundScore.objects.get(round_id=61, student_id=11).total, r61_total_before
+        )
+
+
+class PreviewStaleCountTests(TestCase):
+    """_preview 의 stale_count — 마지막 마감 이후 점수가 달라진 학생 수 (재마감 유도)."""
+
+    databases = {"default"}
+
+    def _preview(self):
+        from apps.tutor.views_round import _preview
+        with patch("apps.tutor.views_round.accounts.get_students", return_value=[SimpleNamespace(id=11, name="김학생")]), \
+             patch("apps.tutor.grading.accounts.get_students", return_value=[SimpleNamespace(id=11, name="김학생")]), \
+             patch("apps.tutor.grading.accounts.get_round_period", return_value=(R_START, R_END)), \
+             patch("apps.tutor.views_round.accounts.get_round_period", return_value=(R_START, R_END)), \
+             patch("apps.tutor.grading.accounts.get_previous_round_end", return_value=PREV_END), \
+             patch("apps.tutor.grading.accounts.get_student_teams", return_value={}):
+            return _preview(ROUND, NOW)
+
+    def test_zero_when_not_closed(self):
+        A("개인필수")
+        sub(A("과제2"), student=11, score=80)
+        self.assertEqual(self._preview()["stale_count"], 0)
+
+    def test_counts_student_whose_score_changed_after_close(self):
+        a = A("개인필수")
+        # 마감: 미제출 상태로 박제
+        with patch("apps.tutor.grading.accounts.get_students", return_value=[SimpleNamespace(id=11, name="김학생")]), \
+             patch("apps.tutor.grading.accounts.get_round_period", return_value=(R_START, R_END)), \
+             patch("apps.tutor.grading.accounts.get_previous_round_end", return_value=PREV_END), \
+             patch("apps.tutor.grading.accounts.get_student_teams", return_value={}):
+            grading.snapshot(ROUND, closed_by=2, now=NOW)
+        # 마감 후 제출·채점 → 점수 달라짐
+        sub(a, student=11, score=95)
+        self.assertEqual(self._preview()["stale_count"], 1)
+
+
 class CsvExportTests(TestCase):
     databases = {"default"}
 
