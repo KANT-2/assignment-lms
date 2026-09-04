@@ -83,7 +83,7 @@
 
   <div class="card">
     <h2>대상 회차</h2>
-    <div class="kv"><span class="k">회차</span><span>{{ round.title }} <span class="tag">id {{ round.id }}</span></span></div>
+    <div class="kv"><span class="k">회차</span><span>{{ round.title }}</span></div>
     {% if period %}
       <div class="kv"><span class="k">평가 기간</span><span>{{ period.0|date:"Y.m.d H:i" }} ~ {{ period.1|date:"Y.m.d H:i" }}</span></div>
     {% else %}
