@@ -52,6 +52,9 @@
   .tt-scope .select-input{border:1px solid var(--border-strong);background:var(--surface-sunken);border-radius:var(--radius-sm);padding:9px 10px;font-size:12.5px;color:var(--text);font-family:inherit;cursor:pointer;}
   .tt-scope .btn{border:none;border-radius:var(--radius-sm);padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--accent);color:#fff;}
   .tt-scope .btn-ghost{background:var(--surface);color:var(--text-muted);border:1px solid var(--border-strong);text-decoration:none;display:inline-flex;align-items:center;}
+  .tt-scope .btn-slack{background:#611f69;color:#fff;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .tt-scope .btn-slack:hover{filter:brightness(1.08);}
+  .tt-scope .btn-slack::before{content:"";width:13px;height:13px;flex-shrink:0;background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122.8 122.8"><path d="M25.8 77.6a12.9 12.9 0 1 1-12.9-12.9h12.9zm6.5 0a12.9 12.9 0 0 1 25.8 0v32.3a12.9 12.9 0 0 1-25.8 0z" fill="%23E01E5A"/><path d="M45.2 25.8a12.9 12.9 0 1 1 12.9-12.9v12.9zm0 6.5a12.9 12.9 0 0 1 0 25.8H12.9a12.9 12.9 0 0 1 0-25.8z" fill="%2336C5F0"/><path d="M97 45.2a12.9 12.9 0 1 1 12.9 12.9H97zm-6.5 0a12.9 12.9 0 0 1-25.8 0V12.9a12.9 12.9 0 0 1 25.8 0z" fill="%232EB67D"/><path d="M77.6 97a12.9 12.9 0 1 1-12.9 12.9V97zm0-6.5a12.9 12.9 0 0 1 0-25.8h32.3a12.9 12.9 0 0 1 0 25.8z" fill="%23ECB22E"/></svg>') center/contain no-repeat;}
 
   .tt-scope .roster-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
   .tt-scope .roster-row{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);overflow:hidden;}
@@ -151,9 +154,7 @@
                   action="{% url 'tutor:submission-remind' assignment.pk row.unit_id %}"
                 >
                 {% csrf_token %}
-                  <button type="submit" class="btn btn-remind">
-                    제출 독려
-                  </button>
+                  <button type="submit" class="btn btn-slack">제출 독려</button>
                   </form>
               {% endif %}
           </div>
