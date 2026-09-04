@@ -33,7 +33,7 @@ from apps.common.preview import (
 )
 from apps.core.models import Assignment, Submission, SubmissionFile
 from apps.github_sync import services as github_services
-from apps.notifications.slack import send_slack_dm_ax
+from apps.notifications.slack import notify_dm_ax
 
 from .forms import MAX_UPLOAD_SIZE, AssignmentSubmissionForm
 from .identity import external_student_id
@@ -322,7 +322,7 @@ def assignment_submit(request, assignment_id):
         submit_msg = (
             "과제가 지각 제출되었습니다." if submitted_late else "과제가 제출되었습니다."
         )
-        send_slack_dm_ax(request.user.id, submit_msg, f"과제명: {assignment.title}")
+        notify_dm_ax(request.user.id, submit_msg, f"과제명: {assignment.title}")
         messages.success(request, submit_msg)
         return redirect("student:assignment-preview", assignment_id=assignment.id)
 

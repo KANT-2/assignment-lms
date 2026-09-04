@@ -49,10 +49,13 @@ from django.views.decorators.http import require_POST
 from apps.accounts_client import services as accounts
 from apps.common.preview import _storage_name
 from apps.core.models import Assignment, AssignmentFile
-from apps.notifications.slack import send_slack_message, send_slack_dm_ax
+from apps.notifications.slack import (
+    active_slack_user_ids,
+    notify_channel,
+    notify_dm_ax_many,
+)
 
 from .forms import AssignmentForm
-
 
 # 과제 첨부 자료(AssignmentFile) 파일 1개당 크기 상한.
 MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024  # 50MB
@@ -103,35 +106,46 @@ def _save_attachments(assignment, request):
     )
 
     skipped = []
+    saved_blobs = []
 
-    # 2) 파일
-    for uploaded in request.FILES.getlist("attach_files"):
-        if uploaded.size > MAX_ATTACHMENT_SIZE:
-            skipped.append(uploaded.name)
-            continue
+    # 2) 파일 — storage.save() 후 DB row 생성. 중간에 실패하면 저장된 파일을 되돌린다
+    #    (안 그러면 디스크에 고아 파일만 남는다).
+    try:
+        for uploaded in request.FILES.getlist("attach_files"):
+            if uploaded.size > MAX_ATTACHMENT_SIZE:
+                skipped.append(uploaded.name)
+                continue
 
-        safe_name = Path(uploaded.name).name
-        storage_name = (
-            f"assignment_files/"
-            f"{assignment.id}/"
-            f"{uuid4().hex}_{safe_name}"
-        )
+            safe_name = Path(uploaded.name).name
+            storage_name = (
+                f"assignment_files/"
+                f"{assignment.id}/"
+                f"{uuid4().hex}_{safe_name}"
+            )
 
-        saved = default_storage.save(
-            storage_name,
-            uploaded,
-        )
+            saved = default_storage.save(
+                storage_name,
+                uploaded,
+            )
+            saved_blobs.append(saved)
 
-        AssignmentFile.objects.create(
-            assignment=assignment,
-            kind=AssignmentFile.Kind.FILE,
-            file_url=default_storage.url(saved),
-            file_name=safe_name,
-            file_size=uploaded.size,
-            order=order,
-        )
+            AssignmentFile.objects.create(
+                assignment=assignment,
+                kind=AssignmentFile.Kind.FILE,
+                file_url=default_storage.url(saved),
+                file_name=safe_name,
+                file_size=uploaded.size,
+                order=order,
+            )
 
-        order += 1
+            order += 1
+    except Exception:
+        for name in saved_blobs:
+            try:
+                default_storage.delete(name)
+            except (OSError, ValueError):
+                pass
+        raise
 
     # 3) 링크
     for raw in request.POST.getlist("attach_links"):
@@ -261,8 +275,8 @@ def assignment_list(request):
                 request,
             )
 
-            # 과제 등록 완료 후 Slack 채널 알림
-            send_slack_message(
+            # 과제 등록 완료 후 Slack 채널 알림 (백그라운드)
+            notify_channel(
                 title="새 과제가 등록되었습니다.",
                 message=f"과제명: {assignment.title}",
             )
@@ -856,310 +870,106 @@ def _sort_rows(rows, sort):
 
 
 # =========================================================
-# 제출 독려 — 미제출 학생/팀에 Slack 개인 DM
+# 제출 독려 — 미제출 학생/팀에 Slack 개인 DM (백그라운드 발송)
 # =========================================================
+
+_REMIND_TITLE = "과제 제출 독려"
+
+
+def _remind_message(assignment):
+    return (
+        "아직 제출하지 않은 과제가 있습니다.\n"
+        f"과제명: {assignment.title}\n"
+        f"마감일: {assignment.due_at:%Y.%m.%d %H:%M}"
+    )
+
+
+def _unsubmitted_recipient_ids(assignment):
+    """과제의 미제출 대상 ax_user_id 목록.
+
+    - 개인 과제: 아직 안 낸 학생
+    - 팀 과제: 아직 안 낸 팀의 팀원 전원
+    """
+    if assignment.is_team:
+        submitted = set(assignment.submissions.values_list("team_id", flat=True))
+        ids = []
+        for team in accounts.get_teams() or []:
+            if team.id in submitted:
+                continue
+            ids += [m.id for m in accounts.get_team_members(team.id) or []]
+        return ids
+
+    submitted = set(assignment.submissions.values_list("student_id", flat=True))
+    return [s.id for s in accounts.get_students() or [] if s.id not in submitted]
+
+
+def _send_reminders(assignment):
+    """assignment 의 미제출 대상에게 독려 DM 을 백그라운드로 발송. (targets, linked) 반환."""
+    targets = _unsubmitted_recipient_ids(assignment)
+    linked = active_slack_user_ids(targets)
+    notify_dm_ax_many(linked, _REMIND_TITLE, _remind_message(assignment))
+    return targets, linked
+
+
+def _remind_result_message(request, total, linked_count):
+    if not total:
+        messages.info(request, "독려할 미제출 대상이 없습니다.")
+    elif linked_count:
+        msg = f"미제출 {total}명 중 {linked_count}명에게 제출 독려 DM을 발송했습니다."
+        if linked_count < total:
+            msg += f" (Slack 미연동 {total - linked_count}명)"
+        messages.success(request, msg)
+    else:
+        messages.warning(
+            request, f"미제출 {total}명 모두 Slack 미연동 상태입니다. 연동 상태를 확인해 주세요."
+        )
+
 
 @tutor_required
 @require_POST
-def submission_remind(
-    request,
-    pk,
-    unit_id,
-):
-    """특정 미제출 학생 또는 팀원에게 Slack 개인 DM으로
-    과제 제출을 독려한다.
-
-    - 개인 과제: 해당 학생 1명에게 DM
-    - 팀 과제: 해당 팀의 모든 팀원에게 DM
-    """
-
-    assignment = get_object_or_404(
-        Assignment.objects,
-        pk=pk,
-    )
-
-    # -----------------------------------------------------
-    # 이미 제출했는지 확인
-    # -----------------------------------------------------
+def submission_remind(request, pk, unit_id):
+    """특정 미제출 학생/팀에게 제출 독려 DM (개인=학생 1명, 팀=팀원 전원)."""
+    assignment = get_object_or_404(Assignment.objects, pk=pk)
 
     if assignment.is_team:
-        already_submitted = (
-            assignment.submissions
-            .filter(team_id=unit_id)
-            .exists()
-        )
+        already_submitted = assignment.submissions.filter(team_id=unit_id).exists()
     else:
-        already_submitted = (
-            assignment.submissions
-            .filter(student_id=unit_id)
-            .exists()
-        )
+        already_submitted = assignment.submissions.filter(student_id=unit_id).exists()
 
     if already_submitted:
-        messages.info(
-            request,
-            "이미 제출한 대상입니다.",
-        )
-
-        return redirect(
-            "tutor:submission-dashboard",
-            pk=assignment.pk,
-        )
-
-    # -----------------------------------------------------
-    # Slack 메시지 내용
-    # -----------------------------------------------------
-
-    title = "과제 제출 독려"
-
-    message = (
-        "아직 제출하지 않은 과제가 있습니다.\n"
-        f"과제명: {assignment.title}\n"
-        f"마감일: {assignment.due_at:%Y.%m.%d %H:%M}"
-    )
-
-    sent_count = 0
-    failed_count = 0
-
-    # -----------------------------------------------------
-    # 팀 과제
-    # -----------------------------------------------------
+        messages.info(request, "이미 제출한 대상입니다.")
+        return redirect("tutor:submission-dashboard", pk=assignment.pk)
 
     if assignment.is_team:
-        members = (
-            accounts.get_team_members(
-                unit_id
-            )
-            or []
-        )
-
-        for member in members:
-            if send_slack_dm_ax(
-                member.id,
-                title,
-                message,
-            ):
-                sent_count += 1
-            else:
-                failed_count += 1
-
-    # -----------------------------------------------------
-    # 개인 과제
-    # -----------------------------------------------------
-
+        targets = [m.id for m in accounts.get_team_members(unit_id) or []]
     else:
-        if send_slack_dm_ax(
-            unit_id,
-            title,
-            message,
-        ):
-            sent_count = 1
-        else:
-            failed_count = 1
+        targets = [unit_id]
 
-    # -----------------------------------------------------
-    # 결과 메시지
-    # -----------------------------------------------------
+    linked = active_slack_user_ids(targets)
+    notify_dm_ax_many(linked, _REMIND_TITLE, _remind_message(assignment))
+    _remind_result_message(request, len(targets), len(linked))
+    return redirect("tutor:submission-dashboard", pk=assignment.pk)
 
-    if sent_count:
-        success_message = (
-            f"제출 독려 메시지를 "
-            f"{sent_count}명에게 보냈습니다."
-        )
-
-        if failed_count:
-            success_message += (
-                f" Slack 미연동 또는 전송 실패 "
-                f"{failed_count}명."
-            )
-
-        messages.success(
-            request,
-            success_message,
-        )
-
-    else:
-        messages.warning(
-            request,
-            "Slack 메시지를 보내지 못했습니다. "
-            "Slack 연동 상태를 확인해 주세요.",
-        )
-
-    return redirect(
-        "tutor:submission-dashboard",
-        pk=assignment.pk,
-    )
-# =========================================================
-# Slack 전체 독려 — 특정 과제의 모든 미제출 대상에게 DM
-# =========================================================
 
 @tutor_required
 @require_POST
-def submission_remind_all(
-    request,
-    pk,
-):
-    """특정 과제의 모든 미제출 학생/팀원에게 Slack 개인 DM을 보낸다.
+def submission_remind_all(request, pk):
+    """특정 과제의 모든 미제출 학생/팀원에게 제출 독려 DM."""
+    assignment = get_object_or_404(Assignment.objects, pk=pk)
+    targets, linked = _send_reminders(assignment)
+    _remind_result_message(request, len(targets), len(linked))
+    return redirect("tutor:dashboard")
 
-    - 개인 과제: 미제출 학생 전체
-    - 팀 과제: 미제출 팀의 모든 팀원
-    """
-
-    assignment = get_object_or_404(
-        Assignment.objects,
-        pk=pk,
-    )
-
-    title = "과제 제출 독려"
-
-    message = (
-        "아직 제출하지 않은 과제가 있습니다.\n"
-        f"과제명: {assignment.title}\n"
-        f"마감일: {assignment.due_at:%Y.%m.%d %H:%M}"
-    )
-
-    sent_count = 0
-    failed_count = 0
-
-    if assignment.is_team:
-        submitted_team_ids = set(
-            assignment.submissions
-            .values_list("team_id", flat=True)
-        )
-
-        for team in accounts.get_teams() or []:
-            if team.id in submitted_team_ids:
-                continue
-
-            members = (
-                accounts.get_team_members(team.id)
-                or []
-            )
-
-            for member in members:
-                if send_slack_dm_ax(
-                    member.id,
-                    title,
-                    message,
-                ):
-                    sent_count += 1
-                else:
-                    failed_count += 1
-
-    else:
-        submitted_student_ids = set(
-            assignment.submissions
-            .values_list("student_id", flat=True)
-        )
-
-        for student in accounts.get_students() or []:
-            if student.id in submitted_student_ids:
-                continue
-
-            if send_slack_dm_ax(
-                student.id,
-                title,
-                message,
-            ):
-                sent_count += 1
-            else:
-                failed_count += 1
-
-    if sent_count:
-        success_message = (
-            f"제출 독려 메시지를 "
-            f"{sent_count}명에게 보냈습니다."
-        )
-
-        if failed_count:
-            success_message += (
-                f" Slack 미연동 또는 전송 실패 "
-                f"{failed_count}명."
-            )
-
-        messages.success(
-            request,
-            success_message,
-        )
-
-    else:
-        messages.warning(
-            request,
-            "Slack 메시지를 보내지 못했습니다. "
-            "Slack 연동 상태를 확인해 주세요.",
-        )
-
-    return redirect(
-        "tutor:dashboard",
-    )
 
 @tutor_required
 @require_POST
 def submission_remind_all_assignments(request):
-    """모든 미제출 과제의 학생/팀원에게 Slack 개인 DM을 보낸다."""
-
+    """마감 전 모든 과제의 미제출 학생/팀원에게 제출 독려 DM."""
     now = timezone.now()
-
-    assignments = Assignment.objects.filter(due_at__gte=now)
-
-    sent_count = 0
-    failed_count = 0
-
-    for assignment in assignments:
-        title = "과제 제출 독려"
-        message = (
-            "아직 제출하지 않은 과제가 있습니다.\n"
-            f"과제명: {assignment.title}\n"
-            f"마감일: {assignment.due_at:%Y.%m.%d %H:%M}"
-        )
-
-        if assignment.is_team:
-            submitted_team_ids = set(
-                assignment.submissions
-                .values_list("team_id", flat=True)
-            )
-
-            for team in accounts.get_teams() or []:
-                if team.id in submitted_team_ids:
-                    continue
-
-                members = accounts.get_team_members(team.id) or []
-
-                for member in members:
-                    if send_slack_dm_ax(member.id, title, message):
-                        sent_count += 1
-                    else:
-                        failed_count += 1
-
-        else:
-            submitted_student_ids = set(
-                assignment.submissions
-                .values_list("student_id", flat=True)
-            )
-
-            for student in accounts.get_students() or []:
-                if student.id in submitted_student_ids:
-                    continue
-
-                if send_slack_dm_ax(student.id, title, message):
-                    sent_count += 1
-                else:
-                    failed_count += 1
-
-    if sent_count:
-        success_message = (
-            f"전체 제출 독려 메시지를 {sent_count}명에게 보냈습니다."
-        )
-        if failed_count:
-            success_message += (
-                f" Slack 미연동 또는 전송 실패 {failed_count}명."
-            )
-        messages.success(request, success_message)
-    else:
-        messages.warning(
-            request,
-            "Slack 메시지를 보내지 못했습니다. "
-            "Slack 연동 상태를 확인해 주세요.",
-        )
-
+    total = linked_total = 0
+    for assignment in Assignment.objects.filter(due_at__gte=now):
+        targets, linked = _send_reminders(assignment)
+        total += len(targets)
+        linked_total += len(linked)
+    _remind_result_message(request, total, linked_total)
     return redirect("tutor:dashboard")
