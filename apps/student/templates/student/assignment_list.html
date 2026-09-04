@@ -43,6 +43,7 @@
   .deadline-open { color:#1858b8; background:#dceaff; }
   .deadline-closed { color:#b42318; background:#fee4e2; }
   .status-warning { color:#9a6700; background:#fff1cc; }
+  .assignment-locked-note { margin:6px 0 0; color:#9a6700; font-size:11px; font-weight:700; line-height:1.4; }
   @media (max-width: 575px) {
     .assignment-date-view { width:100%; margin-left:0; justify-content:flex-start; }
     .assignment-filters { width:100%; margin-left:0; }
@@ -120,9 +121,9 @@
             <span class="badge-soft {% if row.assignment.is_required %}badge-required{% else %}badge-optional{% endif %}">{% if row.assignment.is_required %}필수{% else %}선택{% endif %}</span>
             <span class="badge-soft {% if row.assignment.is_team %}badge-team{% else %}badge-personal{% endif %}">{% if row.assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}</span>
             <span class="deadline-state {% if row.is_past %}deadline-closed{% else %}deadline-open{% endif %}">{% if row.is_past %}마감{% else %}진행 중{% endif %}</span>
-            {% if row.score_locked %}<span class="deadline-state deadline-closed" title="회차 점수 집계가 마감되어 지금 제출해도 점수에 반영되지 않습니다">회차 마감 · 점수 미반영</span>{% endif %}
             <span class="assignment-due">{{ row.assignment.due_at|date:"Y.m.d (D) H:i" }}</span>
           </div>
+          {% if row.score_locked %}<p class="assignment-locked-note">회차 점수가 마감되어, 지금 제출해도 점수에 반영되지 않습니다</p>{% endif %}
         </div>
         <span class="status-pill status-{{ row.status_class }}">{{ row.status }}</span>
         {% if row.submission %}
