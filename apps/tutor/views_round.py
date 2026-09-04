@@ -27,6 +27,16 @@ def _current_round_or_404():
     return rnd
 
 
+def _score_changed(sc, row) -> bool:
+    """실시간 계산(sc)이 박제된 스냅샷(row)과 달라졌는지 — 재마감 유도 판정."""
+    def r(x):
+        return round(x, 1) if x is not None else None
+
+    return (r(sc.final), r(sc.achievement), r(sc.sincerity)) != (
+        r(row.total), r(row.achievement), r(row.sincerity)
+    )
+
+
 def _preview(round_obj, now):
     """마감 전 미리보기 — 저장하지 않고 계산만."""
     students = list(accounts.get_students() or [])
@@ -68,6 +78,17 @@ def _preview(round_obj, now):
         a.grade_done = p["_graded"]
         a.grade_missing = p["_sub"] - p["_graded"]
 
+    # ── 마지막 마감 이후 점수가 달라진 학생 수 (재마감 유도) ──
+    existing = RoundScore.objects.filter(round_id=round_obj.id).order_by("-closed_at").first()
+    stale_count = 0
+    if existing:
+        snap = {r.student_id: r for r in RoundScore.objects.filter(round_id=round_obj.id)}
+        stale_count = sum(
+            1
+            for sid, sc in scores.items()
+            if sid in snap and _score_changed(sc, snap[sid])
+        )
+
     return {
         "round": round_obj,
         "period": period,
@@ -80,7 +101,8 @@ def _preview(round_obj, now):
         "computable_count": computable,
         "preview_rows": preview_rows,
         "avg_final": avg_final,
-        "existing": RoundScore.objects.filter(round_id=round_obj.id).order_by("-closed_at").first(),
+        "existing": existing,
+        "stale_count": stale_count,
     }
 
 

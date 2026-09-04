@@ -34,6 +34,7 @@ from apps.common.preview import (
 from apps.core.models import Assignment, Submission, SubmissionFile
 from apps.github_sync import services as github_services
 from apps.notifications.slack import notify_dm_ax
+from apps.tutor import grading  # 회차 마감 여부 조회 (score_locked_close) — 도메인 공용 모듈
 
 from .forms import MAX_UPLOAD_SIZE, AssignmentSubmissionForm
 from .identity import external_student_id
@@ -116,6 +117,7 @@ def assignment_list(request):
         )
     }
     now = timezone.now()
+    locked_windows = grading.closed_round_windows()
     rows = []
     for assignment in Assignment.objects.all():
         submission = submissions.get(assignment.id)
@@ -123,6 +125,7 @@ def assignment_list(request):
         is_late_available = bool(
             is_past and assignment.allow_late and submission is None
         )
+        score_locked = bool(grading.score_locked_close(assignment, windows=locked_windows))
         if assignment.is_team and team is None:
             status, status_class = "소속 팀 없음", "secondary"
         elif submission and submission.final_score is not None:
@@ -144,6 +147,7 @@ def assignment_list(request):
             "status_class": status_class,
             "is_past": is_past,
             "is_late_available": is_late_available,
+            "score_locked": score_locked,
             "can_submit": (
                 submission is None
                 and (not assignment.is_team or team is not None)
@@ -231,6 +235,8 @@ def assignment_submit(request, assignment_id):
         messages.error(request, "소속된 팀이 없어 팀 과제를 제출할 수 없습니다.")
         return redirect("student:assignment-list")
     is_late = timezone.now() > assignment.due_at
+    # 이 과제가 속한 회차의 점수가 이미 마감됐으면 제출은 되지만 회차 점수 미반영 (경고만).
+    score_locked = bool(grading.score_locked_close(assignment))
     if is_late and not assignment.allow_late:
         messages.error(request, "마감되어 더 이상 제출할 수 없는 과제입니다.")
         return redirect("student:assignment-list")
@@ -261,6 +267,7 @@ def assignment_submit(request, assignment_id):
                 "submitted_links": links,
                 "is_late": is_late,
                 "github_enabled": github_services.enabled() and not assignment.is_team,
+                "score_locked": score_locked,
             })
         saved_files = []
         submitted_late = False
@@ -331,6 +338,7 @@ def assignment_submit(request, assignment_id):
         "assignment": assignment,
         "form": form,
         "is_late": is_late,
+        "score_locked": score_locked,
         "submitted_links": request.POST.getlist("links") if request.method == "POST" else [],
         "github_enabled": github_services.enabled() and not assignment.is_team,
     })

@@ -377,6 +377,39 @@ class SubmissionViewTests(TestCase):
             reverse("student:assignment-submit", args=[assignment.id]),
         )
 
+    def test_submission_form_warns_when_round_score_locked_but_still_submits(self):
+        assignment = self.assignment(
+            due_at=timezone.now() - timedelta(days=1), allow_late=True
+        )
+        with patch(
+            "apps.student.views_submit.grading.score_locked_close",
+            return_value=(61, timezone.now()),
+        ):
+            get = self.client.get(
+                reverse("student:assignment-submit", args=[assignment.id])
+            )
+            self.assertContains(get, "회차 점수에는 반영되지 않습니다")
+            post = self.client.post(
+                reverse("student:assignment-submit", args=[assignment.id]),
+                {
+                    "description": "마감 후 제출",
+                    "file": SimpleUploadedFile("x.py", b"print(1)"),
+                },
+            )
+        self.assertRedirects(
+            post, reverse("student:assignment-preview", args=[assignment.id])
+        )
+        self.assertTrue(Submission.objects.filter(assignment=assignment).exists())
+
+    def test_assignment_list_marks_score_locked_assignment(self):
+        self.assignment(due_at=timezone.now() - timedelta(days=1), allow_late=True)
+        with patch(
+            "apps.student.views_submit.grading.score_locked_close",
+            return_value=(61, timezone.now()),
+        ):
+            response = self.client.get(reverse("student:assignment-list"))
+        self.assertContains(response, "점수 미반영")
+
     def test_student_cannot_preview_another_students_submission(self):
         assignment = self.assignment()
         Submission.objects.create(

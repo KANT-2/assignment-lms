@@ -35,7 +35,12 @@
 {% block content %}
 <form method="post" enctype="multipart/form-data" class="student-form-stack" novalidate>
   {% csrf_token %}
-  {% if is_late %}
+  {% if score_locked %}
+    <div class="alert alert-warning mb-0">
+      이 과제가 속한 <strong>회차는 점수 집계가 마감</strong>됐습니다.
+      지금 제출해도 <strong>회차 점수에는 반영되지 않습니다.</strong> 튜터 피드백은 받을 수 있습니다.
+    </div>
+  {% elif is_late %}
     <div class="alert alert-warning mb-0">제출 마감이 지난 과제입니다. 지금 제출하면 <strong>지각 제출</strong>로 처리됩니다.</div>
   {% endif %}
   <section class="student-card">
