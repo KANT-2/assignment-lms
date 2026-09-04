@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from apps.accounts_client import services as accounts
 from apps.core.models import Assignment, Submission, SubmissionFile
+from apps.github_sync import services as github_services
 
 from .forms import ResubmissionForm
 from .identity import external_student_id
@@ -136,6 +137,7 @@ def resubmit(request, submission_id):
                     "last_editor": last_editor,
                     "resource_error": resource_error,
                     "submitted_links": links,
+                    "github_enabled": github_services.enabled() and not submission.assignment.is_team,
                 },
             )
 
@@ -222,6 +224,7 @@ def resubmit(request, submission_id):
             "form": form,
             "last_editor": last_editor,
             "submitted_links": request.POST.getlist("links") if request.method == "POST" else [],
+            "github_enabled": github_services.enabled() and not submission.assignment.is_team,
         },
     )
 

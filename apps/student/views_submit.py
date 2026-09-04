@@ -260,6 +260,7 @@ def assignment_submit(request, assignment_id):
                 "resource_error": resource_error,
                 "submitted_links": links,
                 "is_late": is_late,
+                "github_enabled": github_services.enabled() and not assignment.is_team,
             })
         saved_files = []
         submitted_late = False
@@ -331,6 +332,7 @@ def assignment_submit(request, assignment_id):
         "form": form,
         "is_late": is_late,
         "submitted_links": request.POST.getlist("links") if request.method == "POST" else [],
+        "github_enabled": github_services.enabled() and not assignment.is_team,
     })
 
 

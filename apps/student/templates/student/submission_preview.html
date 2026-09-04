@@ -81,9 +81,15 @@
             <a class="text-success text-decoration-none" href="{{ github_push.commit_url }}" target="_blank" rel="noopener">동기화됨 ✓</a>
           {% else %}<span class="text-success">동기화됨 ✓</span>{% endif %}
         {% elif github_push.state == "FAILED" %}
-          <span class="text-danger">동기화 실패 — 재제출하거나 잠시 후 다시 시도됩니다</span>
+          {% if previews.0.is_link %}
+            <span class="text-danger fw-semibold">파일 중 링크는 GitHub 백업 대상이 아닙니다</span>
+          {% else %}
+            <span class="text-danger">동기화 실패 — 재제출하거나 잠시 후 다시 시도됩니다</span>
+          {% endif %}
         {% elif github_push.state == "NO_ACCOUNT" or not github_push %}
           <a class="text-decoration-none" href="{% url 'github_sync:connect' %}">GitHub 미연결 — 연결하기</a>
+        {% elif previews.0.is_link %}
+          <span class="text-danger fw-semibold">파일 중 링크는 GitHub 백업 대상이 아닙니다</span>
         {% else %}
           <span class="text-muted">동기화 대기 중…</span>
         {% endif %}
