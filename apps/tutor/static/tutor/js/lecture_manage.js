@@ -221,7 +221,7 @@
     addVideoRow("", "");
     
     document.getElementById("material-builder-list").innerHTML = "";
-    addMaterialRow("FILE", "", "");
+    addMaterialRow("LINK", "", "");
 
     openModal("lesson-modal");
   }
@@ -248,7 +248,7 @@
     if (lesson.materials && lesson.materials.length > 0) {
       lesson.materials.forEach((m) => addMaterialRow(m.kind, m.title, m.url));
     } else {
-      addMaterialRow("FILE", "", "");
+      addMaterialRow("LINK", "", "");
     }
 
     openModal("lesson-modal");
@@ -319,8 +319,8 @@
 
     row.innerHTML = `
       <select class="form-control mat-kind" style="font-size:12px;" onchange="toggleMaterialInput(this, '${rowId}')">
-        <option value="FILE" ${kind === "FILE" ? "selected" : ""}>내 PC 파일</option>
         <option value="LINK" ${kind === "LINK" ? "selected" : ""}>외부 링크</option>
+        <option value="FILE" ${kind === "FILE" ? "selected" : ""}>내 PC 파일</option>
       </select>
       <input type="text" class="form-control mat-title" placeholder="자료명 (예: 1주차 교안)" value="${title}" style="padding: 6px 8px; font-size:12px;">
 
