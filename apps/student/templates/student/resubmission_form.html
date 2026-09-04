@@ -80,6 +80,7 @@
       {% endfor %}
     </div>
     <button id="add-submission-resource" class="submission-add-button btn btn-outline-primary btn-sm" type="button">＋ 자료 추가</button>
+    {% if github_enabled %}<p class="text-danger small mt-2 mb-0">※ 링크로 제출한 자료는 GitHub 백업 대상이 아닙니다. 채점·기록이 필요한 코드는 파일(.ipynb·.py·.md 등)로 제출해 주세요.</p>{% endif %}
     {% if resource_error %}<div class="invalid-feedback d-block">{{ resource_error }}</div>{% endif %}
   </section>
   <section class="student-card">
