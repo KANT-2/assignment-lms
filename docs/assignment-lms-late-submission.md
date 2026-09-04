@@ -162,18 +162,20 @@ else:                                 # 제출·채점완료
 
 ### 6.1 학생 — "점수 미반영"
 
-[grading.py](../apps/tutor/grading.py) `closed_round_windows()` / `score_locked_close(assignment)`:
+[grading.py](../apps/tutor/grading.py) `scored_assignment_ids()` / `score_locked_close(assignment)`:
 
 ```python
-# 마감된 적 있는 회차(RoundScore 존재)들의 스코프 창을 만들고
-# assignment.due_at 이 그 안이면 (round_id, closed_at) 반환
+# 마감된 모든 회차 스냅샷의 RoundScore.assignment_ids 를 union
+# → assignment.id 가 그 안에 있으면 True
 ```
+
+스코프를 재계산하지 않고 **박제된 `assignment_ids` 를 신뢰**한다 (튜터가 제외한 과제는 미포함, 경계·시각 엣지 없음).
 
 | 조건 | 결과 |
 |---|---|
-| 과제 `due_at` 이 **마감된 회차** 스코프 안 | 🔒 잠김 → 학생 경고 + "점수 미반영" 배지 |
-| **gap 과제** (`due_at` 이 마감된 회차 종료 이후) | 🔓 안 잠김 — 다음 회차 채점 대상 |
-| `get_round_period` None | 🔓 안 잠김 (fail-open) |
+| 과제가 **마감된 회차 스냅샷에 집계됨** | 🔒 잠김 → 학생 경고 + "점수 미반영" 배지 |
+| **gap 과제** (어느 스냅샷에도 없음) | 🔓 안 잠김 — 다음 회차 채점 대상 |
+| 튜터가 마감 시 제외한 과제 | 🔓 안 잠김 (실제로 집계 안 됐으므로) |
 
 - 제출 폼: "…지금 제출해도 회차 점수에는 반영되지 않습니다. 튜터 피드백은 받을 수 있습니다." ([submission_form.html](../apps/student/templates/student/submission_form.html))
 - **제출은 막지 않는다.**
@@ -255,7 +257,7 @@ gap:    END_N < due_at < START_N1  (아직 소속 회차 미마감)
 | [apps/core/signals.py](../apps/core/signals.py) | `Evaluation` → `Submission.final_score` / `is_locked` 동기화 |
 | [apps/student/views_submit.py](../apps/student/views_submit.py) | 제출 접수 (`allow_late` 게이트), 목록 상태 |
 | [apps/student/views_result.py](../apps/student/views_result.py) | 재제출 (마감 전까지) |
-| [apps/tutor/grading.py](../apps/tutor/grading.py) | `compute` / `scope_assignments` / `snapshot` / `closed_round_windows` / `score_locked_close` |
+| [apps/tutor/grading.py](../apps/tutor/grading.py) | `compute` / `scope_assignments` / `snapshot` / `scored_assignment_ids` / `score_locked_close` |
 | [apps/tutor/models.py](../apps/tutor/models.py) | `GradingPolicy` / `RoundScore` |
 | [apps/tutor/views_round.py](../apps/tutor/views_round.py) | 회차 마감 · `_preview.stale_count` |
 | [apps/accounts_client/services.py](../apps/accounts_client/services.py) | `get_round_period` / `get_previous_round_end` |

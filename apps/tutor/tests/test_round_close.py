@@ -143,45 +143,44 @@ class SnapshotTests(TestCase):
 
 
 class ScoreLockTests(TestCase):
-    """score_locked_close / closed_round_windows — 학생 뷰의 '점수 미반영' 경고 판정."""
+    """scored_assignment_ids / score_locked_close — 학생 뷰의 '점수 미반영' 경고 판정."""
 
     databases = {"default"}
 
-    def _windows(self):
-        with patch("apps.tutor.grading.accounts.get_round_period", return_value=(R_START, R_END)), \
-             patch("apps.tutor.grading.accounts.get_previous_round_end", return_value=PREV_END):
-            return grading.closed_round_windows()
-
-    def _close_round(self, round_id=61):
+    def _close(self, *assignments, round_id=61):
+        """assignments 를 집계한 RoundScore 스냅샷 1행을 만든다."""
         RoundScore.objects.create(
             round_id=round_id, student_id=11, total=50.0, closed_at=NOW, closed_by=2,
+            assignment_ids=[a.id for a in assignments],
         )
 
-    def test_no_closed_rounds_no_windows(self):
-        self.assertEqual(grading.closed_round_windows(), [])
-        self.assertIsNone(grading.score_locked_close(A("x")))
+    def test_no_closed_rounds(self):
+        self.assertEqual(grading.scored_assignment_ids(), set())
+        self.assertFalse(grading.score_locked_close(A("x")))
 
-    def test_locked_when_due_in_closed_round_scope(self):
-        self._close_round()
-        a = A("scoped", due=R_END - timedelta(days=1))
-        match = grading.score_locked_close(a, windows=self._windows())
-        self.assertIsNotNone(match)
-        self.assertEqual(match[0], 61)
+    def test_locked_when_assignment_in_a_snapshot(self):
+        a = A("scored")
+        self._close(a)
+        self.assertEqual(grading.scored_assignment_ids(), {a.id})
+        self.assertTrue(grading.score_locked_close(a))
 
-    def test_not_locked_for_gap_assignment_due_after_closed_round(self):
-        self._close_round()
-        gap = A("gap", due=R_END + timedelta(days=1))
-        self.assertIsNone(grading.score_locked_close(gap, windows=self._windows()))
+    def test_not_locked_for_gap_assignment_never_snapshotted(self):
+        scored = A("scored")
+        gap = A("gap")
+        self._close(scored)  # gap 은 집계 안 됨
+        self.assertFalse(grading.score_locked_close(gap))
 
-    def test_not_locked_when_due_before_previous_round_end(self):
-        self._close_round()
-        old = A("older", due=PREV_END - timedelta(days=1))
-        self.assertIsNone(grading.score_locked_close(old, windows=self._windows()))
+    def test_not_locked_when_tutor_excluded_it_at_close(self):
+        included = A("included")
+        excluded = A("excluded")
+        self._close(included)  # excluded 는 assignment_ids 에 없음
+        self.assertFalse(grading.score_locked_close(excluded))
 
-    def test_round_without_period_is_skipped(self):
-        self._close_round()
-        with patch("apps.tutor.grading.accounts.get_round_period", return_value=None):
-            self.assertEqual(grading.closed_round_windows(), [])
+    def test_scored_ids_unions_across_rounds(self):
+        a1, a2 = A("r61"), A("r62")
+        self._close(a1, round_id=61)
+        self._close(a2, round_id=62)
+        self.assertEqual(grading.scored_assignment_ids(), {a1.id, a2.id})
 
 
 class MultiRoundAccumulationTests(TestCase):

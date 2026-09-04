@@ -117,7 +117,7 @@ def assignment_list(request):
         )
     }
     now = timezone.now()
-    locked_windows = grading.closed_round_windows()
+    scored_ids = grading.scored_assignment_ids()
     rows = []
     for assignment in Assignment.objects.all():
         submission = submissions.get(assignment.id)
@@ -125,7 +125,7 @@ def assignment_list(request):
         is_late_available = bool(
             is_past and assignment.allow_late and submission is None
         )
-        score_locked = bool(grading.score_locked_close(assignment, windows=locked_windows))
+        score_locked = grading.score_locked_close(assignment, scored_ids=scored_ids)
         if assignment.is_team and team is None:
             status, status_class = "소속 팀 없음", "secondary"
         elif submission and submission.final_score is not None:
@@ -236,7 +236,7 @@ def assignment_submit(request, assignment_id):
         return redirect("student:assignment-list")
     is_late = timezone.now() > assignment.due_at
     # 이 과제가 속한 회차의 점수가 이미 마감됐으면 제출은 되지만 회차 점수 미반영 (경고만).
-    score_locked = bool(grading.score_locked_close(assignment))
+    score_locked = grading.score_locked_close(assignment)
     if is_late and not assignment.allow_late:
         messages.error(request, "마감되어 더 이상 제출할 수 없는 과제입니다.")
         return redirect("student:assignment-list")
