@@ -25,7 +25,8 @@
   .rclose th { text-align:left; font-size:11px; color:var(--c-tfaint); font-weight:700; padding:7px 8px; border-bottom:1px solid var(--c-border); }
   .rclose td { padding:8px; border-bottom:1px solid var(--c-border); vertical-align:middle; }
   .rclose tr:last-child td { border-bottom:0; }
-  .rclose .tag { font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:20px; background:#f7eddc; color:#80623a; }
+  .rclose .tag { display:inline-block; white-space:nowrap; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:20px; background:#f7eddc; color:#80623a; }
+  .rclose td .tag + .tag { margin-left:3px; }
   .rclose .tag.team { background:#f1e9ff; color:#7c4fd6; }
   .rclose .tag.req { background:var(--c-green-soft); color:#147a52; }
   .rclose .actions { display:flex; gap:10px; align-items:center; margin-top:6px; }
@@ -77,7 +78,7 @@
       <h2>포함 과제 ({{ assignments|length }}건) — 체크된 과제만 집계</h2>
       {% if assignments %}
         <table>
-          <thead><tr><th style="width:32px;"></th><th>과제명</th><th style="width:80px;">유형</th><th style="width:130px;">마감</th><th style="width:70px;">중요도</th></tr></thead>
+          <thead><tr><th style="width:32px;"></th><th>과제명</th><th style="width:108px;">유형</th><th style="width:130px;">마감</th><th style="width:64px;">중요도</th></tr></thead>
           <tbody>
             {% for a in assignments %}
             <tr>
