@@ -318,7 +318,7 @@
     const rowId = "mat-" + Math.random().toString(36).substr(2, 9);
 
     row.innerHTML = `
-      <select class="form-control mat-kind" style="padding: 6px 8px; font-size:12px;" onchange="toggleMaterialInput(this, '${rowId}')">
+      <select class="form-control mat-kind" style="font-size:12px;" onchange="toggleMaterialInput(this, '${rowId}')">
         <option value="FILE" ${kind === "FILE" ? "selected" : ""}>내 PC 파일</option>
         <option value="LINK" ${kind === "LINK" ? "selected" : ""}>외부 링크</option>
       </select>
