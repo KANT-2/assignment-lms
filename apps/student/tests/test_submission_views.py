@@ -408,7 +408,7 @@ class SubmissionViewTests(TestCase):
             return_value=True,
         ):
             response = self.client.get(reverse("student:assignment-list"))
-        self.assertContains(response, "점수 미반영")
+        self.assertContains(response, "점수에 반영되지 않습니다")
 
     def test_student_cannot_preview_another_students_submission(self):
         assignment = self.assignment()
