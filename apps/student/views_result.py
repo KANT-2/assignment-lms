@@ -15,7 +15,13 @@ from apps.core.models import Assignment, Submission, SubmissionFile
 
 from .forms import ResubmissionForm
 from .identity import external_student_id
-from .views_submit import _preview, _storage_name, _submission_kind, student_required
+from .views_submit import (
+    _preview,
+    _storage_name,
+    _submission_kind,
+    _submitted_resources,
+    student_required,
+)
 
 
 def _resubmittable_submission(request, submission_id, *, for_update=False):
@@ -113,10 +119,40 @@ def resubmit(request, submission_id):
         initial={"description": submission.description},
     )
     if request.method == "POST" and form.is_valid():
-        uploaded_file = form.cleaned_data["file"]
-        safe_name = Path(uploaded_file.name).name
-        new_storage_name = f"submissions/{request.user.id}/{uuid4().hex}_{safe_name}"
-        saved_name = default_storage.save(new_storage_name, uploaded_file)
+        uploaded_files, links, resource_error = _submitted_resources(request)
+        if resource_error:
+            last_editor = (
+                accounts.get_user(submission.last_editor_id)
+                if submission.last_editor_id
+                else None
+            )
+            return render(
+                request,
+                "student/resubmission_form.html",
+                {
+                    "submission": submission,
+                    "assignment": submission.assignment,
+                    "form": form,
+                    "last_editor": last_editor,
+                    "resource_error": resource_error,
+                    "submitted_links": links,
+                },
+            )
+
+        saved_uploads = []
+        try:
+            for uploaded_file in uploaded_files:
+                safe_name = Path(uploaded_file.name).name
+                new_storage_name = (
+                    f"submissions/{request.user.id}/{uuid4().hex}_{safe_name}"
+                )
+                saved_name = default_storage.save(new_storage_name, uploaded_file)
+                saved_uploads.append((uploaded_file, safe_name, saved_name))
+        except Exception:
+            for _, _, saved_name in saved_uploads:
+                default_storage.delete(saved_name)
+            raise
+
         old_storage_names = []
         try:
             with transaction.atomic():
@@ -126,7 +162,8 @@ def resubmit(request, submission_id):
                 block_reason = _resubmission_block_reason(locked)
                 if block_reason:
                     transaction.set_rollback(True)
-                    default_storage.delete(saved_name)
+                    for _, _, saved_name in saved_uploads:
+                        default_storage.delete(saved_name)
                     messages.error(request, block_reason)
                     return redirect(
                         "student:submission-result", submission_id=locked.id
@@ -144,18 +181,28 @@ def resubmit(request, submission_id):
                 locked.save(
                     update_fields=["description", "submitted_at", "last_editor_id"]
                 )
-                SubmissionFile.objects.create(
-                    submission=locked,
-                    kind=_submission_kind(safe_name),
-                    file_url=default_storage.url(saved_name),
-                    file_name=safe_name,
-                    file_size=uploaded_file.size,
-                )
+                for uploaded_file, safe_name, saved_name in saved_uploads:
+                    SubmissionFile.objects.create(
+                        submission=locked,
+                        kind=_submission_kind(safe_name),
+                        file_url=default_storage.url(saved_name),
+                        file_name=safe_name,
+                        file_size=uploaded_file.size,
+                    )
+                for link in links:
+                    SubmissionFile.objects.create(
+                        submission=locked,
+                        kind=SubmissionFile.Kind.OTHER,
+                        file_url=link,
+                        file_name=link,
+                        file_size=0,
+                    )
                 transaction.on_commit(
                     lambda: [default_storage.delete(name) for name in old_storage_names]
                 )
         except Exception:
-            default_storage.delete(saved_name)
+            for _, _, saved_name in saved_uploads:
+                default_storage.delete(saved_name)
             raise
 
         messages.success(request, "최신 제출물로 재제출되었습니다.")
@@ -174,6 +221,7 @@ def resubmit(request, submission_id):
             "assignment": submission.assignment,
             "form": form,
             "last_editor": last_editor,
+            "submitted_links": request.POST.getlist("links") if request.method == "POST" else [],
         },
     )
 

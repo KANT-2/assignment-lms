@@ -140,6 +140,49 @@ class SubmissionResultTests(TestCase):
         self.assertEqual(submission.files.get().kind, SubmissionFile.Kind.IPYNB)
         self.assertEqual(submission.files.get().file_name, "new.ipynb")
 
+    def test_resubmission_accepts_multiple_files_and_web_links(self):
+        submission = self.make_submission()
+
+        response = self.client.post(
+            reverse("student:submission-resubmit", args=[submission.id]),
+            {
+                "description": "복수 자료로 교체",
+                "files": [
+                    SimpleUploadedFile("new.txt", b"new text"),
+                    SimpleUploadedFile("query.sql", b"SELECT 1;"),
+                ],
+                "links": ["https://example.com/submission-reference"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        submission.refresh_from_db()
+        self.assertEqual(submission.description, "복수 자료로 교체")
+        self.assertEqual(submission.files.count(), 3)
+        self.assertSetEqual(
+            set(submission.files.values_list("file_name", flat=True)),
+            {
+                "new.txt",
+                "query.sql",
+                "https://example.com/submission-reference",
+            },
+        )
+        self.assertFalse(submission.files.filter(file_name="old.txt").exists())
+
+    def test_resubmission_without_resources_keeps_existing_submission(self):
+        submission = self.make_submission()
+
+        response = self.client.post(
+            reverse("student:submission-resubmit", args=[submission.id]),
+            {"description": "자료 없음"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        submission.refresh_from_db()
+        self.assertEqual(submission.description, "기존 설명")
+        self.assertEqual(submission.files.get().file_name, "old.txt")
+        self.assertContains(response, "파일 또는 링크를 하나 이상 추가해 주세요.")
+
     def test_resubmission_is_blocked_after_deadline(self):
         submission = self.make_submission(
             due_at=timezone.now() - timedelta(minutes=1)

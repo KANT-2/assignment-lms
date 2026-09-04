@@ -38,5 +38,5 @@ class AssignmentSubmissionForm(SubmissionForm):
     )
 
 
-class ResubmissionForm(SubmissionForm):
-    """기존 최종 제출본을 덮어쓰기 위한 학생 B 재제출 폼."""
+class ResubmissionForm(AssignmentSubmissionForm):
+    """파일 또는 링크를 복수로 받아 기존 최종 제출본을 덮어쓰는 폼."""

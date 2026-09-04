@@ -3,7 +3,23 @@
 {% block title %}{{ assignment.title }} 재제출 | AX 과제 시스템{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
-<style>.app-topbar .crumb{display:none}.app-topbar .utils{margin-left:auto}</style>
+<style>
+  .app-topbar .crumb { display:none; }
+  .app-topbar .utils { margin-left:auto; }
+  .upload-preview-image { display:block; max-width:100%; max-height:360px; margin:12px auto 0; border-radius:10px; object-fit:contain; }
+  .submission-resource-list { display:flex; flex-direction:column; gap:12px; }
+  .submission-resource-row { padding:14px; border:1px solid var(--color-outline); border-radius:10px; background:var(--color-surface-subtle); }
+  .submission-resource-controls { display:grid; grid-template-columns:110px minmax(0, 1fr) auto; align-items:center; gap:10px; }
+  .submission-resource-preview { margin-top:10px; overflow:hidden; border:1px solid var(--color-outline); border-radius:8px; background:#fff; }
+  .submission-resource-remove { border:0; color:#8a5260; background:transparent; font-size:13px; }
+  .resource-file-wrap { display:flex; min-width:0; overflow:hidden; border:1px solid #ced4da; border-radius:6px; background:#fff; }
+  .resource-file-wrap[hidden] { display:none; }
+  .resource-file { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0, 0, 0, 0); white-space:nowrap; }
+  .resource-file-button { flex:0 0 auto; padding:7px 12px; border:0; border-right:1px solid #ced4da; color:var(--color-text); background:#fff; }
+  .resource-file-status { min-width:0; padding:7px 12px; overflow:hidden; color:var(--color-text-muted); text-overflow:ellipsis; white-space:nowrap; }
+  .submission-add-button { margin-top:12px; border-style:dashed; }
+  @media (max-width:575px) { .submission-resource-controls { grid-template-columns:1fr; } .submission-resource-remove { justify-self:end; } }
+</style>
 {% endblock %}
 {% block page_header %}
 <div class="page-header">
@@ -24,11 +40,47 @@
     {% if assignment.is_team %}<br><strong>팀 공유 제출물이라 모든 팀원의 제출물이 함께 바뀝니다.</strong>{% endif %}
   </div>
   <section class="student-card">
-    <h2 class="student-section-title">📤 새 제출 파일 <span class="required-mark">필수</span></h2>
-    <label class="form-label" for="{{ form.file.id_for_label }}">파일 선택</label>
-    {{ form.file }}
-    <div class="form-text">파일당 최대 30MB입니다.</div>
-    {% for error in form.file.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    <h2 class="student-section-title">📤 새 제출 자료 <span class="required-mark">필수</span></h2>
+    <div id="submission-resource-list" class="submission-resource-list">
+      <div class="submission-resource-row">
+        <div class="submission-resource-controls">
+          <select class="resource-type form-select" aria-label="자료 유형 선택">
+            <option value="file">파일</option>
+            <option value="link">링크</option>
+          </select>
+          <div class="resource-file-wrap">
+            <input class="resource-file" type="file" name="files" aria-label="재제출 파일 선택">
+            <button class="resource-file-button" type="button">파일 선택</button>
+            <span class="resource-file-status">파일당 최대 30MB</span>
+          </div>
+          <input class="resource-link form-control" type="url" name="links" placeholder="https://example.com/자료-링크" aria-label="링크 입력" disabled hidden>
+          <button class="submission-resource-remove" type="button" aria-label="자료 삭제" hidden>삭제</button>
+        </div>
+        <div class="submission-resource-preview" hidden aria-live="polite"></div>
+      </div>
+      {% for link in submitted_links %}
+        {% if link %}
+          <div class="submission-resource-row">
+            <div class="submission-resource-controls">
+              <select class="resource-type form-select" aria-label="자료 유형 선택">
+                <option value="file">파일</option>
+                <option value="link" selected>링크</option>
+              </select>
+              <div class="resource-file-wrap" hidden>
+                <input class="resource-file" type="file" name="files" aria-label="재제출 파일 선택" disabled>
+                <button class="resource-file-button" type="button">파일 선택</button>
+                <span class="resource-file-status">파일당 최대 30MB</span>
+              </div>
+              <input class="resource-link form-control" type="url" name="links" value="{{ link }}" placeholder="https://example.com/자료-링크" aria-label="링크 입력">
+              <button class="submission-resource-remove" type="button" aria-label="자료 삭제">삭제</button>
+            </div>
+            <div class="submission-resource-preview" hidden aria-live="polite"></div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <button id="add-submission-resource" class="submission-add-button btn btn-outline-primary btn-sm" type="button">＋ 자료 추가</button>
+    {% if resource_error %}<div class="invalid-feedback d-block">{{ resource_error }}</div>{% endif %}
   </section>
   <section class="student-card">
     <h2 class="student-section-title">📝 새 설명</h2>
@@ -40,4 +92,115 @@
     <button class="btn btn-primary" type="submit">기존 제출물 덮어쓰기</button>
   </div>
 </form>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+(() => {
+  const list = document.getElementById("submission-resource-list");
+  const addButton = document.getElementById("add-submission-resource");
+  if (!list || !addButton) return;
+
+  const textExtensions = new Set([
+    "txt", "text", "md", "markdown", "csv", "tsv", "sql", "py", "ipynb", "js", "ts", "java",
+    "c", "h", "cpp", "cs", "go", "rs", "rb", "php", "html", "css", "xml",
+    "json", "yaml", "yml", "toml", "ini", "cfg", "conf", "sh", "ps1"
+  ]);
+  const imageExtensions = new Set(["avif", "bmp", "gif", "ico", "jpeg", "jpg", "png", "webp"]);
+
+  const refreshRemoveButtons = () => {
+    const rows = list.querySelectorAll(".submission-resource-row");
+    rows.forEach((row) => {
+      row.querySelector(".submission-resource-remove").hidden = rows.length === 1;
+    });
+  };
+
+  const previewFile = (row, file) => {
+    const preview = row.querySelector(".submission-resource-preview");
+    preview.replaceChildren();
+    if (!file) { preview.hidden = true; return; }
+    preview.hidden = false;
+    const name = document.createElement("div");
+    name.className = "preview-file-name";
+    name.textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
+    preview.appendChild(name);
+    const extension = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+    const reader = new FileReader();
+    if (imageExtensions.has(extension)) {
+      reader.onload = () => {
+        const image = document.createElement("img");
+        image.className = "upload-preview-image";
+        image.alt = `${file.name} 미리보기`;
+        image.src = String(reader.result || "");
+        preview.appendChild(image);
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type.startsWith("text/") || textExtensions.has(extension)) {
+      reader.onload = () => {
+        const pre = document.createElement("pre");
+        pre.className = "code-preview";
+        pre.textContent = String(reader.result || "");
+        preview.appendChild(pre);
+      };
+      reader.readAsText(file, "utf-8");
+    }
+  };
+
+  const configureRow = (row) => {
+    const type = row.querySelector(".resource-type");
+    const fileInput = row.querySelector(".resource-file");
+    const fileWrap = row.querySelector(".resource-file-wrap");
+    const fileButton = row.querySelector(".resource-file-button");
+    const fileStatus = row.querySelector(".resource-file-status");
+    const linkInput = row.querySelector(".resource-link");
+    const removeButton = row.querySelector(".submission-resource-remove");
+    const syncType = () => {
+      const isLink = type.value === "link";
+      fileWrap.hidden = isLink;
+      fileInput.disabled = isLink;
+      linkInput.hidden = !isLink;
+      linkInput.disabled = !isLink;
+      if (isLink) row.querySelector(".submission-resource-preview").hidden = true;
+    };
+    type.addEventListener("change", syncType);
+    fileButton.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files && fileInput.files[0];
+      fileStatus.textContent = file ? file.name : "파일당 최대 30MB";
+      previewFile(row, file);
+    });
+    removeButton.addEventListener("click", () => {
+      row.remove();
+      refreshRemoveButtons();
+    });
+    syncType();
+  };
+
+  addButton.addEventListener("click", () => {
+    const row = document.createElement("div");
+    row.className = "submission-resource-row";
+    row.innerHTML = `
+      <div class="submission-resource-controls">
+        <select class="resource-type form-select" aria-label="자료 유형 선택">
+          <option value="file">파일</option>
+          <option value="link">링크</option>
+        </select>
+        <div class="resource-file-wrap">
+          <input class="resource-file" type="file" name="files" aria-label="재제출 파일 선택">
+          <button class="resource-file-button" type="button">파일 선택</button>
+          <span class="resource-file-status">파일당 최대 30MB</span>
+        </div>
+        <input class="resource-link form-control" type="url" name="links" placeholder="https://example.com/자료-링크" aria-label="링크 입력" disabled hidden>
+        <button class="submission-resource-remove" type="button" aria-label="자료 삭제">삭제</button>
+      </div>
+      <div class="submission-resource-preview" hidden aria-live="polite"></div>`;
+    list.appendChild(row);
+    configureRow(row);
+    refreshRemoveButtons();
+  });
+
+  list.querySelectorAll(".submission-resource-row").forEach(configureRow);
+  refreshRemoveButtons();
+})();
+</script>
 {% endblock %}
