@@ -383,7 +383,7 @@ class SubmissionViewTests(TestCase):
         )
         with patch(
             "apps.student.views_submit.grading.score_locked_close",
-            return_value=(61, timezone.now()),
+            return_value=True,
         ):
             get = self.client.get(
                 reverse("student:assignment-submit", args=[assignment.id])
@@ -405,7 +405,7 @@ class SubmissionViewTests(TestCase):
         self.assignment(due_at=timezone.now() - timedelta(days=1), allow_late=True)
         with patch(
             "apps.student.views_submit.grading.score_locked_close",
-            return_value=(61, timezone.now()),
+            return_value=True,
         ):
             response = self.client.get(reverse("student:assignment-list"))
         self.assertContains(response, "점수 미반영")

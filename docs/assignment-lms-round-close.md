@@ -132,14 +132,16 @@
 
 ### 7.1 학생 — "점수 미반영" 경고
 
-과제의 `due_at` 이 **이미 마감된 회차의 스코프**(직전 회차 종료 < due_at ≤ 회차 종료)에 들어가면:
+과제가 **이미 마감된 회차 스냅샷에 실제로 집계됐으면**(`RoundScore.assignment_ids` 에 포함):
 
-- `grading.score_locked_close(assignment)` → `(round_id, closed_at)` (아니면 `None`, 회차 기간 못 구하면 `None`).
+- `grading.scored_assignment_ids()` → 마감된 모든 회차가 집계한 과제 id 집합.
+- `grading.score_locked_close(assignment)` → `assignment.id in` 그 집합 (bool).
+- 스코프를 다시 계산하지 않고 **박제된 `assignment_ids` 를 신뢰** → 튜터가 확인 화면에서 제외한 과제는 포함 안 됨(정확), 마감 시각·경계 엣지케이스도 없음.
 - 제출 폼([submission_form.html]): "이 과제가 속한 회차는 점수 집계가 마감됐습니다. 지금 제출해도 **회차 점수에는 반영되지 않습니다.** 튜터 피드백은 받을 수 있습니다."
 - 과제 목록: "회차 마감 · 점수 미반영" 배지.
 - **제출 자체는 막지 않는다.** 학생 기록·GitHub·튜터 피드백엔 남는다.
 
-> gap 과제(마감된 회차 종료 후 ~ 새 회차 시작 전에 생성, `due_at` 이 그 사이)는 **잠기지 않는다** — 다음 회차에서 채점되기 때문. 회차 스코프는 항상 `due_at` 기준(§2)이라, 새 회차가 시작되면 그 회차 창에 속한 과제부터 다시 정상 누적된다.
+> gap 과제(마감된 회차 종료 후 ~ 새 회차 시작 전에 생성)는 어느 스냅샷에도 없으니 **잠기지 않는다** — 다음 회차에서 채점된다. 회차 스코프는 항상 `due_at` 기준(§2)이라, 새 회차가 시작되면 그 회차 창에 속한 과제부터 다시 정상 누적된다.
 
 ### 7.2 튜터 — "재마감 필요" 배너
 
@@ -167,7 +169,7 @@ apps/accounts_client/services.py (+) get_round_period(round_id=None) -> (start, 
 apps/tutor/models.py            (+)  RoundScore             (round_id, student_id) 유니크 · §3.2
 apps/tutor/grading.py           (~)  compute(student_ids, assignments=None)   ← 파라미터 추가 (하위호환)
                                 (+)  snapshot(round, closed_by) -> list[RoundScore]
-                                (+)  closed_round_windows() / score_locked_close(assignment)  §7.1
+                                (+)  scored_assignment_ids() / score_locked_close(assignment)  §7.1
 apps/tutor/views_round.py       (+)  _preview.stale_count  §7.2
 ```
 
