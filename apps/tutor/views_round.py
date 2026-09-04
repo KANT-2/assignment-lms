@@ -7,11 +7,13 @@ apps/tutor/views_round.py — 👨‍🏫 튜터B · 회차 점수 마감 (FR: d
 import csv
 
 from django.contrib import messages
+from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from apps.accounts_client import services as accounts
+from apps.core.models import Assignment
 
 from . import grading
 from .models import RoundScore
@@ -39,6 +41,33 @@ def _preview(round_obj, now):
     computable = sum(1 for sc in scores.values() if sc.final is not None)
     period = accounts.get_round_period(round_obj.id)
 
+    # ── 학생별 점수 미리보기 (저장 안 함) — 산출 가능 → 최종 높은 순 ──
+    preview_rows = sorted(
+        (
+            {"name": getattr(s, "name", None) or f"학생 #{s.id}", "sc": scores.get(s.id, grading.StudentScore())}
+            for s in students
+        ),
+        key=lambda r: (r["sc"].final is None, -(r["sc"].final or 0), r["name"]),
+    )
+    finals = [sc.final for sc in scores.values() if sc.final is not None]
+    avg_final = round(sum(finals) / len(finals), 1) if finals else None
+
+    # ── 과제별 채점 진행 (제출 대비 튜터 평가 등록 수) ──
+    progress = {
+        row["id"]: row
+        for row in Assignment.all_objects.filter(id__in=[a.id for a in assignments])
+        .annotate(
+            _sub=Count("submissions", distinct=True),
+            _graded=Count("submissions", filter=Q(submissions__evaluation__isnull=False), distinct=True),
+        )
+        .values("id", "_sub", "_graded")
+    }
+    for a in assignments:
+        p = progress.get(a.id, {"_sub": 0, "_graded": 0})
+        a.grade_total = p["_sub"]
+        a.grade_done = p["_graded"]
+        a.grade_missing = p["_sub"] - p["_graded"]
+
     return {
         "round": round_obj,
         "period": period,
@@ -49,6 +78,8 @@ def _preview(round_obj, now):
         "team_included": team_included,
         "ungraded_total": ungraded_total,
         "computable_count": computable,
+        "preview_rows": preview_rows,
+        "avg_final": avg_final,
         "existing": RoundScore.objects.filter(round_id=round_obj.id).order_by("-closed_at").first(),
     }
 

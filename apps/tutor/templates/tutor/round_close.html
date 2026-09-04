@@ -29,6 +29,29 @@
   .rclose td .tag + .tag { margin-left:4px; }
   .rclose .tag.team { background:#f1e9ff; color:#7c4fd6; }
   .rclose .tag.req { background:var(--c-green-soft); color:#147a52; }
+  .rclose .card.isnew { border-color:#c5d2ff; box-shadow:0 0 0 3px var(--c-accent-soft); }
+  .rclose .card h2 .n { font-size:9px; font-weight:800; color:#fff; background:var(--c-accent); padding:2px 7px; border-radius:20px; margin-left:2px; }
+  .rclose .card h2 .muted { font-weight:600; color:var(--c-tfaint); font-size:12px; }
+
+  .rclose .grade-cell { display:flex; align-items:center; gap:8px; min-width:150px; }
+  .rclose .grade-bar { flex:1; height:6px; border-radius:20px; background:var(--c-sunken); overflow:hidden; }
+  .rclose .grade-bar i { display:block; height:100%; border-radius:20px; background:var(--c-green); }
+  .rclose .grade-bar i.part { background:var(--c-amber); }
+  .rclose .grade-num { font-size:11.5px; font-weight:700; color:var(--c-tmuted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .rclose .grade-num .miss { color:var(--c-amber); }
+  .rclose .grade-done { font-size:11.5px; font-weight:700; color:#147a52; white-space:nowrap; }
+
+  .rclose .pv-summary { display:flex; flex-wrap:wrap; gap:8px 20px; margin-bottom:12px; font-size:12.5px; }
+  .rclose .pv-summary b { font-size:15px; font-weight:800; }
+  .rclose .pv-summary span { color:var(--c-tmuted); }
+  .rclose .pv-summary .miss { color:var(--c-amber); }
+  .rclose .pv-scroll { max-height:340px; overflow-y:auto; margin:0 -4px; }
+  .rclose .pv-scroll thead th { position:sticky; top:0; background:var(--c-surface); z-index:1; }
+  .rclose .pv-num { font-variant-numeric:tabular-nums; }
+  .rclose .pv-final { font-weight:800; }
+  .rclose .pv-dash { color:var(--c-tfaint); }
+  .rclose .pv-miss { color:var(--c-amber); font-weight:700; }
+
   .rclose .actions { display:flex; gap:10px; align-items:center; margin-top:10px; }
   .rclose .btn { border:none; border-radius:8px; padding:12px 22px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; }
   .rclose .btn-go { background:var(--c-accent); color:#fff; }
@@ -78,7 +101,7 @@
       <h2>포함 과제 ({{ assignments|length }}건) — 체크된 과제만 집계</h2>
       {% if assignments %}
         <table>
-          <thead><tr><th style="width:32px;"></th><th>과제명</th><th style="width:108px;">유형</th><th style="width:130px;">마감</th><th style="width:64px;">중요도</th></tr></thead>
+          <thead><tr><th style="width:32px;"></th><th>과제명</th><th style="width:104px;">유형</th><th style="width:118px;">마감</th><th style="width:52px;">중요도</th><th style="width:172px;">채점 진행</th></tr></thead>
           <tbody>
             {% for a in assignments %}
             <tr>
@@ -90,6 +113,18 @@
               </td>
               <td>{{ a.due_at|date:"Y.m.d H:i" }}</td>
               <td>{{ a.get_weight_tier_display }}</td>
+              <td>
+                {% if a.grade_total == 0 %}
+                  <span class="grade-num" style="color:var(--c-tfaint);">제출 없음</span>
+                {% elif a.grade_done >= a.grade_total %}
+                  <span class="grade-done">✓ {{ a.grade_done }}/{{ a.grade_total }}</span>
+                {% else %}
+                  <div class="grade-cell">
+                    <span class="grade-bar"><i class="part" style="width:{% widthratio a.grade_done a.grade_total 100 %}%"></i></span>
+                    <span class="grade-num">{{ a.grade_done }}/{{ a.grade_total }} · <span class="miss">미채점 {{ a.grade_missing }}</span></span>
+                  </div>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -98,6 +133,35 @@
         <div class="empty">이 회차에 귀속되는 마감된 과제가 없습니다.</div>
       {% endif %}
     </div>
+
+    {% if preview_rows %}
+    <div class="card isnew">
+      <h2>점수 미리보기 <span class="n">NEW</span> <span class="muted">이대로 마감하면 나올 점수 · 저장하지 않습니다</span></h2>
+      <div class="pv-summary">
+        <span>산출 가능 <b>{{ computable_count }}</b> / {{ student_count }}명</span>
+        <span>평균 최종 <b>{% if avg_final is not None %}{{ avg_final }}{% else %}—{% endif %}</b></span>
+        <span>미채점 제외 <b class="miss">{{ ungraded_total }}건</b></span>
+      </div>
+      <div class="pv-scroll">
+        <table>
+          <thead>
+            <tr><th>학생</th><th style="width:78px;">최종</th><th style="width:78px;">성취도</th><th style="width:78px;">성실성</th><th style="width:118px;">채점 / 미채점</th></tr>
+          </thead>
+          <tbody>
+            {% for r in preview_rows %}
+            <tr>
+              <td>{{ r.name }}</td>
+              <td class="pv-num pv-final">{% if r.sc.final is not None %}{{ r.sc.final|floatformat:1 }}{% else %}<span class="pv-dash">—</span>{% endif %}</td>
+              <td class="pv-num">{% if r.sc.achievement is not None %}{{ r.sc.achievement|floatformat:1 }}{% else %}<span class="pv-dash">—</span>{% endif %}</td>
+              <td class="pv-num">{% if r.sc.sincerity is not None %}{{ r.sc.sincerity|floatformat:1 }}{% else %}<span class="pv-dash">—</span>{% endif %}</td>
+              <td class="pv-num">{{ r.sc.graded_count }} / {% if r.sc.ungraded_count %}<span class="pv-miss">{{ r.sc.ungraded_count }}</span>{% else %}0{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
 
     <div class="actions">
       <button type="submit" class="btn btn-go" {% if not assignments %}disabled{% endif %}>
