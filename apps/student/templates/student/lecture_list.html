@@ -53,14 +53,14 @@
           <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="assignment-due">{{ lesson.lesson_date|date:"Y.m.d (D)" }}</span>
             
-            {% if lesson.videos.count > 0 %}
-                <span class="badge-video">영상 {{ lesson.videos.count }}개</span>
+            {% if lesson.video_count > 0 %}
+                <span class="badge-video">영상 {{ lesson.video_count }}개</span>
             {% else %}
                 <span class="badge-empty">영상 미등록</span>
             {% endif %}
 
-            {% if lesson.materials.count > 0 %}
-                <span class="badge-material">자료 {{ lesson.materials.count }}개</span>
+            {% if lesson.material_count > 0 %}
+                <span class="badge-material">자료 {{ lesson.material_count }}개</span>
             {% else %}
                 <span class="badge-empty">자료 없음</span>
             {% endif %}
