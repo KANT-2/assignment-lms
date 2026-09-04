@@ -9,28 +9,49 @@
     --c-tfaint:#9aa1b1; --c-border:#e4e8f1; --c-bstrong:#d5dbe8; --c-accent:#4f6df5;
     --c-accent-text:#3a56d4; --c-amber:#c98a1a; --c-amber-soft:#fbf0dd; --c-red:#ef4b4b;
     --c-red-soft:#fdecec; --c-green:#1fa971; --c-green-soft:#e5f7ee;
-    color:var(--c-text); max-width:820px; }
-  .rclose h1 { font-size:20px; font-weight:800; margin:0 0 4px; }
-  .rclose .sub { font-size:12.5px; color:var(--c-tmuted); margin-bottom:16px; }
-  .rclose .card { background:var(--c-surface); border:1px solid var(--c-border); border-radius:14px;
-    padding:16px 18px; margin-bottom:14px; box-shadow:0 1px 10px rgba(24,30,51,.03); }
-  .rclose .card h2 { font-size:13px; font-weight:800; margin:0 0 10px; }
-  .rclose .kv { display:flex; gap:8px; font-size:13px; padding:5px 0; border-bottom:1px dashed var(--c-border); }
+    color:var(--c-text); max-width:1000px; margin:0 auto; }
+  .rclose h1 { font-size:22px; font-weight:800; margin:0 0 5px; }
+  .rclose .sub { font-size:13px; color:var(--c-tmuted); margin-bottom:20px; }
+  .rclose .card { background:var(--c-surface); border:1px solid var(--c-border); border-radius:16px;
+    padding:20px 22px; margin-bottom:16px; box-shadow:0 1px 10px rgba(24,30,51,.03); }
+  .rclose .card h2 { font-size:14.5px; font-weight:800; margin:0 0 13px; }
+  .rclose .kv { display:flex; gap:10px; font-size:13.5px; padding:8px 0; border-bottom:1px dashed var(--c-border); }
   .rclose .kv:last-child { border-bottom:0; }
-  .rclose .kv .k { width:120px; flex-shrink:0; color:var(--c-tmuted); font-weight:600; }
-  .rclose .banner { border-radius:10px; padding:11px 14px; font-size:12.5px; font-weight:600; margin-bottom:14px; line-height:1.6; }
+  .rclose .kv .k { width:130px; flex-shrink:0; color:var(--c-tmuted); font-weight:600; }
+  .rclose .banner { border-radius:12px; padding:13px 16px; font-size:13px; font-weight:600; margin-bottom:16px; line-height:1.6; }
   .rclose .banner.warn { background:var(--c-amber-soft); color:#8a5a12; }
   .rclose .banner.info { background:var(--c-sunken); color:var(--c-tmuted); }
-  .rclose table { width:100%; border-collapse:collapse; font-size:12.5px; }
-  .rclose th { text-align:left; font-size:11px; color:var(--c-tfaint); font-weight:700; padding:7px 8px; border-bottom:1px solid var(--c-border); }
-  .rclose td { padding:8px; border-bottom:1px solid var(--c-border); vertical-align:middle; }
+  .rclose table { width:100%; border-collapse:collapse; font-size:13px; }
+  .rclose th { text-align:left; font-size:11.5px; color:var(--c-tfaint); font-weight:700; padding:9px 10px; border-bottom:1px solid var(--c-border); }
+  .rclose td { padding:11px 10px; border-bottom:1px solid var(--c-border); vertical-align:middle; }
   .rclose tr:last-child td { border-bottom:0; }
-  .rclose .tag { display:inline-block; white-space:nowrap; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:20px; background:#f7eddc; color:#80623a; }
-  .rclose td .tag + .tag { margin-left:3px; }
+  .rclose .tag { display:inline-block; white-space:nowrap; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:#f7eddc; color:#80623a; }
+  .rclose td .tag + .tag { margin-left:4px; }
   .rclose .tag.team { background:#f1e9ff; color:#7c4fd6; }
   .rclose .tag.req { background:var(--c-green-soft); color:#147a52; }
-  .rclose .actions { display:flex; gap:10px; align-items:center; margin-top:6px; }
-  .rclose .btn { border:none; border-radius:8px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .rclose .card h2 .muted { font-weight:600; color:var(--c-tfaint); font-size:12px; }
+
+  .rclose .grade-cell { display:flex; align-items:center; gap:8px; min-width:150px; }
+  .rclose .grade-bar { flex:1; height:6px; border-radius:20px; background:var(--c-sunken); overflow:hidden; }
+  .rclose .grade-bar i { display:block; height:100%; border-radius:20px; background:var(--c-green); }
+  .rclose .grade-bar i.part { background:var(--c-amber); }
+  .rclose .grade-num { font-size:11.5px; font-weight:700; color:var(--c-tmuted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .rclose .grade-num .miss { color:var(--c-amber); }
+  .rclose .grade-done { font-size:11.5px; font-weight:700; color:#147a52; white-space:nowrap; }
+
+  .rclose .pv-summary { display:flex; flex-wrap:wrap; gap:8px 20px; margin-bottom:12px; font-size:12.5px; }
+  .rclose .pv-summary b { font-size:15px; font-weight:800; }
+  .rclose .pv-summary span { color:var(--c-tmuted); }
+  .rclose .pv-summary .miss { color:var(--c-amber); }
+  .rclose .pv-scroll { max-height:340px; overflow-y:auto; margin:0 -4px; }
+  .rclose .pv-scroll thead th { position:sticky; top:0; background:var(--c-surface); z-index:1; }
+  .rclose .pv-num { font-variant-numeric:tabular-nums; }
+  .rclose .pv-final { font-weight:800; }
+  .rclose .pv-dash { color:var(--c-tfaint); }
+  .rclose .pv-miss { color:var(--c-amber); font-weight:700; }
+
+  .rclose .actions { display:flex; gap:10px; align-items:center; margin-top:10px; }
+  .rclose .btn { border:none; border-radius:8px; padding:12px 22px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; }
   .rclose .btn-go { background:var(--c-accent); color:#fff; }
   .rclose .btn-go:hover { background:var(--c-accent-text); }
   .rclose .btn-cancel { background:var(--c-surface); border:1px solid var(--c-bstrong); color:var(--c-tmuted); text-decoration:none; }
@@ -62,7 +83,7 @@
 
   <div class="card">
     <h2>대상 회차</h2>
-    <div class="kv"><span class="k">회차</span><span>{{ round.title }} <span class="tag">id {{ round.id }}</span></span></div>
+    <div class="kv"><span class="k">회차</span><span>{{ round.title }}</span></div>
     {% if period %}
       <div class="kv"><span class="k">평가 기간</span><span>{{ period.0|date:"Y.m.d H:i" }} ~ {{ period.1|date:"Y.m.d H:i" }}</span></div>
     {% else %}
@@ -75,10 +96,10 @@
   <form method="post">
     {% csrf_token %}
     <div class="card">
-      <h2>포함 과제 ({{ assignments|length }}건) — 체크된 과제만 집계</h2>
+      <h2>포함 과제 (<span data-included-count>{{ assignments|length }}</span>/{{ assignments|length }}건) — 체크된 과제만 집계</h2>
       {% if assignments %}
         <table>
-          <thead><tr><th style="width:32px;"></th><th>과제명</th><th style="width:108px;">유형</th><th style="width:130px;">마감</th><th style="width:64px;">중요도</th></tr></thead>
+          <thead><tr><th style="width:32px;"></th><th>과제명</th><th style="width:104px;">유형</th><th style="width:118px;">마감</th><th style="width:52px;">중요도</th><th style="width:172px;">채점 진행</th></tr></thead>
           <tbody>
             {% for a in assignments %}
             <tr>
@@ -90,6 +111,18 @@
               </td>
               <td>{{ a.due_at|date:"Y.m.d H:i" }}</td>
               <td>{{ a.get_weight_tier_display }}</td>
+              <td>
+                {% if a.grade_total == 0 %}
+                  <span class="grade-num" style="color:var(--c-tfaint);">제출 없음</span>
+                {% elif a.grade_done >= a.grade_total %}
+                  <span class="grade-done">✓ {{ a.grade_done }}/{{ a.grade_total }}</span>
+                {% else %}
+                  <div class="grade-cell">
+                    <span class="grade-bar"><i class="part" style="width:{% widthratio a.grade_done a.grade_total 100 %}%"></i></span>
+                    <span class="grade-num">{{ a.grade_done }}/{{ a.grade_total }} · <span class="miss">미채점 {{ a.grade_missing }}</span></span>
+                  </div>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -99,6 +132,35 @@
       {% endif %}
     </div>
 
+    {% if preview_rows %}
+    <div class="card">
+      <h2>점수 미리보기</h2>
+      <div class="pv-summary">
+        <span>산출 가능 <b>{{ computable_count }}</b> / {{ student_count }}명</span>
+        <span>평균 최종 <b>{% if avg_final is not None %}{{ avg_final }}{% else %}—{% endif %}</b></span>
+        <span>미채점 제외 <b class="miss">{{ ungraded_total }}건</b></span>
+      </div>
+      <div class="pv-scroll">
+        <table>
+          <thead>
+            <tr><th>학생</th><th style="width:78px;">최종</th><th style="width:78px;">성취도</th><th style="width:78px;">성실성</th><th style="width:118px;">채점 / 미채점</th></tr>
+          </thead>
+          <tbody>
+            {% for r in preview_rows %}
+            <tr>
+              <td>{{ r.name }}</td>
+              <td class="pv-num pv-final">{% if r.sc.final is not None %}{{ r.sc.final|floatformat:1 }}{% else %}<span class="pv-dash">—</span>{% endif %}</td>
+              <td class="pv-num">{% if r.sc.achievement is not None %}{{ r.sc.achievement|floatformat:1 }}{% else %}<span class="pv-dash">—</span>{% endif %}</td>
+              <td class="pv-num">{% if r.sc.sincerity is not None %}{{ r.sc.sincerity|floatformat:1 }}{% else %}<span class="pv-dash">—</span>{% endif %}</td>
+              <td class="pv-num">{{ r.sc.graded_count }} / {% if r.sc.ungraded_count %}<span class="pv-miss">{{ r.sc.ungraded_count }}</span>{% else %}0{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="actions">
       <button type="submit" class="btn btn-go" {% if not assignments %}disabled{% endif %}>
         {% if existing %}재마감 실행{% else %}점수 마감 실행{% endif %}
@@ -107,4 +169,21 @@
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  (function () {
+    var out = document.querySelector("[data-included-count]");
+    var boxes = document.querySelectorAll('input[name="assignment_ids"]');
+    if (!out || !boxes.length) return;
+    function sync() {
+      var n = 0;
+      boxes.forEach(function (b) { if (b.checked) n++; });
+      out.textContent = n;
+    }
+    boxes.forEach(function (b) { b.addEventListener("change", sync); });
+    sync();
+  })();
+</script>
 {% endblock %}
