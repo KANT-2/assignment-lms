@@ -16,3 +16,9 @@
 *.pdf   binary
 *.docx  binary
 *.ipynb binary
+
+# --- GitHub Linguist ---
+# docs/ 는 설계 문서 + 디자인 목업(HTML). 앱 코드가 아니라 언어 통계에서 제외한다.
+# (목업 HTML 만으로 저장소 HTML 의 절반 이상을 차지해 Python 이 가려짐)
+docs/**             linguist-documentation
+docs/mockups/**     linguist-documentation
