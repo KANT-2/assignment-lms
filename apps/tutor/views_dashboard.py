@@ -25,7 +25,7 @@ from apps.accounts_client import services as accounts
 from apps.core.models import Assignment, Lesson, Submission
 
 FEEDBACK_QUEUE_LIMIT = 12
-LESSON_LIMIT = 12
+LESSON_LIMIT = 4  # 대시보드는 최근 4개만. 나머지는 강의안 관리에서.
 URGENT_DAYS = 1
 IMMINENT_DAYS = 3
 ONGOING_LIMIT = 8

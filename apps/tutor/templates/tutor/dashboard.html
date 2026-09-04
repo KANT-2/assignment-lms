@@ -327,6 +327,9 @@
       </a>
       {% endfor %}
     </div>
+    {% if lesson_total > lesson_rows|length %}
+      <p class="note" style="margin:8px 0 0;">최근 4개만 표시 · 전체 {{ lesson_total }}개는 <a href="{% url 'tutor:lecture' %}">강의안 관리</a>에서</p>
+    {% endif %}
     {% else %}
       <div class="empty">등록된 차시가 없습니다. <a href="{% url 'tutor:lecture' %}">강의안 관리에서 추가</a></div>
     {% endif %}
