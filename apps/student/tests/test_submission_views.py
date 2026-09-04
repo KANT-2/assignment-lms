@@ -29,7 +29,7 @@ class SubmissionViewTests(TestCase):
         self.student_gate.start()
         self.addCleanup(self.student_gate.stop)
         # 제출 완료 시 Slack DM 발송 — 외부 accounts DB 조회 없이 no-op 처리
-        slack = patch("apps.student.views_submit.send_slack_dm_ax", return_value=False)
+        slack = patch("apps.student.views_submit.notify_dm_ax", return_value=None)
         slack.start()
         self.addCleanup(slack.stop)
 

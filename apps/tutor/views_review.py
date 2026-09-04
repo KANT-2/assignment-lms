@@ -16,7 +16,7 @@ from pathlib import Path
 
 from django.contrib import messages
 from django.core.files.storage import default_storage
-from django.http import FileResponse, Http404, request
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -26,7 +26,7 @@ from google.genai.errors import ServerError
 from apps.accounts_client import services as accounts
 from apps.common.preview import IMAGE_PREVIEW_EXTENSIONS, _preview, _storage_name
 from apps.core.models import AiEvaluation, Evaluation, Submission, SubmissionFile
-from apps.notifications.slack import send_slack_dm_ax
+from apps.notifications.slack import notify_dm_ax_many
 
 from . import ai_gemini
 from .forms import EvaluationForm
@@ -142,21 +142,11 @@ def submission_review(request, pk):
 
             if assignment.is_team:
                 # 팀 과제 → 해당 팀의 모든 팀원에게 DM
-                members = accounts.get_team_members(submission.team_id) or []
-
-                for member in members:
-                    send_slack_dm_ax(
-                        member.id,
-                        title,
-                        message,
-                    )
+                recipients = [m.id for m in accounts.get_team_members(submission.team_id) or []]
             else:
                 # 개인 과제 → 해당 학생에게 DM
-                send_slack_dm_ax(
-                    submission.student_id,
-                    title,
-                    message,
-                )
+                recipients = [submission.student_id]
+            notify_dm_ax_many(recipients, title, message)
 
             messages.success(request, "평가를 저장했습니다.")
             return redirect(_review_url(pk, request.POST))
