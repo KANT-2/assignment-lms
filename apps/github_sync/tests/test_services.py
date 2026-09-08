@@ -217,14 +217,15 @@ class LinkSubmissionTests(TestCase):
             return _Resp()
 
         sub = self._submission_with_links(
-            "https://github.com/nelson/other-repo/blob/main/week3/sol.py"
+            # 경로에 공백 (URL 에서는 %20) — 이중 인코딩되지 않아야 한다
+            "https://github.com/nelson/other-repo/blob/main/chapter%2017/sol.py"
         )
         with patch.object(github_api, "_request", _fake_request):
             services.sync_one(services.enqueue(sub))
 
         self.assertEqual(
             captured["url"],
-            "https://api.github.com/repos/nelson/other-repo/contents/week3/sol.py",
+            "https://api.github.com/repos/nelson/other-repo/contents/chapter%2017/sol.py",
         )
         self.assertEqual(captured["params"], {"ref": "main"})
         committed = [c.args[2] for c in put_file.call_args_list]
