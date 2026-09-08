@@ -22,11 +22,12 @@ from django.views.decorators.http import require_POST
 from apps.accounts_client import services as accounts
 
 from . import github_api, oauth, services
-from .models import StudentGithubAccount
+from .models import StudentGithubAccount, TutorGithubAccount
 
 logger = logging.getLogger(__name__)
 
 _STATE_SESSION_KEY = "github_oauth_state"
+_TUTOR_STATE_SESSION_KEY = "github_oauth_state_tutor"
 
 
 def student_required(view_func):
@@ -110,3 +111,74 @@ def disconnect(request):
     ).delete()
     messages.success(request, "GitHub 연결을 해제했습니다. 이미 올라간 커밋은 그대로 남아 있습니다.")
     return redirect("student:dashboard")
+
+
+# ─────────────────────────────────────────────────────────────
+# 튜터용 — 피드백 이슈 게시에 쓸 GitHub 계정 연결
+# ─────────────────────────────────────────────────────────────
+def tutor_required(view_func):
+    @wraps(view_func)
+    @login_required
+    def _wrapped(request, *args, **kwargs):
+        if not accounts.is_tutor(request.user.id):
+            raise PermissionDenied("튜터만 접근할 수 있습니다.")
+        if not services.enabled():
+            raise PermissionDenied("GitHub 연동이 비활성화되어 있습니다.")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def _tutor_callback_uri(request) -> str:
+    return request.build_absolute_uri(reverse("github_sync:tutor-callback"))
+
+
+@tutor_required
+def tutor_connect(request):
+    state = secrets.token_urlsafe(24)
+    request.session[_TUTOR_STATE_SESSION_KEY] = state
+    return redirect(oauth.authorize_url(state, _tutor_callback_uri(request)))
+
+
+@tutor_required
+def tutor_callback(request):
+    expected = request.session.pop(_TUTOR_STATE_SESSION_KEY, None)
+    got = request.GET.get("state")
+    code = request.GET.get("code")
+    if not expected or not got or got != expected or not code:
+        messages.error(request, "GitHub 연결 요청이 유효하지 않습니다. 다시 시도해 주세요.")
+        return redirect("tutor:dashboard")
+
+    try:
+        token_data = oauth.exchange_code(code, _tutor_callback_uri(request))
+        gh_user = github_api.get_authenticated_user(token_data["access_token"])
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("github oauth tutor callback 실패: %s", exc)
+        messages.error(request, "GitHub 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+        return redirect("tutor:dashboard")
+
+    account, _ = TutorGithubAccount.objects.get_or_create(
+        tutor_id=request.user.id,
+        defaults={"github_user_id": gh_user["id"], "github_login": gh_user["login"]},
+    )
+    account.github_user_id = gh_user["id"]
+    account.github_login = gh_user["login"]
+    account.github_name = gh_user["name"]
+    account.token_scope = token_data.get("scope", "")
+    account.last_error = ""
+    account.set_token(token_data["access_token"])
+    account.save()
+
+    messages.success(
+        request,
+        f"GitHub(@{gh_user['login']}) 연결됨. 이후 등록하는 피드백이 학생 저장소 이슈로 남습니다.",
+    )
+    return redirect("tutor:dashboard")
+
+
+@tutor_required
+@require_POST
+def tutor_disconnect(request):
+    TutorGithubAccount.objects.filter(tutor_id=request.user.id).delete()
+    messages.success(request, "GitHub 연결을 해제했습니다. 이미 생성된 이슈는 그대로 남아 있습니다.")
+    return redirect("tutor:dashboard")

@@ -14,7 +14,7 @@ from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from apps.core.models import SubmissionFile
+from apps.core.models import Evaluation, SubmissionFile
 
 from . import services
 
@@ -36,5 +36,19 @@ def push_submission_to_github(sender, instance: SubmissionFile, created, **kwarg
             return
         if push is not None:
             services.try_sync_now(push)
+
+    transaction.on_commit(_run)
+
+
+@receiver(post_save, sender=Evaluation)
+def push_feedback_issue_to_github(sender, instance: Evaluation, **kwargs):
+    """튜터 평가(신규/수정) 저장 시 학생 저장소에 피드백 이슈를 생성/갱신한다."""
+    if not services.tutor_enabled():
+        return
+
+    submission = instance.submission
+
+    def _run():
+        services.try_feedback_issue_now(submission)
 
     transaction.on_commit(_run)

@@ -154,6 +154,99 @@ class ServiceTests(TestCase):
         self.assertEqual(SubmissionPush.objects.count(), 2)
 
 
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp(), **ENABLED_SETTINGS)
+class LinkSubmissionTests(TestCase):
+    databases = {"default"}
+
+    def setUp(self):
+        self.assignment = Assignment.objects.create(
+            title="3주차 데이터 분석",
+            due_at=timezone.now() + timedelta(days=1),
+            is_team=False, created_by=1,
+        )
+        p = patch(
+            "apps.github_sync.services.accounts.get_current_round",
+            return_value=type("R", (), {"id": 7, "title": "2026 1기"})(),
+        )
+        p.start()
+        self.addCleanup(p.stop)
+        acc = StudentGithubAccount(
+            student_id=STUDENT_ID, github_user_id=999, github_login="nelson",
+            github_name="Nelson", repo_full_name="nelson/lms-assignments",
+        )
+        acc.set_token("gho_test")
+        acc.save()
+
+    def _submission_with_links(self, *links, upload=None):
+        sub = Submission.objects.create(assignment=self.assignment, student_id=STUDENT_ID)
+        if upload:
+            saved = default_storage.save(f"submissions/x/{upload}", ContentFile(b"print(1)"))
+            SubmissionFile.objects.create(
+                submission=sub, kind="PY", file_url=default_storage.url(saved),
+                file_name=upload, file_size=8,
+            )
+        for link in links:
+            SubmissionFile.objects.create(
+                submission=sub, kind="OTHER", file_url=link, file_name=link, file_size=0,
+            )
+        return sub
+
+    @patch("apps.github_sync.services.github_api.get_file_sha", return_value=None)
+    @patch("apps.github_sync.services.github_api.put_file", return_value="sha1")
+    @patch("apps.github_sync.services.github_api.get_file_content", return_value=b"df = 1\n")
+    def test_blob_link_is_mirrored(self, get_content, put_file, get_sha):
+        sub = self._submission_with_links(
+            "https://github.com/nelson/other-repo/blob/main/week3/sol.py"
+        )
+        services.sync_one(services.enqueue(sub))
+        get_content.assert_called_once_with(
+            "gho_test", "nelson", "other-repo", "main", "week3/sol.py"
+        )
+        committed = [c.args[2] for c in put_file.call_args_list]
+        self.assertTrue(any(p.endswith("/sol.py") for p in committed))
+        sub.github_push.refresh_from_db()
+        self.assertEqual(sub.github_push.state, SubmissionPush.State.SYNCED)
+
+    @patch("apps.github_sync.services.github_api.get_file_sha", return_value=None)
+    @patch("apps.github_sync.services.github_api.put_file", return_value="sha1")
+    @patch("apps.github_sync.services.github_api.get_file_content")
+    def test_repo_root_link_goes_to_readme_only(self, get_content, put_file, get_sha):
+        sub = self._submission_with_links("https://github.com/nelson/other-repo")
+        services.sync_one(services.enqueue(sub))
+        get_content.assert_not_called()
+        readme_call = put_file.call_args_list[0]
+        self.assertTrue(readme_call.args[2].endswith("/README.md"))
+        self.assertIn(b"github.com/nelson/other-repo", readme_call.args[3])
+        self.assertEqual(put_file.call_count, 1)  # README 만
+
+    @patch("apps.github_sync.services.github_api.get_file_sha", return_value=None)
+    @patch("apps.github_sync.services.github_api.put_file", return_value="sha1")
+    @patch("apps.github_sync.services.github_api.get_file_content",
+           side_effect=GithubApiError("404 Not Found", status_code=404))
+    def test_blob_link_fetch_failure_falls_back_to_link(self, get_content, put_file, get_sha):
+        sub = self._submission_with_links(
+            "https://github.com/nelson/other-repo/blob/main/gone.py"
+        )
+        services.sync_one(services.enqueue(sub))
+        readme_body = put_file.call_args_list[0].args[3]
+        self.assertIn(b"gone.py", readme_body)
+        self.assertEqual(put_file.call_count, 1)
+        sub.github_push.refresh_from_db()
+        self.assertEqual(sub.github_push.state, SubmissionPush.State.SYNCED)
+
+    @patch("apps.github_sync.services.github_api.get_file_sha", return_value=None)
+    @patch("apps.github_sync.services.github_api.put_file", return_value="sha1")
+    @patch("apps.github_sync.services.github_api.get_file_content", return_value=b"x\n")
+    def test_upload_plus_blob_link_both_committed(self, get_content, put_file, get_sha):
+        sub = self._submission_with_links(
+            "https://github.com/nelson/other-repo/blob/main/b.py", upload="a.py"
+        )
+        services.sync_one(services.enqueue(sub))
+        committed = [c.args[2] for c in put_file.call_args_list]
+        self.assertTrue(any(p.endswith("/a.py") for p in committed))
+        self.assertTrue(any(p.endswith("/b.py") for p in committed))
+
+
 class DisabledTests(TestCase):
     databases = {"default"}
 
