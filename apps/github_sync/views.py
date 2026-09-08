@@ -1,9 +1,10 @@
 """
-apps/github_sync/views.py — 학생용 GitHub 연결 / 해제.
+apps/github_sync/views.py — GitHub 연결 / 해제 (학생 · 튜터 공용).
 
-- connect   : state 발급 후 GitHub 동의 화면으로
-- callback  : 코드 교환 → 토큰 저장 → 기존 제출물 backfill
-- disconnect: 계정 행 삭제 (저장소·커밋은 그대로 둔다)
+- connect / tutor_connect : state 발급 후 GitHub 동의 화면으로
+- callback                : 학생·튜터 공용 1개. 세션 state 로 어느 흐름인지 구분해 처리
+                            (OAuth App 에 콜백 URL 을 1개만 등록해도 되게 하려는 것)
+- disconnect / tutor_disconnect : 계정 행 삭제 (저장소·커밋·이슈는 그대로 둔다)
 """
 from __future__ import annotations
 
@@ -62,15 +63,32 @@ def connect(request):
     return redirect(oauth.authorize_url(state, _callback_uri(request)))
 
 
-@student_required
+@login_required
 def callback(request):
-    expected = request.session.pop(_STATE_SESSION_KEY, None)
-    got = request.GET.get("state")
+    """학생·튜터 공용 콜백. 세션에 튜터 state 가 있으면 튜터 흐름, 아니면 학생 흐름."""
+    if not services.enabled():
+        raise PermissionDenied("GitHub 연동이 비활성화되어 있습니다.")
+
+    state = request.GET.get("state")
     code = request.GET.get("code")
-    if not expected or not got or got != expected or not code:
+    tutor_state = request.session.pop(_TUTOR_STATE_SESSION_KEY, None)
+    student_state = request.session.pop(_STATE_SESSION_KEY, None)
+
+    if tutor_state is not None:
+        if state and code and state == tutor_state:
+            return _finish_tutor(request, code)
+        messages.error(request, "GitHub 연결 요청이 유효하지 않습니다. 다시 시도해 주세요.")
+        return redirect("tutor:dashboard")
+
+    if not (state and code and student_state and state == student_state):
         messages.error(request, "GitHub 연결 요청이 유효하지 않습니다. 다시 시도해 주세요.")
         return redirect("student:dashboard")
+    return _finish_student(request, code)
 
+
+def _finish_student(request, code: str):
+    if not accounts.is_student(request.user.id):
+        raise PermissionDenied("학생만 접근할 수 있습니다.")
     try:
         token_data = oauth.exchange_code(code, _callback_uri(request))
         gh_user = github_api.get_authenticated_user(token_data["access_token"])
@@ -129,28 +147,18 @@ def tutor_required(view_func):
     return _wrapped
 
 
-def _tutor_callback_uri(request) -> str:
-    return request.build_absolute_uri(reverse("github_sync:tutor-callback"))
-
-
 @tutor_required
 def tutor_connect(request):
     state = secrets.token_urlsafe(24)
     request.session[_TUTOR_STATE_SESSION_KEY] = state
-    return redirect(oauth.authorize_url(state, _tutor_callback_uri(request)))
+    return redirect(oauth.authorize_url(state, _callback_uri(request)))
 
 
-@tutor_required
-def tutor_callback(request):
-    expected = request.session.pop(_TUTOR_STATE_SESSION_KEY, None)
-    got = request.GET.get("state")
-    code = request.GET.get("code")
-    if not expected or not got or got != expected or not code:
-        messages.error(request, "GitHub 연결 요청이 유효하지 않습니다. 다시 시도해 주세요.")
-        return redirect("tutor:dashboard")
-
+def _finish_tutor(request, code: str):
+    if not accounts.is_tutor(request.user.id):
+        raise PermissionDenied("튜터만 접근할 수 있습니다.")
     try:
-        token_data = oauth.exchange_code(code, _tutor_callback_uri(request))
+        token_data = oauth.exchange_code(code, _callback_uri(request))
         gh_user = github_api.get_authenticated_user(token_data["access_token"])
     except Exception as exc:  # noqa: BLE001
         logger.warning("github oauth tutor callback 실패: %s", exc)

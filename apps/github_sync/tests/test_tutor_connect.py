@@ -31,7 +31,7 @@ class TutorOAuthTests(TestCase):
         session["github_oauth_state_tutor"] = "expected"
         session.save()
         resp = self.client.get(
-            reverse("github_sync:tutor-callback"), {"state": "wrong", "code": "c"}
+            reverse("github_sync:callback"), {"state": "wrong", "code": "c"}
         )
         self.assertRedirects(resp, reverse("tutor:dashboard"), fetch_redirect_response=False)
         self.assertFalse(TutorGithubAccount.objects.exists())
@@ -45,7 +45,7 @@ class TutorOAuthTests(TestCase):
         session["github_oauth_state_tutor"] = "s123"
         session.save()
         resp = self.client.get(
-            reverse("github_sync:tutor-callback"), {"state": "s123", "code": "c"}
+            reverse("github_sync:callback"), {"state": "s123", "code": "c"}
         )
         self.assertRedirects(resp, reverse("tutor:dashboard"), fetch_redirect_response=False)
         acc = TutorGithubAccount.objects.get()

@@ -168,6 +168,6 @@ lms-assignments/
 
 ### 배포 추가 사항
 
-- 튜터 OAuth 콜백은 `/github/callback/tutor/` — 학생 콜백(`/github/callback/`)의 하위 경로라, OAuth App에 등록된 콜백 URL을 **추가로 건드릴 필요 없음** (GitHub이 subpath redirect_uri를 허용).
+- 튜터도 학생과 **같은 콜백 URL(`/github/callback/`)** 을 쓴다 — 세션 state 로 흐름 구분. OAuth App 에 콜백 URL 을 1개만 등록하면 되고, 이미 등록돼 있으면 **추가 작업 없음**.
 - 기존 `*/5 * * * * python manage.py github_sync` 배치가 피드백 이슈 재시도(`sync_pending_feedback_issues`)도 함께 처리 — 별도 cron 불필요.
 - 튜터가 GitHub 연결을 안 하면 이 기능만 비활성, 나머지는 그대로.
