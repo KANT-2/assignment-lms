@@ -122,3 +122,79 @@ class SubmissionPush(models.Model):
         self.state = (
             self.State.FAILED if self.attempts >= MAX_ATTEMPTS else self.State.PENDING
         )
+
+
+class TutorGithubAccount(models.Model):
+    """튜터 GitHub OAuth 연결 정보. 튜터 1명 운영이라 사실상 1행.
+
+    이 계정 토큰으로 학생 공개 저장소에 '피드백 이슈'를 남긴다 (FeedbackIssue).
+    """
+
+    tutor_id = models.IntegerField(unique=True, help_text="accounts_user.id (FK 아님)")
+
+    github_user_id = models.BigIntegerField()
+    github_login = models.CharField(max_length=100)
+    github_name = models.CharField(max_length=200, blank=True)
+
+    # Fernet 로 암호화된 액세스 토큰. 접근은 token / set_token 으로만.
+    access_token_encrypted = models.TextField()
+    token_scope = models.CharField(max_length=200, blank=True)
+
+    connected_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "github_tutor_account"
+
+    def __str__(self):
+        return f"tutor {self.tutor_id} → @{self.github_login}"
+
+    @property
+    def token(self) -> str:
+        return crypto.decrypt(self.access_token_encrypted)
+
+    def set_token(self, raw: str) -> None:
+        self.access_token_encrypted = crypto.encrypt(raw)
+
+
+class FeedbackIssue(models.Model):
+    """제출물 1건에 대한 튜터 피드백 → 학생 저장소 이슈 동기화 상태."""
+
+    class State(models.TextChoices):
+        PENDING = "PENDING", "대기"
+        CREATED = "CREATED", "이슈 생성됨"
+        COMMENTED = "COMMENTED", "코멘트 추가됨"
+        SKIPPED = "SKIPPED", "대상 아님"
+        FAILED = "FAILED", "실패"
+
+    submission = models.OneToOneField(
+        Submission, on_delete=models.CASCADE, related_name="github_feedback_issue"
+    )
+
+    state = models.CharField(max_length=12, choices=State.choices, default=State.PENDING)
+    issue_number = models.PositiveIntegerField(null=True, blank=True)
+    issue_url = models.URLField(blank=True)
+
+    # 마지막으로 반영한 피드백 본문의 해시 — 같으면 재게시하지 않는다.
+    feedback_hash = models.CharField(max_length=64, blank=True)
+
+    attempts = models.PositiveIntegerField(default=0)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "github_feedback_issue"
+        indexes = [models.Index(fields=["state"])]
+
+    def __str__(self):
+        return f"feedback-issue submission#{self.submission_id} {self.state}"
+
+    def mark_attempt_failed(self, message: str) -> None:
+        self.attempts += 1
+        self.last_attempt_at = timezone.now()
+        self.error_message = message[:2000]
+        self.state = (
+            self.State.FAILED if self.attempts >= MAX_ATTEMPTS else self.State.PENDING
+        )

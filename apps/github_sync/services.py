@@ -13,7 +13,9 @@ apps/github_sync/services.py
 """
 from __future__ import annotations
 
+import hashlib
 import logging
+from urllib.parse import quote
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -26,7 +28,12 @@ from apps.core.models import Submission
 
 from . import github_api
 from .github_api import GithubApiError
-from .models import StudentGithubAccount, SubmissionPush
+from .models import (
+    FeedbackIssue,
+    StudentGithubAccount,
+    SubmissionPush,
+    TutorGithubAccount,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -272,3 +279,196 @@ def try_sync_now(push: SubmissionPush) -> None:
         sync_one(push)
     except Exception:  # noqa: BLE001 — 제출 흐름을 절대 막지 않는다
         logger.exception("github 즉시 동기화 중 예외 (push#%s)", push.pk)
+
+
+# ─────────────────────────────────────────────────────────────
+# 튜터 피드백 → 학생 저장소 이슈
+# ─────────────────────────────────────────────────────────────
+def tutor_account() -> TutorGithubAccount | None:
+    """연결된 튜터 GitHub 계정 (운영상 1행). 미설정/미연결이면 None."""
+    if not enabled():
+        return None
+    return TutorGithubAccount.objects.first()
+
+
+def tutor_enabled() -> bool:
+    return tutor_account() is not None
+
+
+def _feedback_hash(text: str) -> str:
+    return hashlib.sha256((text or "").encode()).hexdigest()
+
+
+def _submission_permalink(push: SubmissionPush, account: StudentGithubAccount) -> str:
+    sha = push.finalized_commit_sha or push.commit_sha
+    if not (account.repo_full_name and sha and push.committed_path):
+        return account.repo_url
+    return (
+        f"https://github.com/{account.repo_full_name}/blob/{sha}/"
+        + quote(push.committed_path)
+    )
+
+
+def _issue_title(submission, score: int) -> str:
+    return f"[{submission.assignment.title}] 튜터 피드백 · {score}점"
+
+
+def _issue_body(submission, evaluation, permalink: str, student_login: str) -> str:
+    return "\n".join(
+        [
+            f"@{student_login} 님, 튜터 피드백이 등록되었습니다.",
+            "",
+            f"- **과제:** {submission.assignment.title}",
+            f"- **점수:** {evaluation.score}점",
+            f"- **제출 파일:** {permalink}",
+            "",
+            "---",
+            "",
+            (evaluation.feedback or "_(피드백 본문 없음)_"),
+            "",
+            "---",
+            "_이 이슈는 LMS에서 튜터 평가 저장 시 자동으로 생성·갱신됩니다._",
+        ]
+    )
+
+
+def _comment_body(evaluation) -> str:
+    return "\n".join(
+        [
+            f"**피드백이 수정되었습니다.** (점수 {evaluation.score}점)",
+            "",
+            "---",
+            "",
+            (evaluation.feedback or "_(피드백 본문 없음)_"),
+        ]
+    )
+
+
+def sync_feedback_issue(fi: FeedbackIssue) -> FeedbackIssue:
+    """FeedbackIssue 1건 처리 — 이슈 생성 또는 코멘트 추가. 결과를 저장한다."""
+    submission = fi.submission
+
+    # 팀 과제는 학생 개인 저장소가 없어 대상 아님
+    if submission.assignment.is_team or submission.student_id is None:
+        fi.state = FeedbackIssue.State.SKIPPED
+        fi.save(update_fields=["state", "updated_at"])
+        return fi
+
+    account = tutor_account()
+    if account is None:
+        fi.state = FeedbackIssue.State.PENDING
+        fi.save(update_fields=["state", "updated_at"])
+        return fi
+
+    evaluation = getattr(submission, "evaluation", None)
+    if evaluation is None:
+        fi.state = FeedbackIssue.State.PENDING
+        fi.save(update_fields=["state", "updated_at"])
+        return fi
+
+    student_account = StudentGithubAccount.objects.filter(
+        student_id=submission.student_id
+    ).first()
+    push = SubmissionPush.objects.filter(submission=submission).first()
+    if (
+        student_account is None
+        or push is None
+        or push.state != SubmissionPush.State.SYNCED
+    ):
+        # 학생 저장소에 파일이 아직 올라가지 않음 — 나중에 커맨드가 재시도
+        fi.state = FeedbackIssue.State.PENDING
+        fi.save(update_fields=["state", "updated_at"])
+        return fi
+
+    new_hash = _feedback_hash(evaluation.feedback)
+    if fi.issue_number and fi.feedback_hash == new_hash:
+        return fi  # 이미 반영됨 — no-op
+
+    token = account.token
+    repo = student_account.repo_full_name
+    permalink = _submission_permalink(push, student_account)
+
+    try:
+        if not fi.issue_number:
+            issue = github_api.create_issue(
+                token,
+                repo,
+                _issue_title(submission, evaluation.score),
+                _issue_body(
+                    submission, evaluation, permalink, student_account.github_login
+                ),
+            )
+            fi.issue_number = issue["number"]
+            fi.issue_url = issue["html_url"]
+            fi.state = FeedbackIssue.State.CREATED
+        else:
+            github_api.add_issue_comment(
+                token, repo, fi.issue_number, _comment_body(evaluation)
+            )
+            fi.state = FeedbackIssue.State.COMMENTED
+    except (GithubApiError, OSError, ValueError) as exc:
+        logger.warning("피드백 이슈 동기화 실패 (submission#%s): %s", submission.pk, exc)
+        fi.mark_attempt_failed(str(exc))
+        fi.save()
+        account.last_error = str(exc)[:2000]
+        account.save(update_fields=["last_error"])
+        return fi
+
+    fi.feedback_hash = new_hash
+    fi.attempts += 1
+    fi.error_message = ""
+    fi.last_attempt_at = timezone.now()
+    fi.save()
+    account.last_used_at = timezone.now()
+    account.last_error = ""
+    account.save(update_fields=["last_used_at", "last_error"])
+    return fi
+
+
+def enqueue_feedback_issue(submission: Submission) -> FeedbackIssue | None:
+    """제출물의 튜터 피드백을 이슈로 (재)동기화한다. 팀 과제면 None."""
+    if submission.student_id is None:
+        return None
+    fi, _created = FeedbackIssue.objects.get_or_create(submission=submission)
+    # 재평가면 SKIPPED/FAILED 였어도 다시 시도할 수 있게 되돌린다 (개인 과제 한정).
+    if not submission.assignment.is_team and fi.state in (
+        FeedbackIssue.State.SKIPPED,
+        FeedbackIssue.State.FAILED,
+    ):
+        fi.state = FeedbackIssue.State.PENDING
+        fi.attempts = 0
+        fi.save(update_fields=["state", "attempts", "updated_at"])
+    return sync_feedback_issue(fi)
+
+
+def sync_pending_feedback_issues(limit: int | None = None) -> dict:
+    """PENDING 상태 FeedbackIssue 를 처리한다 (관리 커맨드용)."""
+    qs = (
+        FeedbackIssue.objects.filter(state=FeedbackIssue.State.PENDING)
+        .select_related("submission", "submission__assignment")
+        .order_by("updated_at")
+    )
+    if limit:
+        qs = qs[:limit]
+    result = {"created": 0, "commented": 0, "pending": 0, "failed": 0}
+    for fi in qs:
+        sync_feedback_issue(fi)
+        if fi.state == FeedbackIssue.State.CREATED:
+            result["created"] += 1
+        elif fi.state == FeedbackIssue.State.COMMENTED:
+            result["commented"] += 1
+        elif fi.state == FeedbackIssue.State.FAILED:
+            result["failed"] += 1
+        else:
+            result["pending"] += 1
+    return result
+
+
+def try_feedback_issue_now(submission: Submission) -> None:
+    """평가 저장 직후 즉시 시도 — 실패해도 조용히 넘어간다 (커맨드가 재시도)."""
+    if not tutor_enabled():
+        return
+    try:
+        enqueue_feedback_issue(submission)
+    except Exception:  # noqa: BLE001 — 평가 저장 흐름을 절대 막지 않는다
+        logger.exception("피드백 이슈 즉시 동기화 중 예외 (submission#%s)", submission.pk)

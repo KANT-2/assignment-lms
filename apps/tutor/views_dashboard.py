@@ -23,6 +23,8 @@ from django.utils import timezone
 
 from apps.accounts_client import services as accounts
 from apps.core.models import Assignment, Lesson, Submission
+from apps.github_sync import services as github_services
+from apps.github_sync.models import TutorGithubAccount
 
 FEEDBACK_QUEUE_LIMIT = 12
 LESSON_LIMIT = 4  # 대시보드는 최근 4개만. 나머지는 강의안 관리에서.
@@ -215,6 +217,13 @@ def dashboard(request):
             "needs_attention": needs_attention,
         })
 
+    github_enabled = github_services.enabled()
+    github_account = (
+        TutorGithubAccount.objects.filter(tutor_id=request.user.id).first()
+        if github_enabled
+        else None
+    )
+
     summary = {
         "ongoing": ongoing_count,
         "pending": pending_count,
@@ -237,5 +246,7 @@ def dashboard(request):
             "lesson_total": summary["lessons"],
             "lesson_prep_needed": prep_needed,
             "slack_connected": False,  # 연동 인프라 미구현
+            "github_enabled": github_enabled,
+            "github_account": github_account,
         },
     )

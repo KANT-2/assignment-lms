@@ -46,3 +46,10 @@ class Command(BaseCommand):
 
         finalized = services.finalize_due(timezone.now())
         self.stdout.write(f"finalize_due: 최종본 커밋 {finalized}건")
+
+        if services.tutor_enabled():
+            fb = services.sync_pending_feedback_issues(limit=options["limit"])
+            self.stdout.write(
+                f"feedback_issues: 생성 {fb['created']} · 코멘트 {fb['commented']} · "
+                f"대기 {fb['pending']} · 실패 {fb['failed']}"
+            )
