@@ -193,15 +193,40 @@ class LinkSubmissionTests(TestCase):
 
     @patch("apps.github_sync.services.github_api.get_file_sha", return_value=None)
     @patch("apps.github_sync.services.github_api.put_file", return_value="sha1")
-    @patch("apps.github_sync.services.github_api.get_file_content", return_value=b"df = 1\n")
-    def test_blob_link_is_mirrored(self, get_content, put_file, get_sha):
+    def test_blob_link_is_mirrored(self, put_file, get_sha):
+        # 실제 get_file_content 를 태워 인자 순서 회귀를 막는다 (requests 만 목).
+        import base64
+
+        from apps.github_sync import github_api
+
+        captured = {}
+
+        class _Resp:
+            status_code = 200
+            content = b"x"
+
+            def json(self):
+                return {
+                    "type": "file", "encoding": "base64",
+                    "content": base64.b64encode(b"df = 1\n").decode(),
+                }
+
+        def _fake_request(method, url, token, **kwargs):
+            captured["url"] = url
+            captured["params"] = kwargs.get("params")
+            return _Resp()
+
         sub = self._submission_with_links(
             "https://github.com/nelson/other-repo/blob/main/week3/sol.py"
         )
-        services.sync_one(services.enqueue(sub))
-        get_content.assert_called_once_with(
-            "gho_test", "nelson", "other-repo", "main", "week3/sol.py"
+        with patch.object(github_api, "_request", _fake_request):
+            services.sync_one(services.enqueue(sub))
+
+        self.assertEqual(
+            captured["url"],
+            "https://api.github.com/repos/nelson/other-repo/contents/week3/sol.py",
         )
+        self.assertEqual(captured["params"], {"ref": "main"})
         committed = [c.args[2] for c in put_file.call_args_list]
         self.assertTrue(any(p.endswith("/sol.py") for p in committed))
         sub.github_push.refresh_from_db()
