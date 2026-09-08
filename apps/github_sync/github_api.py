@@ -99,6 +99,21 @@ def get_file_sha(token: str, repo: str, path: str) -> str | None:
     return data.get("sha")
 
 
+def get_file_content(token: str, owner: str, repo: str, path: str, ref: str | None = None) -> bytes:
+    """공개/접근 가능한 저장소의 파일 1개 내용을 bytes 로 가져온다.
+
+    디렉터리이거나, 파일이 너무 커서(>1MB) Contents API 가 내용을 안 주면 GithubApiError.
+    """
+    url = f"{API_ROOT}/repos/{owner}/{repo}/contents/{quote(path)}"
+    params = {"ref": ref} if ref else None
+    data = _ok(_request("GET", url, token, params=params))
+    if isinstance(data, list):
+        raise GithubApiError(f"경로가 디렉터리입니다: {path}")
+    if data.get("type") != "file" or data.get("encoding") != "base64" or not data.get("content"):
+        raise GithubApiError(f"파일 내용을 가져올 수 없습니다: {path}")
+    return base64.b64decode(data["content"])
+
+
 def create_issue(token: str, repo: str, title: str, body: str) -> dict:
     """공개 저장소에 이슈 1건 생성. {number, html_url} 반환."""
     data = _ok(

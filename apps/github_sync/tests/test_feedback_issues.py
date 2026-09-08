@@ -75,9 +75,25 @@ class FeedbackIssueTests(TestCase):
         create_issue.assert_called_once()
         _, repo, title, body = create_issue.call_args[0]
         self.assertEqual(repo, "nelson/lms-assignments")
-        self.assertIn("blob/abc123/", body)
+        self.assertIn("tree/abc123/", body)
         self.assertIn("@nelson", body)
         self.assertIn(str(ev.score), title)
+
+    @patch("apps.github_sync.services.github_api.create_issue",
+           return_value={"number": 7, "html_url": "u"})
+    def test_issue_body_lists_original_links(self, create_issue):
+        self._tutor()
+        SubmissionFile.objects.create(
+            submission=self.submission, kind="OTHER",
+            file_url="https://github.com/nelson/other-repo/blob/main/x.py",
+            file_name="https://github.com/nelson/other-repo/blob/main/x.py",
+            file_size=0,
+        )
+        self._evaluate()
+        services.enqueue_feedback_issue(self.submission)
+        body = create_issue.call_args[0][3]
+        self.assertIn("원본 링크", body)
+        self.assertIn("github.com/nelson/other-repo/blob/main/x.py", body)
 
     @patch("apps.github_sync.services.github_api.add_issue_comment",
            return_value={"id": 1, "html_url": "u"})
