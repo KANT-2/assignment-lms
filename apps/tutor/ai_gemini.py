@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from django.conf import settings
 from google import genai
 from google.genai import types
-from google.genai.errors import ServerError
+from google.genai.errors import ClientError, ServerError
 from pydantic import BaseModel
 
 from apps.common.preview import _notebook_cells, _read_text
@@ -199,11 +199,55 @@ def _call(client, model: str, prompt: str) -> tuple[int, str]:
     return max(0, min(100, int(parsed.score))), comment
 
 
+def _attempt_reason(exc: Exception) -> str:
+    """모델 1개가 실패한 이유를 짧게 (튜터 메시지용)."""
+    if isinstance(exc, ServerError):
+        code = getattr(exc, "code", None)
+        return {503: "혼잡(503)", 504: "타임아웃(504)"}.get(code, f"서버오류({code or '5xx'})")
+    return "응답 해석 실패"
+
+
+def failure_reason(exc: Exception) -> str:
+    """AI 채점 실패 예외를 튜터가 바로 이해할 수 있는 한 문장으로 바꾼다.
+
+    재시도가 의미 있는 실패(혼잡·타임아웃)와 그렇지 않은 실패(키·모델명·한도)를 구분한다.
+    """
+    if isinstance(exc, NoReadableContent):
+        return "AI가 읽을 수 있는 제출 내용이 없습니다."
+    if isinstance(exc, RuntimeError):
+        return "AI 채점이 설정되지 않았습니다 (GEMINI_API_KEY 없음). 관리자에게 문의하세요."
+
+    attempts = getattr(exc, "attempts", None)
+    summary = f" — {', '.join(f'{m}: {r}' for m, r in attempts)}" if attempts else ""
+
+    if isinstance(exc, ClientError):
+        code = getattr(exc, "code", None)
+        if code == 429:
+            return "AI 채점 사용량 한도(rate limit)를 초과했습니다. 잠시 후 다시 시도해 주세요."
+        if code in (401, 403):
+            return "AI 채점 API 키가 유효하지 않습니다. 관리자에게 문의하세요."
+        if code == 404:
+            return "설정된 AI 모델을 찾을 수 없습니다. 관리자에게 GEMINI_MODEL 확인을 요청하세요."
+        return f"AI 채점 요청이 거부되었습니다 (HTTP {code or '4xx'}). 관리자에게 문의하세요."
+    if isinstance(exc, ServerError):
+        if attempts:
+            return (
+                f"AI 모델이 모두 실패했습니다{summary}. "
+                "잠시 후 '✨ AI 다시 채점'을 누르거나, 계속되면 관리자에게 GEMINI_MODEL 확인을 요청하세요."
+            )
+        return "AI 채점 서버가 혼잡합니다. 잠시 후 '✨ AI 다시 채점'을 눌러주세요."
+    if isinstance(exc, ValueError):
+        return f"AI 응답을 해석하지 못했습니다{summary}. 다시 시도해 주세요."
+    return f"AI 채점에 실패했습니다 ({type(exc).__name__}). 잠시 후 다시 시도해 주세요."
+
+
 def generate(submission: Submission) -> AiResult:
     """제출물 하나에 대한 Gemini 1차 평가. 실패 시 예외를 그대로 올린다.
 
-    설정 모델이 5xx(혼잡)면 GEMINI_FALLBACK_MODELS 를 순서대로 재시도하고,
-    전부 실패하면 마지막 ServerError 를 올린다 (뷰가 "혼잡" 메시지).
+    설정 모델이 5xx(혼잡·타임아웃)거나 응답을 못 만들면 GEMINI_FALLBACK_MODELS 를 순서대로
+    재시도한다. 전부 실패하면 마지막 예외에 .attempts (모델별 실패 사유) 를 붙여 올린다.
+    ClientError(4xx: 키·모델명·한도)는 재시도 없이 바로 올린다.
+    뷰는 ai_gemini.failure_reason(exc) 로 튜터에게 원인을 보여준다.
     """
     if not settings.GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY 가 설정되지 않았습니다.")
@@ -218,13 +262,18 @@ def generate(submission: Submission) -> AiResult:
         http_options=types.HttpOptions(timeout=20_000),
     )
 
-    last_error: ServerError | None = None
+    last_error: Exception | None = None
+    attempts: list[tuple[str, str]] = []
     for model in _models():
         try:
             score, comment = _call(client, model, prompt)
-        except ServerError as exc:  # 5xx (503 UNAVAILABLE / 504 DEADLINE) — 다음 모델로
+        except (ServerError, ValueError) as exc:  # 혼잡·타임아웃·응답 해석 실패 → 다음 모델
             last_error = exc
+            attempts.append((model, _attempt_reason(exc)))
             continue
         return AiResult(score=score, comment=comment, unreadable_links=unreadable_links)
 
-    raise last_error  # 모든 모델이 혼잡
+    if last_error is None:  # _models() 가 비어 있음 (GEMINI_MODEL 미설정)
+        raise RuntimeError("설정된 AI 모델이 없습니다 (GEMINI_MODEL 확인).")
+    last_error.attempts = attempts  # 뷰가 failure_reason() 에서 사용
+    raise last_error
