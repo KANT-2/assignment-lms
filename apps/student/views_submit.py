@@ -24,12 +24,10 @@ from apps.accounts_client import services as accounts
 from apps.common.preview import (  # noqa: F401
     IMAGE_PREVIEW_EXTENSIONS,
     _notebook_cells,
+    _preview,
     _read_text,
     _storage_name,
     _submission_kind,
-)
-from apps.common.preview import (
-    _preview as _common_preview,
 )
 from apps.core.models import Assignment, Submission, SubmissionFile
 from apps.github_sync import services as github_services
@@ -49,17 +47,6 @@ IMAGE_CONTENT_TYPES = {
     ".png": "image/png",
     ".webp": "image/webp",
 }
-def _preview(submission_file):
-    """이전 import 경로를 유지하면서 공통 미리보기 데이터를 사용한다."""
-    preview = _common_preview(submission_file)
-    parsed = urlparse(submission_file.file_url)
-    preview["is_link"] = (
-        submission_file.file_size == 0
-        and submission_file.file_name == submission_file.file_url
-        and parsed.scheme in {"http", "https"}
-        and bool(parsed.hostname)
-    )
-    return preview
 
 
 def _submitted_resources(request):

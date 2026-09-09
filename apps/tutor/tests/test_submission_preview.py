@@ -46,6 +46,16 @@ class TutorSubmissionPreviewTests(TestCase):
             file_size=len(content),
         )
 
+    def _link(self, url):
+        # 링크 제출은 file_size=0, file_name=file_url 로 저장된다 (student.views_submit).
+        return SubmissionFile.objects.create(
+            submission=self.submission,
+            kind=SubmissionFile.Kind.OTHER,
+            file_url=url,
+            file_name=url,
+            file_size=0,
+        )
+
     def _review(self):
         with (
             patch("apps.tutor.views_review._neighbors", return_value=(None, None, (1, 1))),
@@ -98,4 +108,17 @@ class TutorSubmissionPreviewTests(TestCase):
         response = self._review()
 
         self.assertContains(response, "미리보기 미지원")
+
+    def test_review_renders_submitted_link_as_clickable(self):
+        self._link("https://github.com/nelson/lms-assignments")
+
+        response = self._review()
+
+        self.assertEqual(response.status_code, 200)
+        # 파일명 자리에 plain text 가 아니라 실제 <a href> 로 나와야 한다 (UX-1)
+        self.assertContains(
+            response, 'href="https://github.com/nelson/lms-assignments"'
+        )
+        self.assertContains(response, "제출 링크")
+        self.assertNotContains(response, "미리보기 미지원")
 
