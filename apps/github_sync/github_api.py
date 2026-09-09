@@ -99,9 +99,10 @@ def get_file_sha(token: str, repo: str, path: str) -> str | None:
     return data.get("sha")
 
 
-def get_file_content(token: str, owner: str, repo: str, path: str, ref: str | None = None) -> bytes:
+def get_file_content(token: str, owner: str, repo: str, ref: str, path: str) -> bytes:
     """공개/접근 가능한 저장소의 파일 1개 내용을 bytes 로 가져온다.
 
+    인자 순서는 _parse_github_blob() 반환 튜플 (owner, repo, ref, path) 과 맞춘다.
     디렉터리이거나, 파일이 너무 커서(>1MB) Contents API 가 내용을 안 주면 GithubApiError.
     """
     url = f"{API_ROOT}/repos/{owner}/{repo}/contents/{quote(path)}"

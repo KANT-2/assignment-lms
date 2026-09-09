@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import posixpath
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -119,7 +119,9 @@ def _parse_github_blob(url: str) -> tuple[str, str, str, str] | None:
     """GitHub blob/raw URL → (owner, repo, ref, path). 파일 특정 불가하면 None."""
     parsed = urlparse(url)
     host = parsed.netloc.lower()
-    parts = [p for p in parsed.path.split("/") if p]
+    # URL 은 이미 퍼센트 인코딩돼 있으므로 디코드해서 실제 경로/브랜치명을 얻는다
+    # (예: "chapter%2017/x.ipynb" → "chapter 17/x.ipynb").
+    parts = [unquote(p) for p in parsed.path.split("/") if p]
     if host in ("github.com", "www.github.com"):
         if len(parts) >= 5 and parts[2] == "blob":
             return parts[0], parts[1], parts[3], "/".join(parts[4:])
