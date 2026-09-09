@@ -135,6 +135,10 @@ GITHUB_OAUTH_CLIENT_ID = env("GITHUB_OAUTH_CLIENT_ID")
 GITHUB_OAUTH_CLIENT_SECRET = env("GITHUB_OAUTH_CLIENT_SECRET")
 GITHUB_TOKEN_ENC_KEY = env("GITHUB_TOKEN_ENC_KEY")
 GITHUB_SUBMISSION_REPO_NAME = env("GITHUB_SUBMISSION_REPO_NAME", "lms-assignments")
+# OAuth 콜백(redirect_uri)을 고정하고 싶을 때. 비우면 요청이 들어온 호스트로 자동 계산.
+# OAuth App 에 등록한 "Authorization callback URL" 과 정확히 같아야 한다 (호스트·포트·경로).
+# 예: LAN IP 로 접속시켜야 하면 http://10.2.16.208:8000/github/callback/
+GITHUB_OAUTH_REDIRECT_URI = env("GITHUB_OAUTH_REDIRECT_URI", "")
 
 # AI 채점이 학생 GitHub 공개 레포 단일 파일 링크를 읽을 때 rate limit 상향용 (apps.tutor.github_fetch).
 # 없어도 동작 (무인증, 60/hr). 있으면 5000/hr.

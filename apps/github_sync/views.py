@@ -53,6 +53,11 @@ def _external_student_id(request) -> int:
 
 
 def _callback_uri(request) -> str:
+    # OAuth App 에 등록한 콜백 URL 과 정확히 일치해야 한다. 접속 호스트가 여러 개면
+    # (localhost / LAN IP / 도메인) settings.GITHUB_OAUTH_REDIRECT_URI 로 고정한다.
+    override = getattr(settings, "GITHUB_OAUTH_REDIRECT_URI", "")
+    if override:
+        return override
     return request.build_absolute_uri(reverse("github_sync:callback"))
 
 

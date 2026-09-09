@@ -26,6 +26,16 @@ class TutorOAuthTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertIn("github.com/login/oauth/authorize", resp["Location"])
 
+    @override_settings(
+        GITHUB_OAUTH_REDIRECT_URI="http://10.2.16.208:8000/github/callback/"
+    )
+    def test_connect_uses_fixed_redirect_uri(self):
+        resp = self.client.get(reverse("github_sync:tutor-connect"))
+        self.assertIn(
+            "redirect_uri=http%3A%2F%2F10.2.16.208%3A8000%2Fgithub%2Fcallback%2F",
+            resp["Location"],
+        )
+
     def test_callback_rejects_bad_state(self):
         session = self.client.session
         session["github_oauth_state_tutor"] = "expected"
