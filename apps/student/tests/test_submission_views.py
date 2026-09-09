@@ -102,8 +102,12 @@ class SubmissionViewTests(TestCase):
         self.assertContains(preview_response, "report.sql")
         self.assertContains(preview_response, "SELECT id, title FROM assignment")
 
-    def test_submission_accepts_multiple_files_and_github_link(self):
+    @patch(
+        "apps.student.views_submit.github_fetch.probe_github_file", return_value="ok"
+    )
+    def test_submission_accepts_multiple_files_and_github_blob_link(self, _probe):
         assignment = self.assignment()
+        blob = "https://github.com/example/assignment/blob/main/solution.py"
 
         response = self.client.post(
             reverse("student:assignment-submit", args=[assignment.id]),
@@ -113,7 +117,7 @@ class SubmissionViewTests(TestCase):
                     SimpleUploadedFile("first.txt", b"first"),
                     SimpleUploadedFile("second.sql", b"SELECT 2;"),
                 ],
-                "links": ["https://github.com/example/assignment"],
+                "links": [blob],
             },
         )
 
@@ -125,18 +129,57 @@ class SubmissionViewTests(TestCase):
         self.assertEqual(submission.files.count(), 3)
         self.assertSetEqual(
             set(submission.files.values_list("file_name", flat=True)),
-            {
-                "first.txt",
-                "second.sql",
-                "https://github.com/example/assignment",
-            },
+            {"first.txt", "second.sql", blob},
         )
 
-        preview_response = self.client.get(
-            reverse("student:assignment-preview", args=[assignment.id])
+    @patch(
+        "apps.student.views_submit.github_fetch.probe_github_file",
+        return_value="not_blob",
+    )
+    def test_submission_rejects_github_repo_or_folder_link(self, _probe):
+        assignment = self.assignment()
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {"links": ["https://github.com/example/assignment"]},
         )
-        self.assertContains(preview_response, "링크 열기")
-        self.assertContains(preview_response, "https://github.com/example/assignment")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "저장소·폴더 링크는 제출할 수 없습니다")
+        self.assertFalse(Submission.objects.filter(assignment=assignment).exists())
+
+    @patch(
+        "apps.student.views_submit.github_fetch.probe_github_file",
+        return_value="not_found",
+    )
+    def test_submission_rejects_unreachable_github_link(self, _probe):
+        assignment = self.assignment()
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {"links": ["https://github.com/example/private/blob/main/x.py"]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "GitHub 링크를 열 수 없습니다")
+        self.assertFalse(Submission.objects.filter(assignment=assignment).exists())
+
+    @patch(
+        "apps.student.views_submit.github_fetch.probe_github_file", return_value="error"
+    )
+    def test_submission_allows_github_link_when_probe_times_out(self, _probe):
+        # 타임아웃은 우리 쪽 문제 — 학생을 막지 않는다.
+        assignment = self.assignment()
+        blob = "https://github.com/example/assignment/blob/main/a.py"
+
+        response = self.client.post(
+            reverse("student:assignment-submit", args=[assignment.id]),
+            {"links": [blob]},
+        )
+
+        self.assertRedirects(
+            response, reverse("student:assignment-preview", args=[assignment.id])
+        )
 
     def test_submission_accepts_non_github_web_link(self):
         assignment = self.assignment()

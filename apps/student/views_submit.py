@@ -34,7 +34,10 @@ from apps.common.preview import (
 from apps.core.models import Assignment, Submission, SubmissionFile
 from apps.github_sync import services as github_services
 from apps.notifications.slack import notify_dm_ax
-from apps.tutor import grading  # 회차 마감 여부 조회 (score_locked_close) — 도메인 공용 모듈
+
+# github_fetch: 제출 링크 검증 (GitHub 단일 파일 링크만 허용)
+# grading: 회차 마감 여부 조회 (score_locked_close) — 도메인 공용 모듈
+from apps.tutor import github_fetch, grading
 
 from .forms import MAX_UPLOAD_SIZE, AssignmentSubmissionForm
 from .identity import external_student_id
@@ -76,7 +79,34 @@ def _submitted_resources(request):
             return uploaded_files, links, "http 또는 https로 시작하는 올바른 링크를 입력해 주세요."
         if len(link) > 200:
             return uploaded_files, links, "링크는 200자 이하로 입력해 주세요."
+        error = _github_link_error(link)
+        if error:
+            return uploaded_files, links, error
     return uploaded_files, links, None
+
+
+def _github_link_error(link):
+    """GitHub 링크면 'AI 채점 가능한 단일 파일 링크' 인지 검증. 문제 있으면 안내 문구, 없으면 None.
+
+    - 저장소 루트 / 폴더(tree) / PR / gist → 거부 (AI 가 코드를 읽지 못함)
+    - blob/raw 형태지만 비공개·404·삭제 → 거부
+    - 네트워크·타임아웃 → 통과 (우리 쪽 문제로 학생을 막지 않는다)
+    비 GitHub 링크(블로그·배포 URL 등)는 그대로 통과.
+    """
+    if not github_fetch.is_github_url(link):
+        return None
+    status = github_fetch.probe_github_file(link)
+    if status == "not_blob":
+        return (
+            "GitHub 저장소·폴더 링크는 제출할 수 없습니다. 특정 파일 페이지"
+            "(.../blob/... 주소)를 붙여주세요. 파일이 여러 개면 링크를 여러 개 추가하면 됩니다."
+        )
+    if status == "not_found":
+        return (
+            f"GitHub 링크를 열 수 없습니다: {link} — 공개 저장소의 파일 링크인지, "
+            "주소가 정확한지 확인해주세요."
+        )
+    return None
 
 
 def student_required(view_func):
