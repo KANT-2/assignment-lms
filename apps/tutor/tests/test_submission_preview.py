@@ -122,3 +122,42 @@ class TutorSubmissionPreviewTests(TestCase):
         self.assertContains(response, "제출 링크")
         self.assertNotContains(response, "미리보기 미지원")
 
+    def test_review_offers_download_for_every_file(self):
+        text_file = self._file("solution.sql", b"SELECT 1;")
+        binary = self._file("archive.bin", b"\x00\x01")
+
+        response = self._review()
+
+        for f in (text_file, binary):
+            self.assertContains(
+                response,
+                reverse("tutor:submission-file-download", args=[f.pk]),
+            )
+
+    def test_file_download_is_attachment(self):
+        f = self._file("archive.bin", b"\x00\x01\x02\x03")
+
+        response = self.client.get(
+            reverse("tutor:submission-file-download", args=[f.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertIn("archive.bin", response["Content-Disposition"])
+
+    def test_file_download_requires_tutor(self):
+        f = self._file("solution.sql", b"SELECT 1;")
+        with patch("apps.tutor.views_manage.accounts.is_tutor", return_value=False):
+            response = self.client.get(
+                reverse("tutor:submission-file-download", args=[f.pk])
+            )
+        self.assertEqual(response.status_code, 403)
+
+    def test_link_submission_has_no_download(self):
+        self._link("https://github.com/x/y/blob/main/a.py")
+
+        response = self._review()
+
+        self.assertNotContains(response, "⬇ 다운로드")
+        self.assertContains(response, "링크 열기")
+

@@ -57,6 +57,10 @@
   .tt-scope .preview-panel{overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:12px;}
   .tt-scope .preview-panel:last-child{margin-bottom:0;}
   .tt-scope .preview-file-name,.tt-scope .cell-label{padding:8px 12px;color:var(--text-faint);background:var(--surface-sunken);font-size:11px;font-weight:700;}
+  .tt-scope .preview-file-name{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .tt-scope .preview-file-name > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tt-scope .preview-download{flex-shrink:0;color:var(--accent-text);text-decoration:none;font-weight:700;}
+  .tt-scope .preview-download:hover{text-decoration:underline;}
   .tt-scope .code-preview,.tt-scope .text-preview{margin:0;padding:14px;overflow:auto;max-height:420px;white-space:pre;}
   .tt-scope .code-preview{color:#f1f4ff;background:#1e2433;font:12.5px/1.7 Consolas,"SFMono-Regular",monospace;}
   .tt-scope .text-preview{color:var(--text);background:var(--surface);font:13px/1.7 var(--font-sans);white-space:pre-wrap;}
@@ -176,7 +180,10 @@
           <a class="btn btn-sm" href="{{ preview.file.file_url }}" target="_blank" rel="noopener noreferrer">링크 열기 ↗</a>
         </div>
         {% else %}
-        <div class="preview-file-name">{{ preview.file.file_name }}</div>
+        <div class="preview-file-name">
+          <span>{{ preview.file.file_name }}</span>
+          <a class="preview-download" href="{% url 'tutor:submission-file-download' preview.file.id %}" download>⬇ 다운로드</a>
+        </div>
         {% if preview.is_image %}
           <img class="submission-image" src="{% url 'tutor:submission-file-inline' preview.file.id %}" alt="{{ preview.file.file_name }} 미리보기" loading="lazy">
         {% elif preview.is_pdf %}
