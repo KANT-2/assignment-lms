@@ -212,6 +212,21 @@ def submission_file_inline(request, file_id):
 
 
 @tutor_required
+def submission_file_download(request, file_id):
+    """튜터 검토 화면에서 제출 파일을 내려받는다 (미리보기 미지원 파일 포함)."""
+    submission_file = get_object_or_404(SubmissionFile, pk=file_id)
+    try:
+        file_handle = default_storage.open(_storage_name(submission_file.file_url), "rb")
+    except (FileNotFoundError, OSError, ValueError):
+        raise Http404("저장된 제출 파일을 찾을 수 없습니다.") from None
+    return FileResponse(
+        file_handle,
+        as_attachment=True,
+        filename=Path(submission_file.file_name).name or "submission",
+    )
+
+
+@tutor_required
 @require_POST
 def ai_evaluation_generate(request, pk):
     """FR-012 — AI 1차 평가 생성/재생성 (기존 AiEvaluation 을 덮어씀)."""
