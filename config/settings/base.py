@@ -140,6 +140,11 @@ GITHUB_SUBMISSION_REPO_NAME = env("GITHUB_SUBMISSION_REPO_NAME", "lms-assignment
 # 없어도 동작 (무인증, 60/hr). 있으면 5000/hr.
 GITHUB_API_TOKEN = env("GITHUB_API_TOKEN")
 
+# 제출·평가 저장 시 GitHub push/이슈 생성을 요청 사이클 안에서 동기 실행할지.
+# 기본 False → 백그라운드 스레드 (github_sync.background). 실패분은 manage.py github_sync 배치가 재시도.
+# True 는 테스트/관리 명령에서 결과를 확정적으로 보고 싶을 때만.
+GITHUB_SYNC_SYNC = env_bool("GITHUB_SYNC_SYNC", False)
+
 # --- Slack 알림 (apps.notifications.slack) ---
 # 기본은 백그라운드 스레드로 발송 (요청 사이클을 막지 않음).
 # True 면 그 자리에서 동기 실행 — 테스트/관리 명령에서 결과를 확정적으로 보고 싶을 때.
