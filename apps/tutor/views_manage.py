@@ -234,7 +234,6 @@ def _assignment_rows():
         .annotate(
             submission_count=Count("submissions")
         )
-        .order_by("due_at")
     )
 
     for a in rows:
@@ -246,7 +245,17 @@ def _assignment_rows():
 
         a.is_past = a.due_at < now
 
-    return rows
+    open_rows = sorted(
+        (a for a in rows if not a.is_past),
+        key=lambda a: (a.created_at, a.id),
+        reverse=True,
+    )
+    closed_rows = sorted(
+        (a for a in rows if a.is_past),
+        key=lambda a: (a.due_at, a.id),
+        reverse=True,
+    )
+    return open_rows + closed_rows
 
 
 # =========================================================
