@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
-from google.genai.errors import ServerError
+from google.genai.errors import ClientError, ServerError
 
 from apps.tutor import ai_gemini
 
@@ -92,13 +92,27 @@ class GenerateMappingTests(SimpleTestCase):
         self.assertEqual(result.score, 77)
 
     @override_settings(GEMINI_MODEL="primary", GEMINI_FALLBACK_MODELS=["backup"])
-    def test_all_models_server_error_reraises(self):
+    def test_all_models_server_error_reraises_with_attempts(self):
         outcomes = {"primary": _server_error(503), "backup": _server_error(504)}
         with patch("apps.tutor.ai_gemini._read_text", return_value="code"), \
              patch("apps.tutor.ai_gemini.genai.Client",
                    side_effect=_fake_client_by_model(outcomes)):
-            with self.assertRaises(ServerError):
+            with self.assertRaises(ServerError) as ctx:
                 ai_gemini.generate(self._submission())
+        self.assertEqual(
+            ctx.exception.attempts, [("primary", "혼잡(503)"), ("backup", "타임아웃(504)")]
+        )
+
+    @override_settings(GEMINI_MODEL="primary", GEMINI_FALLBACK_MODELS=["backup"])
+    def test_falls_back_past_a_parse_failure(self):
+        outcomes = {
+            "primary": ai_gemini._GeminiResult(score=1, comment="   "),  # 빈 코멘트 → ValueError
+            "backup": ai_gemini._GeminiResult(score=80, comment="폴백이 살림."),
+        }
+        with patch("apps.tutor.ai_gemini._read_text", return_value="code"), \
+             patch("apps.tutor.ai_gemini.genai.Client",
+                   side_effect=_fake_client_by_model(outcomes)):
+            self.assertEqual(ai_gemini.generate(self._submission()).score, 80)
 
     @override_settings(GEMINI_MODEL="only", GEMINI_FALLBACK_MODELS=[])
     def test_no_fallback_configured(self):
@@ -108,3 +122,31 @@ class GenerateMappingTests(SimpleTestCase):
                    side_effect=_fake_client_by_model(outcomes)):
             with self.assertRaises(ServerError):
                 ai_gemini.generate(self._submission())
+
+
+class FailureReasonTests(SimpleTestCase):
+    def test_missing_key(self):
+        msg = ai_gemini.failure_reason(RuntimeError("GEMINI_API_KEY 가 설정되지 않았습니다."))
+        self.assertIn("관리자", msg)
+
+    def test_rate_limit(self):
+        exc = ClientError(429, {"error": {"message": "quota"}})
+        self.assertIn("한도", ai_gemini.failure_reason(exc))
+
+    def test_bad_key(self):
+        exc = ClientError(403, {"error": {"message": "forbidden"}})
+        self.assertIn("API 키", ai_gemini.failure_reason(exc))
+
+    def test_bad_model_name(self):
+        exc = ClientError(404, {"error": {"message": "not found"}})
+        self.assertIn("모델", ai_gemini.failure_reason(exc))
+
+    def test_all_models_failed_lists_attempts(self):
+        exc = _server_error(503)
+        exc.attempts = [("gemini-3.6-flash", "혼잡(503)"), ("gemini-flash-latest", "타임아웃(504)")]
+        msg = ai_gemini.failure_reason(exc)
+        self.assertIn("gemini-3.6-flash: 혼잡(503)", msg)
+        self.assertIn("gemini-flash-latest: 타임아웃(504)", msg)
+
+    def test_plain_server_error_without_attempts(self):
+        self.assertIn("혼잡", ai_gemini.failure_reason(_server_error(503)))

@@ -54,6 +54,27 @@ class AiEvalLinkMessageTests(TestCase):
         self.assertContains(response, "저장소·폴더 링크")
         self.assertContains(response, "blob")
 
+    def test_shows_specific_reason_on_rate_limit(self):
+        from google.genai.errors import ClientError
+
+        with patch(
+            "apps.tutor.views_review.ai_gemini.generate",
+            side_effect=ClientError(429, {"error": {"message": "quota"}}),
+        ):
+            response = self._post()
+        self.assertContains(response, "AI 채점 사용량 한도")
+
+    def test_shows_tried_models_when_all_fail(self):
+        from google.genai.errors import ServerError
+
+        exc = ServerError(503, {"error": {"message": "busy"}})
+        exc.attempts = [("gemini-3.6-flash", "타임아웃(504)"), ("gemini-flash-latest", "혼잡(503)")]
+        with patch(
+            "apps.tutor.views_review.ai_gemini.generate", side_effect=exc
+        ):
+            response = self._post()
+        self.assertContains(response, "gemini-3.6-flash: 타임아웃(504)")
+
     def test_unreadable_repo_link_warns_on_otherwise_ok_eval(self):
         with patch(
             "apps.tutor.views_review.ai_gemini.generate",
