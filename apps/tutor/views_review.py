@@ -28,7 +28,7 @@ from apps.common.preview import IMAGE_PREVIEW_EXTENSIONS, _preview, _storage_nam
 from apps.core.models import AiEvaluation, Evaluation, Submission, SubmissionFile
 from apps.notifications.slack import notify_dm_ax_many
 
-from . import ai_gemini
+from . import ai_gemini, github_fetch
 from .forms import EvaluationForm
 from .views_manage import (
     SORT_CHOICES,
@@ -44,6 +44,14 @@ logger = logging.getLogger(__name__)
 
 # 이전/다음 이동 시 유지할 쿼리 파라미터 (대시보드 필터/정렬)
 _CARRY_KEYS = ("q", "status", "sort")
+
+
+def _repo_or_folder_links(urls):
+    """GitHub 저장소/폴더 링크 (AI 가 코드를 못 읽는 종류) 만 추린다."""
+    return [
+        u for u in urls
+        if github_fetch.is_github_url(u) and not github_fetch.raw_url(u)
+    ]
 
 
 def _carry_qs(src) -> str:
@@ -211,12 +219,19 @@ def ai_evaluation_generate(request, pk):
     try:
         result = ai_gemini.generate(submission)
     except ai_gemini.NoReadableContent as exc:
-        detail = f": {', '.join(exc.links)}" if exc.links else " (코드/텍스트 파일이 아님)"
-        messages.error(
-            request,
-            "AI가 제출물 내용을 읽지 못했습니다" + detail
-            + ". 링크를 확인하거나 학생에게 재제출을 요청하세요.",
-        )
+        if not exc.links:
+            hint = "코드·텍스트 파일이 아니라 AI가 읽을 내용이 없습니다."
+            detail = ""
+        elif _repo_or_folder_links(exc.links):
+            hint = (
+                "GitHub 저장소·폴더 링크는 AI가 코드를 읽지 못합니다. "
+                "특정 파일 페이지(.../blob/...) 링크나 파일 첨부로 다시 제출하도록 학생에게 요청하세요."
+            )
+            detail = f" — {', '.join(exc.links)}"
+        else:
+            hint = "링크가 비공개이거나 접근할 수 없습니다. 학생에게 확인/재제출을 요청하세요."
+            detail = f" — {', '.join(exc.links)}"
+        messages.error(request, f"AI가 제출물 내용을 읽지 못했습니다{detail}. {hint}")
         return redirect(_review_url(pk, request.POST))
     except ServerError:
         logger.warning("AI 1차 평가 — Gemini 서버 혼잡 (submission=%s)", pk)
@@ -232,9 +247,14 @@ def ai_evaluation_generate(request, pk):
         defaults={"score": result.score, "comment": result.comment},
     )
     if result.unreadable_links:
+        extra = (
+            " (저장소·폴더 링크는 파일 목록만 확인됩니다)"
+            if _repo_or_folder_links(result.unreadable_links)
+            else ""
+        )
         messages.warning(
             request,
-            f"읽지 못한 링크: {', '.join(result.unreadable_links)}. "
+            f"읽지 못한 링크{extra}: {', '.join(result.unreadable_links)}. "
             "AI 평가는 나머지 자료 기준입니다.",
         )
     messages.success(

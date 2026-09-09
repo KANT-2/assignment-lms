@@ -46,6 +46,17 @@ class SubmissionViewTests(TestCase):
         values.update(overrides)
         return Assignment.objects.create(**values)
 
+    def test_submission_form_shows_github_link_guidance(self):
+        assignment = self.assignment()
+        with patch(
+            "apps.student.views_submit.github_services.enabled", return_value=True
+        ):
+            response = self.client.get(
+                reverse("student:assignment-submit", args=[assignment.id])
+            )
+        self.assertContains(response, "파일 페이지 링크")
+        self.assertContains(response, "blob")
+
     def test_personal_submission_saves_subject_and_detected_file_kind(self):
         assignment = self.assignment()
 
