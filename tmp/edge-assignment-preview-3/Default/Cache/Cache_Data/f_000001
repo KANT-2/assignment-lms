@@ -1,0 +1,1102 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>과제 목록 | AX 과제 시스템</title>
+
+  
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/common/css/app.css">
+  
+<link rel="stylesheet" href="/static/student/css/assignments.css">
+<style>
+  .app-topbar .crumb { display:none; }
+  .app-topbar .utils { margin-left:auto; }
+  .assignment-list-card { padding:12px; border-color:#edf0f5; border-radius:14px; box-shadow:0 8px 28px rgb(31 47 78 / 6%); }
+  .assignment-toolbar { display:flex; flex-direction:column; gap:12px; margin-bottom:16px; }
+  .assignment-quick-filter { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:2px 2px 12px; border-bottom:1px solid #f0f2f6; }
+  .assignment-type-tabs { display:flex; align-items:center; gap:6px; }
+  .assignment-type-tab { min-height:34px; padding:7px 16px; border:1px solid #e0e5ed; border-radius:999px; color:#687386; background:#fff; font-size:12px; font-weight:700; text-decoration:none; }
+  .assignment-type-tab:hover { border-color:#b9d2ff; color:#2867c7; }
+  .assignment-type-tab.is-active { border-color:#edf4ff; color:#2867c7; background:#edf4ff; }
+  .assignment-search-sort { display:flex; align-items:center; gap:10px; margin-left:auto; }
+  .assignment-search { position:relative; }
+  .assignment-search::before { content:"⌕"; position:absolute; top:50%; left:12px; color:#71809a; font-size:18px; transform:translateY(-52%); pointer-events:none; }
+  .assignment-search input { width:190px; min-height:36px; padding:7px 12px 7px 34px; border:1px solid #dfe4ec; border-radius:8px; color:#344258; background:#fff; font-size:12px; }
+  .assignment-search input:focus,.assignment-sort-select:focus { border-color:#8db4f7; outline:3px solid rgb(40 112 230 / 12%); }
+  .assignment-sort-select { min-width:128px; min-height:36px; padding:7px 32px 7px 12px; border:1px solid #dfe4ec; border-radius:8px; color:#536078; background:#fff; font-size:12px; font-weight:700; }
+  .assignment-list-summary { display:flex; align-items:center; gap:8px; padding:2px 4px; }
+  .assignment-list-summary .student-section-title { font-size:15px; }
+  .assignment-list-summary .assignment-count { font-size:12px; }
+  .assignment-filters { display:flex; flex-direction:column; gap:10px; width:100%; }
+  .assignment-filter-primary,.assignment-filter-secondary { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; }
+  .assignment-filter-secondary { justify-content:flex-end; padding-top:10px; border-top:1px solid #f0f2f6; }
+  .assignment-filter-group,.assignment-date-view { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .assignment-filter-primary { justify-content:flex-start; }
+  .assignment-date-view { justify-content:flex-end; margin-left:auto; }
+  .assignment-filter-label { color:#748096; font-size:11px; font-weight:700; white-space:nowrap; }
+  .assignment-filter-options { display:flex; flex-wrap:wrap; gap:6px; }
+  .assignment-filter-chip { min-height:34px; padding:7px 15px; border:1px solid #e0e5ed; border-radius:999px; color:#687386; background:#fff; font-size:12px; font-weight:700; line-height:1.35; text-decoration:none; transition:border-color .15s ease, color .15s ease, background .15s ease; }
+  .assignment-filter-chip:hover { border-color:#b9d2ff; color:#2867c7; background:#f7faff; }
+  .assignment-filter-chip.is-deadline-active,.assignment-filter-chip.is-submission-active,.assignment-filter-chip.is-date-active { border-color:#e3edff; color:#2867c7; background:#edf4ff; }
+  .assignment-calendar-filter { display:flex; align-items:center; gap:7px; margin-left:2px; }
+  .assignment-calendar-input { width:145px; min-height:34px; padding:6px 10px; border:1px solid #dfe4ec; border-radius:8px; color:#536078; background:#fff; font-size:12px; font-weight:600; }
+  .assignment-calendar-input:focus { border-color:#8db4f7; outline:3px solid rgb(40 112 230 / 12%); }
+  .assignment-calendar-clear { color:#748096; font-size:11px; font-weight:600; text-decoration:none; }
+  .assignment-date-heading { margin:18px 4px 8px; color:#4d5b70; font-size:13px; font-weight:800; }
+  .assignment-date-heading:first-child { margin-top:2px; }
+  .assignment-list-card .assignment-list { gap:12px; }
+  .assignment-list-card .assignment-row { min-height:116px; padding:20px 22px; border-color:#e5e9f0; border-radius:11px; background:#fff; box-shadow:0 1px 3px rgb(31 47 78 / 3%); }
+  .assignment-list-card .assignment-row.is-open { background:#fff; }
+  .assignment-list-card .assignment-row.is-past { background:#fafbfc; }
+  .assignment-list-card .assignment-row:has(.status-danger) { border-color:#ffd5d8; background:#fffafa; }
+  .assignment-row-main { display:flex; flex-direction:column; align-items:flex-start; }
+  .assignment-list-card .assignment-title { margin-bottom:7px; color:#15233b; font-size:18px; font-weight:800; line-height:1.35; }
+  .assignment-meta { gap:0 !important; margin-bottom:11px; color:#748096; }
+  .assignment-meta .badge-soft { padding:0; color:#748096; background:transparent; font-size:12px; font-weight:600; }
+  .assignment-meta .badge-soft + .badge-soft::before { content:"·"; margin:0 7px; color:#a2abb9; }
+  .assignment-deadline { display:flex; align-items:center; gap:7px; color:#687791; font-size:12px; font-weight:600; }
+  .assignment-deadline.is-past { color:#8a95a7; }
+  .assignment-deadline > span:first-child { font-size:17px; line-height:1; }
+  .assignment-list-card .assignment-due { color:inherit; font-size:12px; }
+  .assignment-row-actions { display:flex; flex:0 0 132px; flex-direction:column; align-items:flex-end; justify-content:center; gap:12px; align-self:stretch; }
+  .assignment-row-actions .status-pill { padding:6px 12px; font-size:11px; }
+  .assignment-row-actions .btn { min-width:112px; padding:8px 15px; border-radius:7px; font-size:12px; font-weight:700; }
+  .assignment-row-actions .btn-primary { border-color:#3478ee; background:#3478ee; box-shadow:0 4px 10px rgb(52 120 238 / 18%); }
+  .assignment-row-actions .btn-outline-primary { border-color:#4b83ef; color:#2867d4; background:#fff; }
+  .assignment-list-card .status-primary { color:#6550c8; background:#efebff; }
+  .assignment-list-card .status-success { color:#268b55; background:#e8f7ee; }
+  .assignment-list-card .status-danger { color:#df3f49; background:#ffecee; }
+  .assignment-list-card .status-secondary { color:#3f72d3; background:#edf3ff; }
+  .assignment-list-card .status-warning { color:#b66d14; background:#fff1dc; }
+  .assignment-list-card .assignment-locked-note { margin:8px 0 0; color:#a26418; }
+  .late-assignment-section { overflow:hidden; margin-top:12px; border:1px solid #e4e8ef; border-radius:10px; background:#fafbfc; }
+  .late-assignment-section summary { display:flex; align-items:center; justify-content:space-between; min-height:48px; padding:12px 16px; color:#1d2638; cursor:pointer; font-size:13px; font-weight:800; list-style:none; }
+  .late-assignment-section summary::-webkit-details-marker { display:none; }
+  .late-assignment-section summary::after { content:"⌄"; color:#59677e; font-size:18px; transition:transform .15s ease; }
+  .late-assignment-section[open] summary::after { transform:rotate(180deg); }
+  .late-assignment-count { margin-left:5px; color:#b66d14; }
+  .late-assignment-list { display:flex; flex-direction:column; gap:10px; padding:0 10px 10px; }
+  .late-assignment-list .assignment-row { border-color:#f3dfc2; background:#fffdf9; }
+  .assignment-pagination .btn { border-color:transparent; box-shadow:none; }
+  .assignment-pagination .btn-outline-secondary { color:#687386; background:transparent; }
+  .assignment-pagination .btn-outline-secondary:hover { color:#315dba; background:#f4f7fc; }
+  .assignment-pagination .btn-primary { color:#2867c7; background:#eaf2ff; }
+  .assignment-pagination .btn-primary:hover { color:#1f57ad; background:#dceaff; }
+  .assignment-pagination .assignment-page-move { background:transparent; }
+  .assignment-pagination .assignment-page-move:hover { background:transparent; }
+  .assignment-row[data-href] { cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  .assignment-row[data-href]:hover { border-color:#adc8f5; box-shadow:0 4px 12px rgb(45 92 170 / 10%); transform:translateY(-1px); }
+  .assignment-row[data-href]:focus-visible { outline:3px solid rgb(40 112 230 / 25%); outline-offset:2px; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .page-head-text { display: flex; flex-direction: column; gap: 6px; }
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1.page-title { color:#15233b; font-size:24px; font-weight:800; margin:0; letter-spacing:-.02em; }
+  .page-sub { font-size: 13px; color: var(--color-text-muted); }
+  .assignment-summary-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); overflow:hidden; margin-bottom:12px; border:1px solid #e4e8ef; border-radius:10px; background:#f8f9fb; }
+  .assignment-summary-item { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; padding:10px 14px; color:#1d2638; font-size:13px; font-weight:800; text-align:center; }
+  .assignment-summary-item + .assignment-summary-item { border-left:1px solid #e4e8ef; }
+  .assignment-summary-item strong { color:#748096; font-size:13px; }
+  .assignment-summary-item.is-primary { color:#fff; background:#3478ee; }
+  .assignment-summary-item.is-primary strong { color:#dfeaff; }
+  @media (max-width: 767px) {
+    .assignment-list-card { padding:10px; }
+    .assignment-filter-primary,.assignment-filter-secondary { align-items:flex-start; }
+    .assignment-quick-filter { align-items:stretch; flex-direction:column; }
+    .assignment-search-sort { width:100%; margin-left:0; }
+    .assignment-search { flex:1; }
+    .assignment-search input { width:100%; }
+    .assignment-filter-secondary { flex-direction:column; }
+    .assignment-filter-group,.assignment-date-view { width:100%; justify-content:flex-start; }
+    .assignment-date-view { margin-left:0; }
+    .assignment-calendar-filter { margin-left:0; }
+    .assignment-list-card .assignment-row { position:relative; min-height:0; padding:17px; gap:13px; }
+    .assignment-list-card .assignment-title { padding-right:84px; white-space:normal; }
+    .assignment-row-actions { position:relative; display:grid; grid-template-columns:1fr; flex:1 0 100%; width:100%; align-items:stretch; gap:9px; }
+    .assignment-row-actions .status-pill { position:absolute; top:17px; right:17px; }
+    .assignment-row-actions .btn { width:100%; }
+  }
+  @media (max-width: 480px) {
+    .assignment-summary-item { min-height:44px; padding:8px 6px; font-size:11px; }
+    .assignment-summary-item strong { font-size:11px; }
+    .assignment-type-tabs { width:100%; }
+    .assignment-type-tab { flex:1; padding-right:8px; padding-left:8px; text-align:center; }
+    .assignment-search-sort { align-items:stretch; flex-direction:column; }
+    .assignment-sort-select { width:100%; }
+    .assignment-list-summary { align-items:flex-start; flex-direction:column; }
+    .assignment-filter-options { gap:5px; }
+    .assignment-filter-chip { min-height:32px; padding:6px 11px; }
+    .assignment-calendar-input { width:135px; }
+  }
+</style>
+
+</head>
+<body>
+  <div class="app-shell">
+    
+<aside class="app-sidebar" id="app-sidebar">
+  <div class="brand">AX 과제 시스템</div>
+  <nav>
+    
+      <div class="nav-group-label">학생</div>
+      <a href="/dashboard/"
+         class="">대시보드</a>
+      <a href="/lecture/"
+         class="">강의 및 교안 학습</a>
+      <a href="/assignments/"
+         class="active">과제 확인</a>
+    
+  </nav>
+</aside>
+
+
+    
+      <button class="sidebar-overlay" type="button" aria-label="메뉴 닫기" tabindex="-1"></button>
+    
+
+    <div class="app-body">
+      
+<header class="app-topbar">
+  
+    <button class="sidebar-toggle" type="button"
+            aria-label="메뉴 열기" aria-controls="app-sidebar" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+        <path d="M3 6h18M3 12h18M3 18h18"></path>
+      </svg>
+    </button>
+  
+  <div class="crumb">
+    학생
+  </div>
+  <div class="utils">
+
+    
+      <span>dev · STUDENT</span>
+      <form method="post" action="/accounts/logout/" class="d-inline">
+        <input type="hidden" name="csrfmiddlewaretoken" value="u0tTgxW3gGp53OBfm7kDnITG39mRUJCuEsZrxGAIP484aDU0TS2aQHJwxOl22i8u">
+        <button type="submit" class="btn btn-link btn-sm p-0 align-baseline">로그아웃</button>
+      </form>
+    
+  </div>
+</header>
+
+
+      <main class="app-main">
+        <div class="container-fluid">
+          
+
+
+          
+<div class="page-head">
+  <div class="page-head-text">
+    <div class="title-row">
+      <h1 class="page-title">과제 목록</h1>
+    </div>
+    <div class="page-sub">지금 해야 할 과제를 먼저 확인해보세요.</div>
+  </div>
+</div>
+
+          
+<div class="assignment-summary-tabs" aria-label="과제 현황">
+  <div class="assignment-summary-item is-primary">해야 할 과제 <strong>4</strong></div>
+  <div class="assignment-summary-item">제출한 과제 <strong>0</strong></div>
+  <div class="assignment-summary-item">피드백 된 과제 <strong>0</strong></div>
+</div>
+<section class="student-card assignment-list-card" aria-labelledby="assignment-list-heading">
+  <div class="assignment-toolbar">
+    <div class="assignment-quick-filter">
+      <nav class="assignment-type-tabs" aria-label="과제 유형">
+        <a class="assignment-type-tab is-active" href="?type=all&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=all&amp;date_group=all&amp;created_date=">전체</a>
+        <a class="assignment-type-tab" href="?type=personal&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=all&amp;date_group=all&amp;created_date=">개인 과제</a>
+        <a class="assignment-type-tab" href="?type=team&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=all&amp;date_group=all&amp;created_date=">팀 과제</a>
+      </nav>
+      <form class="assignment-search-sort" method="get">
+        <input type="hidden" name="type" value="all">
+        <input type="hidden" name="submission" value="all">
+        <input type="hidden" name="deadline" value="all">
+        <input type="hidden" name="date_group" value="all">
+        <input type="hidden" name="created_date" value="">
+        <label class="assignment-search">
+          <span class="visually-hidden">과제명 검색</span>
+          <input type="search" name="q" value="" placeholder="과제명 검색">
+        </label>
+        <label>
+          <span class="visually-hidden">과제 정렬</span>
+          <select class="assignment-sort-select" name="sort" onchange="this.form.submit()">
+            <option value="default" selected>기본 정렬</option>
+            <option value="due_soon">마감 임박순</option>
+          </select>
+        </label>
+      </form>
+    </div>
+    <div class="assignment-list-summary">
+      <h2 id="assignment-list-heading" class="student-section-title mb-0">전체 과제</h2>
+      <span class="assignment-count text-muted">5개 / 전체 5개</span>
+    </div>
+    <div class="assignment-filters" aria-label="과제 목록 필터">
+      <div class="assignment-filter-primary">
+        <div class="assignment-filter-group submission-filter">
+          <span class="assignment-filter-label">제출 상태</span>
+          <div class="assignment-filter-options" role="group" aria-label="제출 상태 선택">
+            <a class="assignment-filter-chip is-submission-active" href="?type=all&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=all&amp;date_group=all&amp;created_date=">전체</a>
+            <a class="assignment-filter-chip" href="?type=all&amp;q=&amp;sort=default&amp;submission=unsubmitted&amp;deadline=all&amp;date_group=all&amp;created_date=">미제출</a>
+            <a class="assignment-filter-chip" href="?type=all&amp;q=&amp;sort=default&amp;submission=submitted&amp;deadline=all&amp;date_group=all&amp;created_date=">제출완료</a>
+          </div>
+        </div>
+      </div>
+      <div class="assignment-filter-secondary">
+        <div class="assignment-filter-group deadline-filter">
+          <span class="assignment-filter-label">마감 상태</span>
+          <div class="assignment-filter-options" role="group" aria-label="마감 상태 선택">
+            <a class="assignment-filter-chip is-deadline-active" href="?type=all&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=all&amp;date_group=all&amp;created_date=">전체</a>
+            <a class="assignment-filter-chip" href="?type=all&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=open&amp;date_group=all&amp;created_date=">진행 중</a>
+            <a class="assignment-filter-chip" href="?type=all&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=closed&amp;date_group=all&amp;created_date=">마감</a>
+          </div>
+        </div>
+        <div class="assignment-date-view" aria-label="생성일 보기 기준">
+          <span class="assignment-filter-label">생성일 기준</span>
+          <div class="assignment-filter-options" role="group" aria-label="생성일 묶음 선택">
+            <a class="assignment-filter-chip is-date-active" href="?type=all&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=all&amp;date_group=all&amp;created_date=">전체</a>
+            <a class="assignment-filter-chip" href="?type=all&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=all&amp;date_group=month&amp;created_date=">월별</a>
+            <a class="assignment-filter-chip" href="?type=all&amp;q=&amp;sort=default&amp;submission=all&amp;deadline=all&amp;date_group=day&amp;created_date=">일별</a>
+          </div>
+          <form class="assignment-calendar-filter" method="get">
+            <input type="hidden" name="submission" value="all">
+            <input type="hidden" name="deadline" value="all">
+            <input type="hidden" name="date_group" value="all">
+            <input type="hidden" name="type" value="all">
+            <input type="hidden" name="q" value="">
+            <input type="hidden" name="sort" value="default">
+            <label class="visually-hidden" for="assignment-created-date">과제 생성 날짜 선택</label>
+            <input class="assignment-calendar-input" id="assignment-created-date" type="date" name="created_date" value="" aria-label="과제 생성 날짜 선택" onchange="this.form.submit()">
+            
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="assignment-list">
+    
+      
+      
+        <article class="assignment-row is-past">
+  <div class="assignment-row-main flex-grow-1 min-width-0">
+    <h3 class="assignment-title">1차</h3>
+    <div class="assignment-meta d-flex flex-wrap align-items-center gap-2">
+      <span class="badge-soft badge-required">필수</span>
+      <span class="badge-soft badge-personal">개인 과제</span>
+    </div>
+    <div class="assignment-deadline is-past">
+      <span aria-hidden="true">◷</span>
+      <span class="assignment-due">2026.09.01 (화) 14:21</span>
+    </div>
+    
+  </div>
+  <div class="assignment-row-actions">
+    <span class="status-pill status-danger">미제출로 마감</span>
+    
+  </div>
+</article>
+
+      
+    
+  </div>
+  
+    <details class="late-assignment-section">
+      <summary>지각 제출 허용 <span class="late-assignment-count">4</span></summary>
+      <div class="late-assignment-list">
+        
+          <article class="assignment-row is-past" data-href="/assignments/5/submit/" role="link" tabindex="0" aria-label="오류와 예외처리 지각 제출">
+  <div class="assignment-row-main flex-grow-1 min-width-0">
+    <h3 class="assignment-title">오류와 예외처리</h3>
+    <div class="assignment-meta d-flex flex-wrap align-items-center gap-2">
+      <span class="badge-soft badge-required">필수</span>
+      <span class="badge-soft badge-personal">개인 과제</span>
+    </div>
+    <div class="assignment-deadline is-past">
+      <span aria-hidden="true">◷</span>
+      <span class="assignment-due">2026.09.08 (화) 16:22</span>
+    </div>
+    
+  </div>
+  <div class="assignment-row-actions">
+    <span class="status-pill status-warning">지각 제출 가능</span>
+    
+      <a class="btn btn-primary btn-sm" href="/assignments/5/submit/">지각 제출</a>
+    
+  </div>
+</article>
+
+        
+          <article class="assignment-row is-past" data-href="/assignments/4/submit/" role="link" tabindex="0" aria-label="반복문 실습 과제 지각 제출">
+  <div class="assignment-row-main flex-grow-1 min-width-0">
+    <h3 class="assignment-title">반복문 실습 과제</h3>
+    <div class="assignment-meta d-flex flex-wrap align-items-center gap-2">
+      <span class="badge-soft badge-required">필수</span>
+      <span class="badge-soft badge-personal">개인 과제</span>
+    </div>
+    <div class="assignment-deadline is-past">
+      <span aria-hidden="true">◷</span>
+      <span class="assignment-due">2026.09.07 (월) 15:43</span>
+    </div>
+    
+  </div>
+  <div class="assignment-row-actions">
+    <span class="status-pill status-warning">지각 제출 가능</span>
+    
+      <a class="btn btn-primary btn-sm" href="/assignments/4/submit/">지각 제출</a>
+    
+  </div>
+</article>
+
+        
+          <article class="assignment-row is-past" data-href="/assignments/3/submit/" role="link" tabindex="0" aria-label="ㄴㄴㄴㄴㄴ 지각 제출">
+  <div class="assignment-row-main flex-grow-1 min-width-0">
+    <h3 class="assignment-title">ㄴㄴㄴㄴㄴ</h3>
+    <div class="assignment-meta d-flex flex-wrap align-items-center gap-2">
+      <span class="badge-soft badge-optional">선택</span>
+      <span class="badge-soft badge-personal">개인 과제</span>
+    </div>
+    <div class="assignment-deadline is-past">
+      <span aria-hidden="true">◷</span>
+      <span class="assignment-due">2026.09.01 (화) 15:47</span>
+    </div>
+    
+  </div>
+  <div class="assignment-row-actions">
+    <span class="status-pill status-warning">지각 제출 가능</span>
+    
+      <a class="btn btn-primary btn-sm" href="/assignments/3/submit/">지각 제출</a>
+    
+  </div>
+</article>
+
+        
+          <article class="assignment-row is-past" data-href="/assignments/2/submit/" role="link" tabindex="0" aria-label="sqld미리보기테스트 지각 제출">
+  <div class="assignment-row-main flex-grow-1 min-width-0">
+    <h3 class="assignment-title">sqld미리보기테스트</h3>
+    <div class="assignment-meta d-flex flex-wrap align-items-center gap-2">
+      <span class="badge-soft badge-optional">선택</span>
+      <span class="badge-soft badge-personal">개인 과제</span>
+    </div>
+    <div class="assignment-deadline is-past">
+      <span aria-hidden="true">◷</span>
+      <span class="assignment-due">2026.09.01 (화) 14:26</span>
+    </div>
+    
+  </div>
+  <div class="assignment-row-actions">
+    <span class="status-pill status-warning">지각 제출 가능</span>
+    
+      <a class="btn btn-primary btn-sm" href="/assignments/2/submit/">지각 제출</a>
+    
+  </div>
+</article>
+
+        
+      </div>
+    </details>
+  
+  
+</section>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+    <script>
+      (function () {
+        var sidebar = document.getElementById("app-sidebar");
+        var toggle = document.querySelector(".sidebar-toggle");
+        var overlay = document.querySelector(".sidebar-overlay");
+
+        if (!sidebar || !toggle || !overlay) return;
+
+        function setSidebarOpen(open) {
+          sidebar.classList.toggle("open", open);
+          overlay.classList.toggle("open", open);
+          document.body.classList.toggle("sidebar-open", open);
+          toggle.setAttribute("aria-expanded", String(open));
+          toggle.setAttribute("aria-label", open ? "메뉴 닫기" : "메뉴 열기");
+        }
+
+        toggle.addEventListener("click", function () {
+          setSidebarOpen(!sidebar.classList.contains("open"));
+        });
+
+        overlay.addEventListener("click", function () {
+          setSidebarOpen(false);
+          toggle.focus();
+        });
+
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && sidebar.classList.contains("open")) {
+            setSidebarOpen(false);
+            toggle.focus();
+          }
+        });
+
+        sidebar.addEventListener("click", function (event) {
+          if (event.target.closest("a")) setSidebarOpen(false);
+        });
+
+        window.addEventListener("resize", function () {
+          if (window.innerWidth > 992) setSidebarOpen(false);
+        });
+      })();
+    </script>
+  
+  
+<script>
+(() => {
+  document.querySelectorAll(".assignment-row[data-href]").forEach((row) => {
+    const navigate = () => { window.location.href = row.dataset.href; };
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("a, button")) return;
+      navigate();
+    });
+    row.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      navigate();
+    });
+  });
+})();
+</script>
+
+
+<div id="djDebugRoot" >
+  <template shadowrootmode="open">
+    
+    <link rel="stylesheet" href="/static/debug_toolbar/css/print.css" media="print">
+    <link rel="stylesheet" href="/static/debug_toolbar/css/toolbar.css">
+    
+    
+    <script type="module" src="/static/debug_toolbar/js/toolbar.js" async></script>
+    
+    <div id="djDebug" class="djdt-hidden" dir="ltr"
+        
+        data-request-id="6d04883cb4a54860ba6397fb94d417b9"
+        data-render-panel-url="/__debug__/render_panel/"
+        
+        
+        
+        data-sidebar-url="/__debug__/history_sidebar/"
+        
+        data-default-show="true"
+        data-update-on-fetch="False">
+      <div class="djdt-hidden" id="djDebugToolbarHandle">
+        <div title="툴바 열기" id="djShowToolBarButton">
+          <span id="djShowToolBarD">D</span><span id="djShowToolBarJ">J</span>DT
+        </div>
+      </div>
+      <div class="djdt-hidden" id="djDebugToolbar">
+        <ul id="djDebugPanelList">
+          <li><a id="djHideToolBarButton" href="#" title="툴바 숨기기">숨기기 »</a></li>
+          <li>
+            <a id="djToggleThemeButton" href="#" title="Toggle Theme">
+              Toggle Theme <svg
+  aria-hidden="true"
+  class="djdt-hidden theme-auto"
+  fill="currentColor"
+  viewBox="0 0 32 32"
+  version="1.1"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <path
+    d="M0 16q0 3.264 1.28 6.24t3.392 5.088 5.12 3.424 6.208 1.248q3.264 0 6.24-1.248t5.088-3.424 3.392-5.088 1.28-6.24-1.28-6.208-3.392-5.12-5.088-3.392-6.24-1.28q-3.264 0-6.208 1.28t-5.12 3.392-3.392 5.12-1.28 6.208zM4 16q0-3.264 1.6-6.016t4.384-4.352 6.016-1.632 6.016 1.632 4.384 4.352 1.6 6.016-1.6 6.048-4.384 4.352-6.016 1.6-6.016-1.6-4.384-4.352-1.6-6.048zM16 26.016q2.72 0 5.024-1.344t3.648-3.648 1.344-5.024-1.344-4.992-3.648-3.648-5.024-1.344v20z"
+  ></path>
+</svg>
+<svg
+  aria-hidden="true"
+  class="djdt-hidden theme-light"
+  viewBox="0 0 24 24"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M12 1.25C12.4142 1.25 12.75 1.58579 12.75 2V4C12.75 4.41421 12.4142 4.75 12 4.75C11.5858 4.75 11.25 4.41421 11.25 4V2C11.25 1.58579 11.5858 1.25 12 1.25ZM3.66865 3.71609C3.94815 3.41039 4.42255 3.38915 4.72825 3.66865L6.95026 5.70024C7.25596 5.97974 7.2772 6.45413 6.9977 6.75983C6.7182 7.06553 6.2438 7.08677 5.9381 6.80727L3.71609 4.77569C3.41039 4.49619 3.38915 4.02179 3.66865 3.71609ZM20.3314 3.71609C20.6109 4.02179 20.5896 4.49619 20.2839 4.77569L18.0619 6.80727C17.7562 7.08677 17.2818 7.06553 17.0023 6.75983C16.7228 6.45413 16.744 5.97974 17.0497 5.70024L19.2718 3.66865C19.5775 3.38915 20.0518 3.41039 20.3314 3.71609ZM12 7.75C9.65279 7.75 7.75 9.65279 7.75 12C7.75 14.3472 9.65279 16.25 12 16.25C14.3472 16.25 16.25 14.3472 16.25 12C16.25 9.65279 14.3472 7.75 12 7.75ZM6.25 12C6.25 8.82436 8.82436 6.25 12 6.25C15.1756 6.25 17.75 8.82436 17.75 12C17.75 15.1756 15.1756 17.75 12 17.75C8.82436 17.75 6.25 15.1756 6.25 12ZM1.25 12C1.25 11.5858 1.58579 11.25 2 11.25H4C4.41421 11.25 4.75 11.5858 4.75 12C4.75 12.4142 4.41421 12.75 4 12.75H2C1.58579 12.75 1.25 12.4142 1.25 12ZM19.25 12C19.25 11.5858 19.5858 11.25 20 11.25H22C22.4142 11.25 22.75 11.5858 22.75 12C22.75 12.4142 22.4142 12.75 22 12.75H20C19.5858 12.75 19.25 12.4142 19.25 12ZM17.0255 17.0252C17.3184 16.7323 17.7933 16.7323 18.0862 17.0252L20.3082 19.2475C20.6011 19.5404 20.601 20.0153 20.3081 20.3082C20.0152 20.6011 19.5403 20.601 19.2475 20.3081L17.0255 18.0858C16.7326 17.7929 16.7326 17.3181 17.0255 17.0252ZM6.97467 17.0253C7.26756 17.3182 7.26756 17.7931 6.97467 18.086L4.75244 20.3082C4.45955 20.6011 3.98468 20.6011 3.69178 20.3082C3.39889 20.0153 3.39889 19.5404 3.69178 19.2476L5.91401 17.0253C6.2069 16.7324 6.68177 16.7324 6.97467 17.0253ZM12 19.25C12.4142 19.25 12.75 19.5858 12.75 20V22C12.75 22.4142 12.4142 22.75 12 22.75C11.5858 22.75 11.25 22.4142 11.25 22V20C11.25 19.5858 11.5858 19.25 12 19.25Z"
+    fill="currentColor"
+  />
+</svg>
+<svg
+  aria-hidden="true"
+  class="djdt-hidden theme-dark"
+  viewBox="0 0 24 24"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <path
+    d="M3.32031 11.6835C3.32031 16.6541 7.34975 20.6835 12.3203 20.6835C16.1075 20.6835 19.3483 18.3443 20.6768 15.032C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834C12.3497 15.6834 8.32031 11.654 8.32031 6.68342C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996C5.65605 4.66028 3.32031 7.89912 3.32031 11.6835Z"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
+
+            </a>
+          </li>
+          
+            
+
+<li id="djdt-HistoryPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtHistoryPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="이력" class="HistoryPanel">
+  
+  이력
+  
+    
+      <br><small>/assignments/</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-VersionsPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtVersionsPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="버전" class="VersionsPanel">
+  
+  버전
+  
+    
+      <br><small>Django 6.1</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-TimerPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtTimerPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <div class="djdt-contentless">
+  
+  시각
+  
+    
+      <br><small>Total: 204.04ms</small>
+    
+  
+  
+    </div>
+  
+</li>
+
+          
+            
+
+<li id="djdt-SettingsPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtSettingsPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="설정 &#x27;config.settings.dev&#x27;" class="SettingsPanel">
+  
+  설정
+  
+    
+      
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-HeadersPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtHeadersPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="헤더" class="HeadersPanel">
+  
+  헤더
+  
+    
+      
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-RequestPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtRequestPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="요청" class="RequestPanel">
+  
+  요청
+  
+    
+      <br><small>assignment_list</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-SQLPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtSQLPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="SQL 쿼리 1개의 커넥션" class="SQLPanel">
+  
+  SQL
+  
+    
+      <br><small>2.93 밀리초 동안 5개의 쿼리</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-StaticFilesPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtStaticFilesPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="정적 파일 (0개 찾음, 2개 사용됨)" class="StaticFilesPanel">
+  
+  정적 파일
+  
+    
+      <br><small>2개의 파일 사용됨</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-TemplatesPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtTemplatesPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="템플릿 (10개 렌더링)" class="TemplatesPanel">
+  
+  템플릿
+  
+    
+      <br><small>student/assignment_list.html</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-AlertsPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtAlertsPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="Alerts" class="AlertsPanel">
+  
+  Alerts
+  
+    
+      
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-CachePanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtCachePanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="백엔드에서 1개의 캐시 호출" class="CachePanel">
+  
+  캐시
+  
+    
+      <br><small>0.00 밀리초 동안 0번 호출</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-SignalsPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtSignalsPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="시그널" class="SignalsPanel">
+  
+  시그널
+  
+    
+      <br><small>15개의 시그널 42개의 리시버</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-TasksPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtTasksPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="Tasks" class="TasksPanel">
+  
+  Tasks
+  
+    
+      <br><small>0 tasks</small>
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-CommunityPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtCommunityPanel" checked title="다음 요청부터 비활성화 됩니다.">
+  
+    <a href="#" title="Community" class="CommunityPanel">
+  
+  Community
+  
+    
+      
+    
+  
+  
+    </a>
+  
+</li>
+
+          
+            
+
+<li id="djdt-RedirectsPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtRedirectsPanel" title="다음 요청부터 활성화 됩니다.">
+  
+    <div class="djdt-contentless djdt-disabled">
+  
+  리다이렉션 가로채기
+  
+  
+    </div>
+  
+</li>
+
+          
+            
+
+<li id="djdt-ProfilingPanel" class="djDebugPanelButton">
+  <input type="checkbox" data-cookie="djdtProfilingPanel" title="다음 요청부터 활성화 됩니다.">
+  
+    <div class="djdt-contentless djdt-disabled">
+  
+  프로파일링
+  
+  
+    </div>
+  
+</li>
+
+          
+        </ul>
+      </div>
+      
+        
+
+
+  <div id="HistoryPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>이력</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="VersionsPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>버전</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+
+      
+        
+
+
+  <div id="SettingsPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>설정 &#x27;config.settings.dev&#x27;</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="HeadersPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>헤더</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="RequestPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>요청</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="SQLPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>SQL 쿼리 1개의 커넥션</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="StaticFilesPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>정적 파일 (0개 찾음, 2개 사용됨)</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="TemplatesPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>템플릿 (10개 렌더링)</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="AlertsPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>Alerts</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="CachePanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>백엔드에서 1개의 캐시 호출</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="SignalsPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>시그널</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="TasksPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>Tasks</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+  <div id="CommunityPanel" class="djdt-panelContent djdt-hidden">
+    <div class="djDebugPanelTitle">
+      <h3>Community</h3>
+      <button type="button" class="djDebugClose">×</button>
+    </div>
+    <div class="djDebugPanelContent">
+      
+        <div class="djdt-loader"></div>
+        <div class="djdt-scroll"></div>
+      
+    </div>
+  </div>
+
+
+      
+        
+
+
+
+      
+        
+
+
+
+      
+      <div id="djDebugWindow" class="djdt-panelContent djdt-hidden"></div>
+    </div>
+  </template>
+</div>
+</body>
+</html>

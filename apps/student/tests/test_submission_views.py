@@ -217,6 +217,63 @@ class SubmissionViewTests(TestCase):
         self.assertNotContains(response, "미제출 과제")
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_shows_summary_counts(self, _get_user_team):
+        self.assignment(title="해야 할 과제")
+        submitted_assignment = self.assignment(title="제출한 과제")
+        feedback_assignment = self.assignment(title="피드백 된 과제")
+        Submission.objects.create(
+            assignment=submitted_assignment,
+            student_id=self.user.id,
+            team_id=None,
+        )
+        Submission.objects.create(
+            assignment=feedback_assignment,
+            student_id=self.user.id,
+            team_id=None,
+            final_score=90,
+        )
+
+        response = self.client.get(reverse("student:assignment-list"))
+
+        self.assertEqual(response.context["todo_count"], 1)
+        self.assertEqual(response.context["submitted_count"], 2)
+        self.assertEqual(response.context["feedback_count"], 1)
+        self.assertContains(response, "해야 할 과제 <strong>1</strong>", html=True)
+        self.assertContains(response, "제출한 과제 <strong>2</strong>", html=True)
+        self.assertContains(response, "피드백 된 과제 <strong>1</strong>", html=True)
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_summary_tabs_filter_the_list(self, _get_user_team):
+        todo_assignment = self.assignment(title="해야 하는 과제")
+        submitted_assignment = self.assignment(title="제출만 한 과제")
+        feedback_assignment = self.assignment(title="피드백 받은 과제")
+        Submission.objects.create(
+            assignment=submitted_assignment,
+            student_id=self.user.id,
+            team_id=None,
+        )
+        Submission.objects.create(
+            assignment=feedback_assignment,
+            student_id=self.user.id,
+            team_id=None,
+            final_score=95,
+        )
+
+        submitted_response = self.client.get(
+            reverse("student:assignment-list"), {"summary": "submitted"}
+        )
+        self.assertNotContains(submitted_response, todo_assignment.title)
+        self.assertContains(submitted_response, submitted_assignment.title)
+        self.assertContains(submitted_response, feedback_assignment.title)
+
+        feedback_response = self.client.get(
+            reverse("student:assignment-list"), {"summary": "feedback"}
+        )
+        self.assertNotContains(feedback_response, todo_assignment.title)
+        self.assertNotContains(feedback_response, submitted_assignment.title)
+        self.assertContains(feedback_response, feedback_assignment.title)
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
     def test_assignment_list_combines_unsubmitted_and_open_filters(
         self, _get_user_team
     ):
@@ -233,6 +290,35 @@ class SubmissionViewTests(TestCase):
 
         self.assertContains(response, "진행 중 미제출")
         self.assertNotContains(response, "마감된 미제출")
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_filters_by_type_and_title(self, _get_user_team):
+        self.assignment(title="개인 검색 대상", is_team=False)
+        self.assignment(title="팀 검색 대상", is_team=True)
+
+        response = self.client.get(
+            reverse("student:assignment-list"),
+            {"type": "personal", "q": "검색 대상"},
+        )
+
+        self.assertContains(response, "개인 검색 대상")
+        self.assertNotContains(response, "팀 검색 대상")
+        self.assertEqual(response.context["assignment_type"], "personal")
+        self.assertEqual(response.context["search_query"], "검색 대상")
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_sorts_open_assignments_by_due_date(self, _get_user_team):
+        later = self.assignment(title="나중 마감", due_at=timezone.now() + timedelta(days=3))
+        sooner = self.assignment(title="먼저 마감", due_at=timezone.now() + timedelta(days=1))
+
+        response = self.client.get(
+            reverse("student:assignment-list"),
+            {"sort": "due_soon"},
+        )
+
+        assignment_ids = [row["assignment"].id for row in response.context["rows"]]
+        self.assertEqual(assignment_ids, [sooner.id, later.id])
+        self.assertEqual(response.context["sort_order"], "due_soon")
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
     def test_assignment_list_paginates_after_ten_items(self, _get_user_team):
@@ -426,6 +512,8 @@ class SubmissionViewTests(TestCase):
 
         self.assertContains(response, assignment.title)
         self.assertContains(response, "지각 제출 가능")
+        self.assertContains(response, "지각 제출 허용")
+        self.assertEqual(response.context["late_rows"][0]["assignment"], assignment)
         self.assertContains(
             response,
             reverse("student:assignment-submit", args=[assignment.id]),

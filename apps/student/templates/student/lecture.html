@@ -630,17 +630,23 @@
     const targetLesson = lessonsData.find(l => l.id === lessonParam);
 
     if (targetLesson) {
-        selectedDateStr = targetLesson.date;
+      selectedDateStr = targetLesson.date;
+      currentLessonId = targetLesson.id;
     } else if (dateParam && lessonsData.some(l => l.date === dateParam)) {
-        selectedDateStr = dateParam;
+      selectedDateStr = dateParam;
     } else {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const hasToday = lessonsData.some(l => l.date === todayStr);
-        if (hasToday) {
-            selectedDateStr = todayStr;
-        } else {
-            selectedDateStr = lessonsData[0].date;
-        }
+      const todayStr = new Date().toISOString().split('T')[0];
+      const hasToday = lessonsData.some(l => l.date === todayStr);
+      if (hasToday) {
+        selectedDateStr = todayStr;
+      } else {
+        selectedDateStr = lessonsData[0].date;
+      }
+    }
+
+    if (currentLessonId === null) {
+      const firstLesson = lessonsData.find(l => l.date === selectedDateStr);
+      currentLessonId = firstLesson ? firstLesson.id : null;
     }
 
     if (selectedDateStr) {
@@ -665,7 +671,7 @@
     container.innerHTML = '';
     
     const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
-    const lesson = dayLessons.length > 0 ? dayLessons[0] : null;
+    const lesson = dayLessons.find(l => l.id === currentLessonId) || dayLessons[0] || null;
     
     if (!lesson) {
         totalCountSpan.textContent = `해당 일자 총 0개`;
@@ -735,6 +741,7 @@
         
         el.onclick = () => {
           selectedDateStr = dateStr;
+          currentLessonId = lessonsOnDay[0].id;
           renderCalendar();
           renderPlaylist();
           currentVideoIndex = 0; selectVideo(0);
@@ -768,7 +775,7 @@
     currentVideoIndex = vidIndex;
     
     const dayLessons = lessonsData.filter(l => l.date === selectedDateStr);
-    const lesson = dayLessons.length > 0 ? dayLessons[0] : null;
+    const lesson = dayLessons.find(l => l.id === currentLessonId) || dayLessons[0] || null;
     if (!lesson) return;
     
     const videos = lesson.videos || [];

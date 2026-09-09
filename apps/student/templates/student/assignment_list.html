@@ -6,27 +6,72 @@
 <style>
   .app-topbar .crumb { display:none; }
   .app-topbar .utils { margin-left:auto; }
-  .assignment-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 24px; margin-bottom:14px; }
-  .assignment-list-summary { display:flex; align-items:center; gap:8px; order:1; width:100%; }
-  .assignment-list-summary .student-section-title { font-size:18px; }
-  .assignment-list-summary .assignment-count { font-size:13px; }
-  .assignment-date-view { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:10px; order:2; margin-left:auto; padding-bottom:2px; }
-  .assignment-calendar-filter { display:flex; align-items:center; gap:6px; margin-left:4px; }
-  .assignment-calendar-input { width:142px; padding:5px 10px; border:1px solid #d8dee8; border-radius:999px; color:#4f5d73; background:#fff; font-size:12px; font-weight:700; }
-  .assignment-calendar-input:focus { border-color:#a8c5f5; outline:3px solid rgb(40 112 230 / 12%); }
-  .assignment-calendar-clear { color:#7a8494; font-size:12px; text-decoration:none; }
-  .assignment-filters { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; order:3; width:100%; justify-content:flex-end; padding:4px 0; background:transparent; }
-  .assignment-filter-group { display:flex; align-items:center; gap:10px; }
-  .assignment-filter-label { color:var(--color-text-muted); font-size:12px; font-weight:700; white-space:nowrap; }
+  .assignment-list-card { padding:12px; border-color:#edf0f5; border-radius:14px; box-shadow:0 8px 28px rgb(31 47 78 / 6%); }
+  .assignment-toolbar { display:flex; flex-direction:column; gap:12px; margin-bottom:16px; }
+  .assignment-quick-filter { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:2px 2px 12px; border-bottom:1px solid #f0f2f6; }
+  .assignment-type-tabs { display:flex; align-items:center; gap:6px; }
+  .assignment-type-tab { min-height:34px; padding:7px 16px; border:1px solid #e0e5ed; border-radius:999px; color:#687386; background:#fff; font-size:12px; font-weight:700; text-decoration:none; }
+  .assignment-type-tab:hover { border-color:#b9d2ff; color:#2867c7; }
+  .assignment-type-tab.is-active { border-color:#edf4ff; color:#2867c7; background:#edf4ff; }
+  .assignment-search-sort { display:flex; align-items:center; gap:10px; margin-left:auto; }
+  .assignment-search { position:relative; }
+  .assignment-search::before { content:"⌕"; position:absolute; top:50%; left:12px; color:#71809a; font-size:18px; transform:translateY(-52%); pointer-events:none; }
+  .assignment-search input { width:190px; min-height:36px; padding:7px 12px 7px 34px; border:1px solid #dfe4ec; border-radius:8px; color:#344258; background:#fff; font-size:12px; }
+  .assignment-search input:focus,.assignment-sort-select:focus { border-color:#8db4f7; outline:3px solid rgb(40 112 230 / 12%); }
+  .assignment-sort-select { min-width:128px; min-height:36px; padding:7px 32px 7px 12px; border:1px solid #dfe4ec; border-radius:8px; color:#536078; background:#fff; font-size:12px; font-weight:700; }
+  .assignment-list-summary { display:flex; align-items:center; gap:8px; padding:2px 4px; }
+  .assignment-list-summary .student-section-title { font-size:15px; }
+  .assignment-list-summary .assignment-count { font-size:12px; }
+  .assignment-filters { display:flex; flex-direction:column; gap:10px; width:100%; }
+  .assignment-filter-primary,.assignment-filter-secondary { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; }
+  .assignment-filter-secondary { justify-content:flex-end; padding-top:10px; border-top:1px solid #f0f2f6; }
+  .assignment-filter-group,.assignment-date-view { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .assignment-filter-primary { justify-content:flex-start; }
+  .assignment-date-view { justify-content:flex-end; margin-left:auto; }
+  .assignment-filter-label { color:#748096; font-size:11px; font-weight:700; white-space:nowrap; }
   .assignment-filter-options { display:flex; flex-wrap:wrap; gap:6px; }
-  .assignment-filter-chip { padding:5px 12px; border:1px solid #d8dee8; border-radius:999px; color:#687386; background:#fff; font-size:12px; font-weight:700; line-height:1.35; text-decoration:none; transition:transform .15s ease, box-shadow .15s ease, background .15s ease; }
-  .assignment-filter-chip:hover { color:#315dba; background:#f7f9ff; transform:translateY(-1px); box-shadow:0 3px 8px rgb(49 93 186 / 12%); }
-  .assignment-filter-chip.is-deadline-active { border-color:#b9d2ff; color:#2159b5; background:#eaf2ff; }
-  .assignment-filter-chip.is-submission-active { border-color:#bde8d4; color:#16734a; background:#e9f8f0; }
-  .assignment-filter-chip.is-date-active { border-color:#d7c5f6; color:#6941a5; background:#f3edff; }
-  .assignment-date-heading { margin:16px 2px 8px; color:#4d5b70; font-size:13px; font-weight:800; }
+  .assignment-filter-chip { min-height:34px; padding:7px 15px; border:1px solid #e0e5ed; border-radius:999px; color:#687386; background:#fff; font-size:12px; font-weight:700; line-height:1.35; text-decoration:none; transition:border-color .15s ease, color .15s ease, background .15s ease; }
+  .assignment-filter-chip:hover { border-color:#b9d2ff; color:#2867c7; background:#f7faff; }
+  .assignment-filter-chip.is-deadline-active,.assignment-filter-chip.is-submission-active,.assignment-filter-chip.is-date-active { border-color:#e3edff; color:#2867c7; background:#edf4ff; }
+  .assignment-calendar-filter { display:flex; align-items:center; gap:7px; margin-left:2px; }
+  .assignment-calendar-input { width:145px; min-height:34px; padding:6px 10px; border:1px solid #dfe4ec; border-radius:8px; color:#536078; background:#fff; font-size:12px; font-weight:600; }
+  .assignment-calendar-input:focus { border-color:#8db4f7; outline:3px solid rgb(40 112 230 / 12%); }
+  .assignment-calendar-clear { color:#748096; font-size:11px; font-weight:600; text-decoration:none; }
+  .assignment-date-heading { margin:18px 4px 8px; color:#4d5b70; font-size:13px; font-weight:800; }
   .assignment-date-heading:first-child { margin-top:2px; }
-  .assignment-row .badge-personal { color:#80623a; background:#f7eddc; }
+  .assignment-list-card .assignment-list { gap:12px; }
+  .assignment-list-card .assignment-row { min-height:116px; padding:20px 22px; border-color:#e5e9f0; border-radius:11px; background:#fff; box-shadow:0 1px 3px rgb(31 47 78 / 3%); }
+  .assignment-list-card .assignment-row.is-open { background:#fff; }
+  .assignment-list-card .assignment-row.is-past { background:#fafbfc; }
+  .assignment-list-card .assignment-row:has(.status-danger) { border-color:#ffd5d8; background:#fffafa; }
+  .assignment-row-main { display:flex; flex-direction:column; align-items:flex-start; }
+  .assignment-list-card .assignment-title { margin-bottom:7px; color:#15233b; font-size:18px; font-weight:800; line-height:1.35; }
+  .assignment-meta { gap:0 !important; margin-bottom:11px; color:#748096; }
+  .assignment-meta .badge-soft { padding:0; color:#748096; background:transparent; font-size:12px; font-weight:600; }
+  .assignment-meta .badge-soft + .badge-soft::before { content:"·"; margin:0 7px; color:#a2abb9; }
+  .assignment-deadline { display:flex; align-items:center; gap:7px; color:#687791; font-size:12px; font-weight:600; }
+  .assignment-deadline.is-past { color:#8a95a7; }
+  .assignment-deadline > span:first-child { font-size:17px; line-height:1; }
+  .assignment-list-card .assignment-due { color:inherit; font-size:12px; }
+  .assignment-row-actions { display:flex; flex:0 0 132px; flex-direction:column; align-items:flex-end; justify-content:center; gap:12px; align-self:stretch; }
+  .assignment-row-actions .status-pill { padding:6px 12px; font-size:11px; }
+  .assignment-row-actions .btn { min-width:112px; padding:8px 15px; border-radius:7px; font-size:12px; font-weight:700; }
+  .assignment-row-actions .btn-primary { border-color:#3478ee; background:#3478ee; box-shadow:0 4px 10px rgb(52 120 238 / 18%); }
+  .assignment-row-actions .btn-outline-primary { border-color:#4b83ef; color:#2867d4; background:#fff; }
+  .assignment-list-card .status-primary { color:#6550c8; background:#efebff; }
+  .assignment-list-card .status-success { color:#268b55; background:#e8f7ee; }
+  .assignment-list-card .status-danger { color:#df3f49; background:#ffecee; }
+  .assignment-list-card .status-secondary { color:#3f72d3; background:#edf3ff; }
+  .assignment-list-card .status-warning { color:#b66d14; background:#fff1dc; }
+  .assignment-list-card .assignment-locked-note { margin:8px 0 0; color:#a26418; }
+  .late-assignment-section { overflow:hidden; margin-top:12px; border:1px solid #e4e8ef; border-radius:10px; background:#fafbfc; }
+  .late-assignment-section summary { display:flex; align-items:center; justify-content:space-between; min-height:48px; padding:12px 16px; color:#1d2638; cursor:pointer; font-size:13px; font-weight:800; list-style:none; }
+  .late-assignment-section summary::-webkit-details-marker { display:none; }
+  .late-assignment-section summary::after { content:"⌄"; color:#59677e; font-size:18px; transition:transform .15s ease; }
+  .late-assignment-section[open] summary::after { transform:rotate(180deg); }
+  .late-assignment-count { margin-left:5px; color:#b66d14; }
+  .late-assignment-list { display:flex; flex-direction:column; gap:10px; padding:0 10px 10px; }
+  .late-assignment-list .assignment-row { border-color:#f3dfc2; background:#fffdf9; }
   .assignment-pagination .btn { border-color:transparent; box-shadow:none; }
   .assignment-pagination .btn-outline-secondary { color:#687386; background:transparent; }
   .assignment-pagination .btn-outline-secondary:hover { color:#315dba; background:#f4f7fc; }
@@ -34,27 +79,51 @@
   .assignment-pagination .btn-primary:hover { color:#1f57ad; background:#dceaff; }
   .assignment-pagination .assignment-page-move { background:transparent; }
   .assignment-pagination .assignment-page-move:hover { background:transparent; }
-  .assignment-row.is-open { background:var(--color-surface); }
-  .assignment-row.is-past { background:#f1f3f6; }
   .assignment-row[data-href] { cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
   .assignment-row[data-href]:hover { border-color:#adc8f5; box-shadow:0 4px 12px rgb(45 92 170 / 10%); transform:translateY(-1px); }
   .assignment-row[data-href]:focus-visible { outline:3px solid rgb(40 112 230 / 25%); outline-offset:2px; }
-  .deadline-state { display:inline-flex; align-items:center; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; white-space:nowrap; }
-  .deadline-open { color:#1858b8; background:#dceaff; }
-  .deadline-closed { color:#b42318; background:#fee4e2; }
-  .status-warning { color:#9a6700; background:#fff1cc; }
-  .assignment-locked-note { margin:6px 0 0; color:#9a6700; font-size:11px; font-weight:700; line-height:1.4; }
-  @media (max-width: 575px) {
-    .assignment-date-view { width:100%; margin-left:0; justify-content:flex-start; }
-    .assignment-filters { width:100%; margin-left:0; }
-    .assignment-filter-group { width:100%; justify-content:space-between; }
-  }
-  /* Header matching dashboard */
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
   .page-head-text { display: flex; flex-direction: column; gap: 6px; }
   .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  h1.page-title { font-size: 21px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+  h1.page-title { color:#15233b; font-size:24px; font-weight:800; margin:0; letter-spacing:-.02em; }
   .page-sub { font-size: 13px; color: var(--color-text-muted); }
+  .assignment-summary-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); overflow:hidden; margin-bottom:12px; border:1px solid #e4e8ef; border-radius:10px; background:#f8f9fb; }
+  .assignment-summary-item { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; padding:10px 14px; color:#1d2638; font-size:13px; font-weight:800; text-align:center; text-decoration:none; transition:color .15s ease,background .15s ease; }
+  .assignment-summary-item:hover { color:#2867c7; background:#f2f6ff; }
+  .assignment-summary-item + .assignment-summary-item { border-left:1px solid #e4e8ef; }
+  .assignment-summary-item strong { color:#748096; font-size:13px; }
+  .assignment-summary-item.is-active { color:#fff; background:#3478ee; }
+  .assignment-summary-item.is-active:hover { color:#fff; background:#286bdf; }
+  .assignment-summary-item.is-active strong { color:#dfeaff; }
+  @media (max-width: 767px) {
+    .assignment-list-card { padding:10px; }
+    .assignment-filter-primary,.assignment-filter-secondary { align-items:flex-start; }
+    .assignment-quick-filter { align-items:stretch; flex-direction:column; }
+    .assignment-search-sort { width:100%; margin-left:0; }
+    .assignment-search { flex:1; }
+    .assignment-search input { width:100%; }
+    .assignment-filter-secondary { flex-direction:column; }
+    .assignment-filter-group,.assignment-date-view { width:100%; justify-content:flex-start; }
+    .assignment-date-view { margin-left:0; }
+    .assignment-calendar-filter { margin-left:0; }
+    .assignment-list-card .assignment-row { position:relative; min-height:0; padding:17px; gap:13px; }
+    .assignment-list-card .assignment-title { padding-right:84px; white-space:normal; }
+    .assignment-row-actions { position:relative; display:grid; grid-template-columns:1fr; flex:1 0 100%; width:100%; align-items:stretch; gap:9px; }
+    .assignment-row-actions .status-pill { position:absolute; top:17px; right:17px; }
+    .assignment-row-actions .btn { width:100%; }
+  }
+  @media (max-width: 480px) {
+    .assignment-summary-item { min-height:44px; padding:8px 6px; font-size:11px; }
+    .assignment-summary-item strong { font-size:11px; }
+    .assignment-type-tabs { width:100%; }
+    .assignment-type-tab { flex:1; padding-right:8px; padding-left:8px; text-align:center; }
+    .assignment-search-sort { align-items:stretch; flex-direction:column; }
+    .assignment-sort-select { width:100%; }
+    .assignment-list-summary { align-items:flex-start; flex-direction:column; }
+    .assignment-filter-options { gap:5px; }
+    .assignment-filter-chip { min-height:32px; padding:6px 11px; }
+    .assignment-calendar-input { width:135px; }
+  }
 </style>
 {% endblock %}
 {% block page_header %}
@@ -63,88 +132,71 @@
     <div class="title-row">
       <h1 class="page-title">과제 목록</h1>
     </div>
-    <div class="page-sub">진행 중인 과제와 마감된 과제를 한눈에 확인하세요.</div>
+    <div class="page-sub">지금 해야 할 과제를 먼저 확인해보세요.</div>
   </div>
 </div>
 {% endblock %}
 {% block content %}
-<section class="student-card" aria-labelledby="assignment-list-heading">
+<div class="assignment-summary-tabs" aria-label="과제 현황">
+  <a class="assignment-summary-item{% if summary_filter == 'todo' or summary_filter == 'all' %} is-active{% endif %}" href="?summary=todo&amp;type={{ assignment_type }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}">해야 할 과제 <strong>{{ todo_count }}</strong></a>
+  <a class="assignment-summary-item{% if summary_filter == 'submitted' %} is-active{% endif %}" href="?summary=submitted&amp;type={{ assignment_type }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}">제출한 과제 <strong>{{ submitted_count }}</strong></a>
+  <a class="assignment-summary-item{% if summary_filter == 'feedback' %} is-active{% endif %}" href="?summary=feedback&amp;type={{ assignment_type }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}">피드백 된 과제 <strong>{{ feedback_count }}</strong></a>
+</div>
+<section class="student-card assignment-list-card" aria-label="과제 목록">
   <div class="assignment-toolbar">
-    <div class="assignment-date-view" aria-label="생성일 보기 기준">
-      <span class="assignment-filter-label">생성일 기준</span>
-      <div class="assignment-filter-options" role="group" aria-label="생성일 묶음 선택">
-        <a class="assignment-filter-chip{% if date_group == 'all' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=all&amp;created_date={{ created_date }}">전체</a>
-        <a class="assignment-filter-chip{% if date_group == 'month' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=month&amp;created_date={{ created_date }}">월별</a>
-        <a class="assignment-filter-chip{% if date_group == 'day' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=day&amp;created_date={{ created_date }}">일별</a>
-      </div>
-      <form class="assignment-calendar-filter" method="get">
+    <div class="assignment-quick-filter">
+      <nav class="assignment-type-tabs" aria-label="과제 유형">
+        <a class="assignment-type-tab{% if assignment_type == 'all' %} is-active{% endif %}" href="?summary={{ summary_filter }}&amp;type=all&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}">전체</a>
+        <a class="assignment-type-tab{% if assignment_type == 'personal' %} is-active{% endif %}" href="?summary={{ summary_filter }}&amp;type=personal&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}">개인 과제</a>
+        <a class="assignment-type-tab{% if assignment_type == 'team' %} is-active{% endif %}" href="?summary={{ summary_filter }}&amp;type=team&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}">팀 과제</a>
+      </nav>
+      <form class="assignment-search-sort" method="get">
+        <input type="hidden" name="type" value="{{ assignment_type }}">
+        <input type="hidden" name="summary" value="{{ summary_filter }}">
         <input type="hidden" name="submission" value="{{ submission_filter }}">
         <input type="hidden" name="deadline" value="{{ deadline_filter }}">
         <input type="hidden" name="date_group" value="{{ date_group }}">
-        <label class="visually-hidden" for="assignment-created-date">과제 생성 날짜 선택</label>
-        <input class="assignment-calendar-input" id="assignment-created-date" type="date" name="created_date" value="{{ created_date }}" aria-label="과제 생성 날짜 선택" onchange="this.form.submit()">
-        {% if created_date %}<a class="assignment-calendar-clear" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}">초기화</a>{% endif %}
+        <input type="hidden" name="created_date" value="{{ created_date }}">
+        <label class="assignment-search">
+          <input type="search" name="q" value="{{ search_query }}" placeholder="과제명 검색" aria-label="과제명 검색">
+        </label>
+        <label>
+          <select class="assignment-sort-select" name="sort" aria-label="과제 정렬" onchange="this.form.submit()">
+            <option value="default"{% if sort_order == 'default' %} selected{% endif %}>기본 정렬</option>
+            <option value="due_soon"{% if sort_order == 'due_soon' %} selected{% endif %}>마감 임박순</option>
+          </select>
+        </label>
       </form>
-    </div>
-    <div class="assignment-list-summary">
-      <span aria-hidden="true">📋</span>
-      <h2 id="assignment-list-heading" class="student-section-title mb-0">전체 과제</h2>
-      <span class="assignment-count text-muted">{{ filtered_count }}개 / 전체 {{ total_count }}개</span>
-    </div>
-    <div class="assignment-filters" aria-label="과제 목록 필터">
-      <div class="assignment-filter-group deadline-filter">
-        <span class="assignment-filter-label">마감 상태</span>
-        <div class="assignment-filter-options" role="group" aria-label="마감 상태 선택">
-          <a class="assignment-filter-chip{% if deadline_filter == 'all' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=all&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">전체</a>
-          <a class="assignment-filter-chip{% if deadline_filter == 'open' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=open&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">진행 중</a>
-          <a class="assignment-filter-chip{% if deadline_filter == 'closed' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=closed&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">마감</a>
-        </div>
-      </div>
-      <div class="assignment-filter-group submission-filter">
-        <span class="assignment-filter-label">제출 상태</span>
-        <div class="assignment-filter-options" role="group" aria-label="제출 상태 선택">
-          <a class="assignment-filter-chip{% if submission_filter == 'all' %} is-submission-active{% endif %}" href="?submission=all&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">전체</a>
-          <a class="assignment-filter-chip{% if submission_filter == 'unsubmitted' %} is-submission-active{% endif %}" href="?submission=unsubmitted&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">미제출</a>
-          <a class="assignment-filter-chip{% if submission_filter == 'submitted' %} is-submission-active{% endif %}" href="?submission=submitted&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">제출완료</a>
-        </div>
-      </div>
     </div>
   </div>
   <div class="assignment-list">
     {% for group in row_groups %}
       {% if group.label %}<h3 class="assignment-date-heading">{{ group.label }}</h3>{% endif %}
       {% for row in group.rows %}
-      <article class="assignment-row{% if row.is_past %} is-past{% else %} is-open{% endif %}"{% if row.submission %} data-href="{% url 'student:assignment-preview' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 제출 보기"{% elif row.can_submit %} data-href="{% url 'student:assignment-submit' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} {% if row.is_late_available %}지각 제출{% else %}제출하기{% endif %}"{% endif %}>
-        <div class="flex-grow-1 min-width-0">
-          <h3 class="assignment-title">{{ row.assignment.title }}</h3>
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge-soft {% if row.assignment.is_required %}badge-required{% else %}badge-optional{% endif %}">{% if row.assignment.is_required %}필수{% else %}선택{% endif %}</span>
-            <span class="badge-soft {% if row.assignment.is_team %}badge-team{% else %}badge-personal{% endif %}">{% if row.assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}</span>
-            <span class="deadline-state {% if row.is_past %}deadline-closed{% else %}deadline-open{% endif %}">{% if row.is_past %}마감{% else %}진행 중{% endif %}</span>
-            <span class="assignment-due">{{ row.assignment.due_at|date:"Y.m.d (D) H:i" }}</span>
-          </div>
-          {% if row.score_locked %}<p class="assignment-locked-note">회차 점수가 마감되어, 지금 제출해도 점수에 반영되지 않습니다</p>{% endif %}
-        </div>
-        <span class="status-pill status-{{ row.status_class }}">{{ row.status }}</span>
-        {% if row.submission %}
-          <a class="btn btn-outline-primary btn-sm" href="{% url 'student:assignment-preview' row.assignment.id %}">제출 보기</a>
-        {% elif row.can_submit %}
-          <a class="btn btn-primary btn-sm" href="{% url 'student:assignment-submit' row.assignment.id %}">{% if row.is_late_available %}지각 제출{% else %}제출하기{% endif %}</a>
-        {% endif %}
-      </article>
+        {% include "student/_assignment_list_row.html" %}
       {% endfor %}
-    {% empty %}<div class="empty-state">선택한 조건에 맞는 과제가 없습니다.</div>{% endfor %}
+    {% empty %}{% if not late_rows %}<div class="empty-state">선택한 조건에 맞는 과제가 없습니다.</div>{% endif %}{% endfor %}
   </div>
+  {% if late_rows %}
+    <details class="late-assignment-section">
+      <summary>지각 제출 허용 <span class="late-assignment-count">{{ late_rows|length }}</span></summary>
+      <div class="late-assignment-list">
+        {% for row in late_rows %}
+          {% include "student/_assignment_list_row.html" %}
+        {% endfor %}
+      </div>
+    </details>
+  {% endif %}
   {% if page_obj.paginator.num_pages > 1 %}
     <nav class="assignment-pagination d-flex align-items-center justify-content-center gap-2 mt-4" aria-label="과제 목록 페이지">
       {% if page_obj.has_previous %}
-        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_obj.previous_page_number }}">‹ 이전</a>
+        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?summary={{ summary_filter }}&amp;type={{ assignment_type }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}&amp;submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_obj.previous_page_number }}">‹ 이전</a>
       {% endif %}
       {% for page_number in page_obj.paginator.page_range %}
-        <a class="btn btn-sm {% if page_number == page_obj.number %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_number }}"{% if page_number == page_obj.number %} aria-current="page"{% endif %}>{{ page_number }}</a>
+        <a class="btn btn-sm {% if page_number == page_obj.number %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?summary={{ summary_filter }}&amp;type={{ assignment_type }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}&amp;submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_number }}"{% if page_number == page_obj.number %} aria-current="page"{% endif %}>{{ page_number }}</a>
       {% endfor %}
       {% if page_obj.has_next %}
-        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_obj.next_page_number }}">다음 ›</a>
+        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?summary={{ summary_filter }}&amp;type={{ assignment_type }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort_order }}&amp;submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_obj.next_page_number }}">다음 ›</a>
       {% endif %}
     </nav>
   {% endif %}

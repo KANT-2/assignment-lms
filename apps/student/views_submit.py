@@ -116,12 +116,22 @@ def assignment_list(request):
     deadline_filter = request.GET.get("deadline", "all")
     date_group = request.GET.get("date_group", "all")
     created_date_value = request.GET.get("created_date", "")
+    assignment_type = request.GET.get("type", "all")
+    search_query = request.GET.get("q", "").strip()
+    sort_order = request.GET.get("sort", "default")
+    summary_filter = request.GET.get("summary", "all")
     if submission_filter not in {"all", "submitted", "unsubmitted"}:
         submission_filter = "all"
     if deadline_filter not in {"all", "open", "closed"}:
         deadline_filter = "all"
     if date_group not in {"all", "month", "day"}:
         date_group = "all"
+    if assignment_type not in {"all", "personal", "team"}:
+        assignment_type = "all"
+    if sort_order not in {"default", "due_soon"}:
+        sort_order = "default"
+    if summary_filter not in {"all", "todo", "submitted", "feedback"}:
+        summary_filter = "all"
     try:
         created_date = date.fromisoformat(created_date_value) if created_date_value else None
     except ValueError:
@@ -183,6 +193,14 @@ def assignment_list(request):
         reverse=True,
     )
     rows = open_rows + closed_rows
+    todo_count = sum(1 for row in rows if row["submission"] is None and row["can_submit"])
+    submitted_count = sum(1 for row in rows if row["submission"] is not None)
+    feedback_count = sum(
+        1
+        for row in rows
+        if row["submission"] is not None
+        and row["submission"].final_score is not None
+    )
     filtered_rows = [
         row
         for row in rows
@@ -200,16 +218,49 @@ def assignment_list(request):
             created_date is None
             or timezone.localtime(row["assignment"].created_at).date() == created_date
         )
+        and (
+            assignment_type == "all"
+            or (assignment_type == "personal" and not row["assignment"].is_team)
+            or (assignment_type == "team" and row["assignment"].is_team)
+        )
+        and (
+            not search_query
+            or search_query.casefold() in row["assignment"].title.casefold()
+        )
+        and (
+            summary_filter == "all"
+            or (
+                summary_filter == "todo"
+                and row["submission"] is None
+                and row["can_submit"]
+            )
+            or (summary_filter == "submitted" and row["submission"] is not None)
+            or (
+                summary_filter == "feedback"
+                and row["submission"] is not None
+                and row["submission"].final_score is not None
+            )
+        )
     ]
+    if sort_order == "due_soon":
+        filtered_rows.sort(
+            key=lambda row: (
+                row["is_past"],
+                row["assignment"].due_at if not row["is_past"] else -row["assignment"].due_at.timestamp(),
+                row["assignment"].id,
+            )
+        )
     page_obj = Paginator(filtered_rows, 10).get_page(request.GET.get("page"))
     page_rows = list(page_obj.object_list)
+    late_rows = [row for row in page_rows if row["is_late_available"]]
+    regular_rows = [row for row in page_rows if not row["is_late_available"]]
     row_groups = []
-    if date_group == "all" and page_rows:
-        row_groups.append({"label": "", "rows": page_rows})
+    if date_group == "all" and regular_rows:
+        row_groups.append({"label": "", "rows": regular_rows})
     else:
         label_format = "%Y년 %m월" if date_group == "month" else "%Y년 %m월 %d일"
         groups = {}
-        for row in page_rows:
+        for row in regular_rows:
             created_at = timezone.localtime(row["assignment"].created_at)
             deadline_label = "마감" if row["is_past"] else "진행 중"
             group_key = (row["is_past"], created_at.strftime(label_format))
@@ -227,13 +278,21 @@ def assignment_list(request):
         {
             "rows": page_rows,
             "row_groups": row_groups,
+            "late_rows": late_rows,
             "total_count": len(rows),
             "filtered_count": len(filtered_rows),
+            "todo_count": todo_count,
+            "submitted_count": submitted_count,
+            "feedback_count": feedback_count,
             "page_obj": page_obj,
             "submission_filter": submission_filter,
             "deadline_filter": deadline_filter,
             "date_group": date_group,
             "created_date": created_date_value,
+            "assignment_type": assignment_type,
+            "search_query": search_query,
+            "sort_order": sort_order,
+            "summary_filter": summary_filter,
         },
     )
 

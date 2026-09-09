@@ -1,0 +1,22 @@
+<article class="assignment-row{% if row.is_past %} is-past{% else %} is-open{% endif %}"{% if row.submission %} data-href="{% url 'student:assignment-preview' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 제출 보기"{% elif row.can_submit %} data-href="{% url 'student:assignment-submit' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} {% if row.is_late_available %}지각 제출{% else %}제출하기{% endif %}"{% endif %}>
+  <div class="assignment-row-main flex-grow-1 min-width-0">
+    <h3 class="assignment-title">{{ row.assignment.title }}</h3>
+    <div class="assignment-meta d-flex flex-wrap align-items-center gap-2">
+      <span class="badge-soft {% if row.assignment.is_required %}badge-required{% else %}badge-optional{% endif %}">{% if row.assignment.is_required %}필수{% else %}선택{% endif %}</span>
+      <span class="badge-soft {% if row.assignment.is_team %}badge-team{% else %}badge-personal{% endif %}">{% if row.assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}</span>
+    </div>
+    <div class="assignment-deadline{% if row.is_past %} is-past{% endif %}">
+      <span aria-hidden="true">◷</span>
+      <span class="assignment-due">{{ row.assignment.due_at|date:"Y.m.d (D) H:i" }}</span>
+    </div>
+    {% if row.score_locked %}<p class="assignment-locked-note">회차 점수가 마감되어, 지금 제출해도 점수에 반영되지 않습니다</p>{% endif %}
+  </div>
+  <div class="assignment-row-actions">
+    <span class="status-pill status-{{ row.status_class }}">{{ row.status }}</span>
+    {% if row.submission %}
+      <a class="btn btn-outline-primary btn-sm" href="{% url 'student:assignment-preview' row.assignment.id %}">제출 보기</a>
+    {% elif row.can_submit %}
+      <a class="btn btn-primary btn-sm" href="{% url 'student:assignment-submit' row.assignment.id %}">{% if row.is_late_available %}지각 제출{% else %}제출하기{% endif %}</a>
+    {% endif %}
+  </div>
+</article>
