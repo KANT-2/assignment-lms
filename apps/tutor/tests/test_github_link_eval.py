@@ -94,6 +94,52 @@ class FetchGithubFileTests(TestCase):
             )
 
 
+class ProbeGithubFileTests(TestCase):
+    def _get(self, status):
+        return patch(
+            "apps.tutor.github_fetch.requests.get",
+            return_value=SimpleNamespace(status_code=status, close=lambda: None),
+        )
+
+    def test_repo_root_is_not_blob(self):
+        self.assertEqual(
+            github_fetch.probe_github_file("https://github.com/o/r"), "not_blob"
+        )
+
+    def test_tree_link_is_not_blob(self):
+        self.assertEqual(
+            github_fetch.probe_github_file("https://github.com/o/r/tree/main/src"),
+            "not_blob",
+        )
+
+    def test_reachable_blob_is_ok(self):
+        with self._get(200):
+            self.assertEqual(
+                github_fetch.probe_github_file("https://github.com/o/r/blob/main/a.py"),
+                "ok",
+            )
+
+    def test_private_or_missing_blob_is_not_found(self):
+        for status in (401, 403, 404, 410):
+            with self._get(status):
+                self.assertEqual(
+                    github_fetch.probe_github_file(
+                        "https://github.com/o/r/blob/main/a.py"
+                    ),
+                    "not_found",
+                )
+
+    def test_timeout_is_error(self):
+        with patch(
+            "apps.tutor.github_fetch.requests.get",
+            side_effect=github_fetch.requests.RequestException,
+        ):
+            self.assertEqual(
+                github_fetch.probe_github_file("https://github.com/o/r/blob/main/a.py"),
+                "error",
+            )
+
+
 class BuildPromptTests(TestCase):
     databases = {"default"}
 
