@@ -182,7 +182,7 @@ def assignment_list(request):
         key=lambda row: (row["assignment"].created_at, row["assignment"].id),
         reverse=True,
     )
-    rows = closed_rows + open_rows
+    rows = open_rows + closed_rows
     filtered_rows = [
         row
         for row in rows

@@ -250,7 +250,7 @@ class SubmissionViewTests(TestCase):
         self.assertEqual(first_page.context["page_obj"].paginator.num_pages, 2)
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
-    def test_assignment_list_sorts_closed_then_recently_created_open_assignments(
+    def test_assignment_list_sorts_open_then_recently_closed_assignments(
         self, _get_user_team
     ):
         now = timezone.now()
@@ -284,7 +284,7 @@ class SubmissionViewTests(TestCase):
         ]
         self.assertEqual(
             assignment_ids,
-            [recent_closed.id, older_closed.id, recent_open.id, older_open.id],
+            [recent_open.id, older_open.id, recent_closed.id, older_closed.id],
         )
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)

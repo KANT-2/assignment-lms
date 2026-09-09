@@ -111,3 +111,35 @@ class AssignmentCreateViewTests(TestCase):
         a = Assignment.objects.get(title="중요 과제")
         self.assertEqual(a.weight_tier, "LOW")
         self.assertEqual(a.late_penalty, 5)
+
+    @patch("apps.tutor.views_manage.accounts.get_students", return_value=[])
+    @patch("apps.tutor.views_manage.accounts.get_teams", return_value=[])
+    def test_list_sorts_open_then_recently_closed_assignments(
+        self, _get_teams, _get_students
+    ):
+        now = timezone.now()
+        older_closed = Assignment.objects.create(
+            title="이전 마감 과제", due_at=now - timedelta(days=2), created_by=1
+        )
+        recent_closed = Assignment.objects.create(
+            title="최근 마감 과제", due_at=now - timedelta(days=1), created_by=1
+        )
+        older_open = Assignment.objects.create(
+            title="먼저 생성된 진행 과제", due_at=now + timedelta(days=3), created_by=1
+        )
+        recent_open = Assignment.objects.create(
+            title="최근 생성된 진행 과제", due_at=now + timedelta(days=1), created_by=1
+        )
+        Assignment.objects.filter(pk=older_open.pk).update(
+            created_at=now - timedelta(hours=2)
+        )
+        Assignment.objects.filter(pk=recent_open.pk).update(
+            created_at=now - timedelta(hours=1)
+        )
+
+        response = self.client.get(reverse("tutor:assignment-list"))
+
+        self.assertEqual(
+            [assignment.id for assignment in response.context["assignments"]],
+            [recent_open.id, older_open.id, recent_closed.id, older_closed.id],
+        )
