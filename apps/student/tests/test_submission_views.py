@@ -199,7 +199,7 @@ class SubmissionViewTests(TestCase):
         )
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
-    def test_assignment_list_filters_by_submission_status(self, _get_user_team):
+    def test_assignment_list_filters_by_status_tab(self, _get_user_team):
         submitted_assignment = self.assignment(title="제출한 과제")
         self.assignment(title="미제출 과제")
         Submission.objects.create(
@@ -210,16 +210,14 @@ class SubmissionViewTests(TestCase):
 
         response = self.client.get(
             reverse("student:assignment-list"),
-            {"submission": "submitted", "deadline": "all"},
+            {"status": "submitted"},
         )
 
         self.assertContains(response, "제출한 과제")
         self.assertNotContains(response, "미제출 과제")
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
-    def test_assignment_list_combines_unsubmitted_and_open_filters(
-        self, _get_user_team
-    ):
+    def test_assignment_list_todo_tab_excludes_closed_assignments(self, _get_user_team):
         self.assignment(title="진행 중 미제출")
         self.assignment(
             title="마감된 미제출",
@@ -228,7 +226,7 @@ class SubmissionViewTests(TestCase):
 
         response = self.client.get(
             reverse("student:assignment-list"),
-            {"submission": "unsubmitted", "deadline": "open"},
+            {"status": "todo"},
         )
 
         self.assertContains(response, "진행 중 미제출")
@@ -250,18 +248,10 @@ class SubmissionViewTests(TestCase):
         self.assertEqual(first_page.context["page_obj"].paginator.num_pages, 2)
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
-    def test_assignment_list_sorts_open_then_recently_closed_assignments(
+    def test_assignment_list_sorts_todo_assignments_by_nearest_deadline(
         self, _get_user_team
     ):
         now = timezone.now()
-        older_closed = self.assignment(
-            title="이전 마감 과제",
-            due_at=now - timedelta(days=2),
-        )
-        recent_closed = self.assignment(
-            title="최근 마감 과제",
-            due_at=now - timedelta(days=1),
-        )
         older_open = self.assignment(
             title="먼저 생성된 진행 과제",
             due_at=now + timedelta(days=3),
@@ -284,42 +274,54 @@ class SubmissionViewTests(TestCase):
         ]
         self.assertEqual(
             assignment_ids,
-            [recent_open.id, older_open.id, recent_closed.id, older_closed.id],
+            [recent_open.id, older_open.id],
         )
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
-    def test_assignment_list_groups_by_created_month(self, _get_user_team):
-        assignment = self.assignment(title="생성일 묶음 과제")
+    def test_assignment_list_filters_by_assignment_type(self, _get_user_team):
+        self.assignment(title="개인 과제", is_team=False)
+        self.assignment(title="팀 전용 과제", is_team=True)
 
         response = self.client.get(
             reverse("student:assignment-list"),
-            {"date_group": "month"},
+            {"type": "team"},
         )
 
-        expected_month = timezone.localtime(assignment.created_at).strftime(
-            "%Y년 %m월"
-        )
-        self.assertEqual(response.context["date_group"], "month")
-        self.assertContains(response, f"진행 중 · {expected_month}")
-        self.assertContains(response, "생성일 묶음 과제")
+        self.assertContains(response, "팀 전용 과제")
+        self.assertNotContains(response, '<h3 class="assignment-title">개인 과제</h3>')
 
     @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
-    def test_assignment_list_filters_by_selected_created_date(self, _get_user_team):
-        selected = self.assignment(title="선택 날짜 과제")
-        other = self.assignment(title="다른 날짜 과제")
-        selected_date = timezone.localtime(selected.created_at).date()
-        Assignment.objects.filter(pk=other.pk).update(
-            created_at=selected.created_at - timedelta(days=1)
-        )
+    def test_assignment_list_searches_by_title(self, _get_user_team):
+        self.assignment(title="파이썬 기초 과제")
+        self.assignment(title="데이터베이스 과제")
 
         response = self.client.get(
             reverse("student:assignment-list"),
-            {"created_date": selected_date.isoformat()},
+            {"q": "파이썬"},
         )
 
-        self.assertContains(response, "선택 날짜 과제")
-        self.assertNotContains(response, "다른 날짜 과제")
-        self.assertEqual(response.context["created_date"], selected_date.isoformat())
+        self.assertContains(response, "파이썬 기초 과제")
+        self.assertNotContains(response, "데이터베이스 과제")
+        self.assertEqual(response.context["search_query"], "파이썬")
+
+    @patch("apps.student.views_submit.accounts.get_user_team", return_value=None)
+    def test_assignment_list_counts_each_status(self, _get_user_team):
+        self.assignment(title="해야 할 과제")
+        submitted = self.assignment(title="제출한 과제")
+        feedback = self.assignment(title="피드백 과제")
+        Submission.objects.create(assignment=submitted, student_id=self.user.id)
+        Submission.objects.create(
+            assignment=feedback,
+            student_id=self.user.id,
+            final_score=95,
+        )
+
+        response = self.client.get(reverse("student:assignment-list"))
+
+        self.assertEqual(
+            response.context["status_counts"],
+            {"todo": 1, "submitted": 1, "feedback": 1},
+        )
 
     @patch("apps.student.views_submit.accounts.get_user_team")
     def test_team_member_can_submit_once_for_the_team(self, get_user_team):
