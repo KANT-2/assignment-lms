@@ -19,6 +19,7 @@ from django.conf import settings
 
 _ALLOWED_HOSTS = {"github.com", "www.github.com", "raw.githubusercontent.com"}
 _TIMEOUT = 10
+_PROBE_TIMEOUT = 6  # 제출 시점 링크 검증용 — 본문은 안 받고 상태코드만
 _MAX_BYTES = 512 * 1024  # 이보다 큰 파일은 스킵 (데이터/바이너리로 간주)
 
 # /{owner}/{repo}/blob/{ref}/{path...}
@@ -46,6 +47,39 @@ def raw_url(url: str) -> str | None:
         return None
     owner, repo, ref, path = match.groups()
     return f"https://raw.githubusercontent.com/{owner}/{repo}/{ref}/{path}"
+
+
+def probe_github_file(url: str) -> str:
+    """GitHub 링크가 AI 채점 가능한 단일 파일 링크인지 확인 (본문은 안 받음).
+
+    반환:
+        "ok"        blob/raw 형태 + 200
+        "not_blob"  github.com 인데 blob/raw 단일 파일 형태가 아님 (레포 루트·tree·PR·gist)
+        "not_found" blob/raw 형태지만 열리지 않음 (비공개·404·삭제)
+        "error"     네트워크·타임아웃 — 판단 보류 (호출부가 통과시킨다)
+
+    호출 전에 is_github_url(url) 로 GitHub 링크인지 먼저 확인할 것.
+    """
+    target = raw_url(url)
+    if target is None:
+        return "not_blob"
+
+    headers = {}
+    token = getattr(settings, "GITHUB_API_TOKEN", "") or ""
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        resp = requests.get(target, timeout=_PROBE_TIMEOUT, headers=headers, stream=True)
+        resp.close()
+    except requests.RequestException:
+        return "error"
+
+    if resp.status_code == 200:
+        return "ok"
+    if resp.status_code in (401, 403, 404, 410):
+        return "not_found"
+    return "error"
 
 
 def fetch_github_file(url: str) -> str | None:

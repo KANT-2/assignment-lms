@@ -103,6 +103,11 @@ urlpatterns = [
         name="submission-file-inline",
     ),
     path(
+        "submission-files/<int:file_id>/download/",
+        views_review.submission_file_download,
+        name="submission-file-download",
+    ),
+    path(
         "submissions/<int:pk>/ai-evaluation/",
         views_review.ai_evaluation_generate,
         name="submission-ai-eval",

@@ -38,6 +38,16 @@ class SignalTests(TestCase):
         self.assertEqual(push.state, SubmissionPush.State.PENDING)
         try_sync.assert_called_once()
 
+    @patch("apps.github_sync.services.try_sync_now", side_effect=RuntimeError("GitHub 느림"))
+    def test_push_row_survives_when_github_call_fails(self, _try_sync):
+        # enqueue(행 생성)는 동기, GitHub 호출만 백그라운드 → 호출이 터져도 PENDING 행은 남아
+        # 배치가 재시도할 수 있어야 한다. SubmissionFile 저장 자체도 예외 없이 끝나야 한다.
+        sub = self._make_file()
+        self.assertEqual(
+            SubmissionPush.objects.get(submission=sub).state,
+            SubmissionPush.State.PENDING,
+        )
+
     @override_settings(GITHUB_OAUTH_CLIENT_ID=None)
     def test_disabled_does_nothing(self):
         self._make_file()

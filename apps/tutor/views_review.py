@@ -21,14 +21,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.views.decorators.http import require_POST
-from google.genai.errors import ServerError
 
 from apps.accounts_client import services as accounts
 from apps.common.preview import IMAGE_PREVIEW_EXTENSIONS, _preview, _storage_name
 from apps.core.models import AiEvaluation, Evaluation, Submission, SubmissionFile
 from apps.notifications.slack import notify_dm_ax_many
 
-from . import ai_gemini
+from . import ai_gemini, github_fetch
 from .forms import EvaluationForm
 from .views_manage import (
     SORT_CHOICES,
@@ -44,6 +43,14 @@ logger = logging.getLogger(__name__)
 
 # 이전/다음 이동 시 유지할 쿼리 파라미터 (대시보드 필터/정렬)
 _CARRY_KEYS = ("q", "status", "sort")
+
+
+def _repo_or_folder_links(urls):
+    """GitHub 저장소/폴더 링크 (AI 가 코드를 못 읽는 종류) 만 추린다."""
+    return [
+        u for u in urls
+        if github_fetch.is_github_url(u) and not github_fetch.raw_url(u)
+    ]
 
 
 def _carry_qs(src) -> str:
@@ -204,6 +211,21 @@ def submission_file_inline(request, file_id):
 
 
 @tutor_required
+def submission_file_download(request, file_id):
+    """튜터 검토 화면에서 제출 파일을 내려받는다 (미리보기 미지원 파일 포함)."""
+    submission_file = get_object_or_404(SubmissionFile, pk=file_id)
+    try:
+        file_handle = default_storage.open(_storage_name(submission_file.file_url), "rb")
+    except (FileNotFoundError, OSError, ValueError):
+        raise Http404("저장된 제출 파일을 찾을 수 없습니다.") from None
+    return FileResponse(
+        file_handle,
+        as_attachment=True,
+        filename=Path(submission_file.file_name).name or "submission",
+    )
+
+
+@tutor_required
 @require_POST
 def ai_evaluation_generate(request, pk):
     """FR-012 — AI 1차 평가 생성/재생성 (기존 AiEvaluation 을 덮어씀)."""
@@ -211,20 +233,23 @@ def ai_evaluation_generate(request, pk):
     try:
         result = ai_gemini.generate(submission)
     except ai_gemini.NoReadableContent as exc:
-        detail = f": {', '.join(exc.links)}" if exc.links else " (코드/텍스트 파일이 아님)"
-        messages.error(
-            request,
-            "AI가 제출물 내용을 읽지 못했습니다" + detail
-            + ". 링크를 확인하거나 학생에게 재제출을 요청하세요.",
-        )
+        if not exc.links:
+            hint = "코드·텍스트 파일이 아니라 AI가 읽을 내용이 없습니다."
+            detail = ""
+        elif _repo_or_folder_links(exc.links):
+            hint = (
+                "GitHub 저장소·폴더 링크는 AI가 코드를 읽지 못합니다. "
+                "특정 파일 페이지(.../blob/...) 링크나 파일 첨부로 다시 제출하도록 학생에게 요청하세요."
+            )
+            detail = f" — {', '.join(exc.links)}"
+        else:
+            hint = "링크가 비공개이거나 접근할 수 없습니다. 학생에게 확인/재제출을 요청하세요."
+            detail = f" — {', '.join(exc.links)}"
+        messages.error(request, f"AI가 제출물 내용을 읽지 못했습니다{detail}. {hint}")
         return redirect(_review_url(pk, request.POST))
-    except ServerError:
-        logger.warning("AI 1차 평가 — Gemini 서버 혼잡 (submission=%s)", pk)
-        messages.error(request, "AI 채점 서버가 혼잡합니다. 잠시 후 '✨ AI 다시 채점'을 눌러주세요.")
-        return redirect(_review_url(pk, request.POST))
-    except Exception:
-        logger.exception("AI 1차 평가 생성 실패 (submission=%s)", pk)
-        messages.error(request, "AI 1차 평가 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+    except Exception as exc:  # noqa: BLE001 — 원인은 failure_reason() 이 튜터에게 문장으로
+        logger.warning("AI 1차 평가 실패 (submission=%s): %s", pk, exc, exc_info=True)
+        messages.error(request, ai_gemini.failure_reason(exc))
         return redirect(_review_url(pk, request.POST))
 
     _, created = AiEvaluation.objects.update_or_create(
@@ -232,9 +257,14 @@ def ai_evaluation_generate(request, pk):
         defaults={"score": result.score, "comment": result.comment},
     )
     if result.unreadable_links:
+        extra = (
+            " (저장소·폴더 링크는 파일 목록만 확인됩니다)"
+            if _repo_or_folder_links(result.unreadable_links)
+            else ""
+        )
         messages.warning(
             request,
-            f"읽지 못한 링크: {', '.join(result.unreadable_links)}. "
+            f"읽지 못한 링크{extra}: {', '.join(result.unreadable_links)}. "
             "AI 평가는 나머지 자료 기준입니다.",
         )
     messages.success(

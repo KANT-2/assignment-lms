@@ -68,6 +68,21 @@ class TutorStudentMgmtTests(TestCase):
         ctx = self.client.get(reverse("tutor:student-list"), {"sort": "name"}).context
         self.assertEqual([r["name"] for r in ctx["rows"]], ["학생1", "학생2", "학생3"])
 
+    def test_sort_by_score(self):
+        a = self._a(due_at=timezone.now() - timedelta(days=1))
+        for sid, sc in [(1, 90), (2, 30), (3, 60)]:
+            sub = Submission.objects.create(assignment=a, student_id=sid)
+            Evaluation.objects.create(submission=sub, score=sc, feedback="x")
+        low = self.client.get(reverse("tutor:student-list"), {"sort": "score_low"}).context
+        self.assertEqual([r["id"] for r in low["rows"]], [2, 3, 1])
+        high = self.client.get(reverse("tutor:student-list"), {"sort": "score_high"}).context
+        self.assertEqual([r["id"] for r in high["rows"]], [1, 3, 2])
+
+    def test_invalid_sort_falls_back(self):
+        self._a()
+        ctx = self.client.get(reverse("tutor:student-list"), {"sort": "bogus"}).context
+        self.assertEqual(ctx["filters"]["sort"], "required")
+
     # ---------- detail ----------
     def test_detail_timeline_statuses(self):
         done = self._a(title="제출완료", due_at=timezone.now() + timedelta(days=2))

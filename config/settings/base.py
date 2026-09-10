@@ -122,9 +122,12 @@ AX_ROUND_ID = env("AX_ROUND_ID", None)
 # 키 미설정 / 호출 실패 시엔 뷰가 "AI 평가 생성에 실패했습니다" 메시지를 띄운다 (가짜 점수 저장 안 함).
 GEMINI_API_KEY = env("GEMINI_API_KEY")
 GEMINI_MODEL = env("GEMINI_MODEL", "gemini-3.6-flash")
-# 1순위 모델이 5xx(혼잡)일 때 순서대로 재시도할 폴백 모델. 무료 티어는 모델별로
-# 혼잡이 오락가락해서 하나 걸어두면 성공률이 올라간다. 비우면 재시도 없음.
-GEMINI_FALLBACK_MODELS = env_list("GEMINI_FALLBACK_MODELS", "gemini-flash-latest")
+# 1순위 모델이 5xx(혼잡·타임아웃)거나 응답을 못 만들 때 순서대로 재시도할 폴백 모델.
+# 모델별로 혼잡이 오락가락하고, 큰 프롬프트 + 구조화 출력에서는 flash 계열이 자주 504 → 마지막에
+# gemini-flash-lite-latest 를 안전망으로. 비우면 재시도 없음.
+GEMINI_FALLBACK_MODELS = env_list(
+    "GEMINI_FALLBACK_MODELS", "gemini-flash-latest,gemini-flash-lite-latest"
+)
 
 # --- GitHub 제출물 동기화 (apps.github_sync) ---
 # 세 값이 모두 있어야 기능 활성화 (services.enabled()). 없으면 시그널·UI 모두 no-op.
@@ -143,6 +146,11 @@ GITHUB_OAUTH_REDIRECT_URI = env("GITHUB_OAUTH_REDIRECT_URI", "")
 # AI 채점이 학생 GitHub 공개 레포 단일 파일 링크를 읽을 때 rate limit 상향용 (apps.tutor.github_fetch).
 # 없어도 동작 (무인증, 60/hr). 있으면 5000/hr.
 GITHUB_API_TOKEN = env("GITHUB_API_TOKEN")
+
+# 제출·평가 저장 시 GitHub push/이슈 생성을 요청 사이클 안에서 동기 실행할지.
+# 기본 False → 백그라운드 스레드 (github_sync.background). 실패분은 manage.py github_sync 배치가 재시도.
+# True 는 테스트/관리 명령에서 결과를 확정적으로 보고 싶을 때만.
+GITHUB_SYNC_SYNC = env_bool("GITHUB_SYNC_SYNC", False)
 
 # --- Slack 알림 (apps.notifications.slack) ---
 # 기본은 백그라운드 스레드로 발송 (요청 사이클을 막지 않음).

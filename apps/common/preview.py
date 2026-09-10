@@ -18,6 +18,7 @@ _preview(submission_file) -> dict:
 """
 import json
 from pathlib import Path
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -29,13 +30,27 @@ from pygments.lexers import PythonLexer
 
 from apps.core.models import SubmissionFile
 
-
 IMAGE_PREVIEW_EXTENSIONS = {
     ".avif", ".bmp", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".webp",
 }
 PDF_PREVIEW_EXTENSIONS = {".pdf"}
 CSV_PREVIEW_EXTENSIONS = {".csv", ".tsv"}
 PREVIEW_TEXT_LIMIT = 1024 * 1024
+
+
+def _is_link_submission(submission_file):
+    """SubmissionFile 이 업로드 파일이 아니라 학생이 붙인 링크(URL)인지.
+
+    링크 제출은 file_size=0, file_name=file_url 로 저장된다 (student.views_submit).
+    학생·튜터 미리보기 화면이 "🔗 링크 열기" 로 렌더할지 판단하는 단일 기준.
+    """
+    parsed = urlparse(submission_file.file_url or "")
+    return (
+        submission_file.file_size == 0
+        and submission_file.file_name == submission_file.file_url
+        and parsed.scheme in {"http", "https"}
+        and bool(parsed.hostname)
+    )
 
 
 def _submission_kind(file_name):
@@ -125,14 +140,17 @@ def _notebook_cells(raw_text):
 
 def _preview(submission_file):
     extension = Path(submission_file.file_name).suffix.lower()
+    is_link = _is_link_submission(submission_file)
     preview = {
         "file": submission_file,
         "kind": submission_file.kind,
-        "is_image": extension in IMAGE_PREVIEW_EXTENSIONS,
-        "is_pdf": extension in PDF_PREVIEW_EXTENSIONS,
-        "is_csv": extension in CSV_PREVIEW_EXTENSIONS,
+        "is_link": is_link,
+        "is_image": not is_link and extension in IMAGE_PREVIEW_EXTENSIONS,
+        "is_pdf": not is_link and extension in PDF_PREVIEW_EXTENSIONS,
+        "is_csv": not is_link and extension in CSV_PREVIEW_EXTENSIONS,
     }
-    if preview["is_image"] or preview["is_pdf"]:
+    # 링크 제출은 스토리지에 파일이 없다 — 본문 읽기 시도 없이 바로 반환.
+    if is_link or preview["is_image"] or preview["is_pdf"]:
         return preview
 
     raw_text, truncated = _read_preview_text(submission_file)

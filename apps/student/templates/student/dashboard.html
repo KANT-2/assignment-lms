@@ -140,13 +140,14 @@
   .dash .team-row .name { font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .dash .team-row .email { font-size:10.5px; color:var(--d-tmuted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-  .dash .submission-status { display:grid; grid-template-columns:minmax(130px, .9fr) minmax(150px, 1.1fr); align-items:center; gap:20px; }
+  /* 우측 사이드 칸(≈250px)에 들어가므로 항상 세로 배치 — 도넛 위, 통계 아래 */
+  .dash .submission-status { display:flex; flex-direction:column; align-items:center; gap:16px; }
   .dash .submission-ring { --submission-pct:0%; position:relative; width:128px; height:128px; margin:auto; border-radius:50%;
     display:grid; place-items:center; background:conic-gradient(from -90deg,var(--d-accent) var(--submission-pct),var(--d-sunken) 0); }
   .dash .submission-ring::before { content:""; position:absolute; inset:24px; border-radius:50%; background:var(--d-surface); }
   .dash .submission-ring-label { position:relative; z-index:1; text-align:center; color:var(--d-tmuted); font-size:11px; font-weight:600; }
   .dash .submission-ring-label strong { display:block; margin-top:2px; color:var(--d-accent); font-size:24px; line-height:1; }
-  .dash .submission-summary { display:flex; flex-direction:column; }
+  .dash .submission-summary { display:flex; flex-direction:column; width:100%; }
   .dash .submission-stat { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--d-border); }
   .dash .submission-stat:last-child { border-bottom:0; }
   .dash .submission-stat span { color:var(--d-tmuted); font-size:11px; }
@@ -156,10 +157,6 @@
   .dash .submission-week-nav a:hover { background:var(--d-sunken); color:var(--d-text); }
   .dash .submission-week-nav span { text-align:center; color:var(--d-tmuted); font-size:11px; font-weight:600; }
   .dash .info-mark { color:var(--d-tmuted); font-size:12px; cursor:help; }
-  @media (max-width:420px){
-    .dash .submission-status { grid-template-columns:1fr; }
-    .dash .submission-summary { width:100%; }
-  }
   .dash .muted-empty { color:var(--d-tfaint); font-size:12.5px; padding:10px 0; }
 </style>
 {% endblock %}
