@@ -1,6 +1,5 @@
 """학생 A — 과제 목록, 개인 과제 제출, 제출 파일 미리보기."""
 
-from datetime import date
 from functools import wraps
 from pathlib import Path
 from urllib.parse import urlparse
@@ -112,21 +111,16 @@ def student_required(view_func):
 def assignment_list(request):
     student_id = request.user.id
     team = accounts.get_user_team(external_student_id(request))
-    submission_filter = request.GET.get("submission", "all")
-    deadline_filter = request.GET.get("deadline", "all")
-    date_group = request.GET.get("date_group", "all")
-    created_date_value = request.GET.get("created_date", "")
-    if submission_filter not in {"all", "submitted", "unsubmitted"}:
-        submission_filter = "all"
-    if deadline_filter not in {"all", "open", "closed"}:
-        deadline_filter = "all"
-    if date_group not in {"all", "month", "day"}:
-        date_group = "all"
-    try:
-        created_date = date.fromisoformat(created_date_value) if created_date_value else None
-    except ValueError:
-        created_date = None
-        created_date_value = ""
+    status_filter = request.GET.get("status", "todo")
+    type_filter = request.GET.get("type", "all")
+    search_query = request.GET.get("q", "").strip()[:100]
+    sort = request.GET.get("sort", "deadline")
+    if status_filter not in {"todo", "submitted", "feedback"}:
+        status_filter = "todo"
+    if type_filter not in {"all", "personal", "team"}:
+        type_filter = "all"
+    if sort not in {"deadline", "latest"}:
+        sort = "deadline"
     submissions = {
         item.assignment_id: item for item in Submission.objects.filter(
             Q(student_id=student_id, team_id__isnull=True)
@@ -143,97 +137,78 @@ def assignment_list(request):
             is_past and assignment.allow_late and submission is None
         )
         score_locked = grading.score_locked_close(assignment, scored_ids=scored_ids)
-        if assignment.is_team and team is None:
-            status, status_class = "소속 팀 없음", "secondary"
-        elif submission and submission.final_score is not None:
-            status, status_class = "평가완료", "primary"
-        elif submission and submission.submitted_at > assignment.due_at:
-            status, status_class = "지각 제출완료", "warning"
+        if submission and submission.final_score is not None:
+            tab_status = "feedback"
         elif submission:
-            status, status_class = "제출완료", "success"
-        elif is_late_available:
-            status, status_class = "지각 제출 가능", "warning"
-        elif is_past:
-            status, status_class = "미제출로 마감", "danger"
+            tab_status = "submitted"
+        elif not is_past:
+            tab_status = "todo"
         else:
-            status, status_class = "미제출", "secondary"
+            tab_status = "closed"
+
+        due_local = timezone.localtime(assignment.due_at)
+        days_left = (due_local.date() - timezone.localdate()).days
         rows.append({
             "assignment": assignment,
             "submission": submission,
-            "status": status,
-            "status_class": status_class,
+            "tab_status": tab_status,
             "is_past": is_past,
             "is_late_available": is_late_available,
             "score_locked": score_locked,
+            "days_left": days_left,
+            "is_due_today": not is_past and days_left == 0,
             "can_submit": (
                 submission is None
                 and (not assignment.is_team or team is not None)
                 and (not is_past or assignment.allow_late)
             ),
-            "due_date_str": timezone.localtime(assignment.due_at).strftime('%Y-%m-%d'),
         })
-    closed_rows = sorted(
-        (row for row in rows if row["is_past"]),
-        key=lambda row: (row["assignment"].due_at, row["assignment"].id),
-        reverse=True,
-    )
-    open_rows = sorted(
-        (row for row in rows if not row["is_past"]),
-        key=lambda row: (row["assignment"].created_at, row["assignment"].id),
-        reverse=True,
-    )
-    rows = open_rows + closed_rows
+
+    status_counts = {
+        key: sum(row["tab_status"] == key for row in rows)
+        for key in ("todo", "submitted", "feedback")
+    }
+
+    def matches_controls(row):
+        assignment = row["assignment"]
+        return (
+            (type_filter == "all"
+             or (type_filter == "team" and assignment.is_team)
+             or (type_filter == "personal" and not assignment.is_team))
+            and (not search_query or search_query.casefold() in assignment.title.casefold())
+        )
+
     filtered_rows = [
         row
         for row in rows
-        if (
-            submission_filter == "all"
-            or (submission_filter == "submitted" and row["submission"] is not None)
-            or (submission_filter == "unsubmitted" and row["submission"] is None)
-        )
-        and (
-            deadline_filter == "all"
-            or (deadline_filter == "open" and not row["is_past"])
-            or (deadline_filter == "closed" and row["is_past"])
-        )
-        and (
-            created_date is None
-            or timezone.localtime(row["assignment"].created_at).date() == created_date
-        )
+        if row["tab_status"] == status_filter and matches_controls(row)
     ]
+    reverse = sort == "latest"
+    sort_key = (
+        (lambda row: (row["assignment"].created_at, row["assignment"].id))
+        if sort == "latest"
+        else (lambda row: (row["assignment"].due_at, row["assignment"].id))
+    )
+    filtered_rows.sort(key=sort_key, reverse=reverse)
+
+    late_rows = [row for row in rows if row["is_late_available"] and matches_controls(row)]
+    late_rows.sort(key=lambda row: (row["assignment"].due_at, row["assignment"].id), reverse=True)
+
     page_obj = Paginator(filtered_rows, 10).get_page(request.GET.get("page"))
     page_rows = list(page_obj.object_list)
-    row_groups = []
-    if date_group == "all" and page_rows:
-        row_groups.append({"label": "", "rows": page_rows})
-    else:
-        label_format = "%Y년 %m월" if date_group == "month" else "%Y년 %m월 %d일"
-        groups = {}
-        for row in page_rows:
-            created_at = timezone.localtime(row["assignment"].created_at)
-            deadline_label = "마감" if row["is_past"] else "진행 중"
-            group_key = (row["is_past"], created_at.strftime(label_format))
-            if group_key not in groups:
-                group = {
-                    "label": f"{deadline_label} · {group_key[1]}",
-                    "rows": [],
-                }
-                groups[group_key] = group
-                row_groups.append(group)
-            groups[group_key]["rows"].append(row)
     return render(
         request,
         "student/assignment_list.html",
         {
             "rows": page_rows,
-            "row_groups": row_groups,
-            "total_count": len(rows),
             "filtered_count": len(filtered_rows),
             "page_obj": page_obj,
-            "submission_filter": submission_filter,
-            "deadline_filter": deadline_filter,
-            "date_group": date_group,
-            "created_date": created_date_value,
+            "late_rows": late_rows,
+            "status_counts": status_counts,
+            "status_filter": status_filter,
+            "type_filter": type_filter,
+            "search_query": search_query,
+            "sort": sort,
         },
     )
 

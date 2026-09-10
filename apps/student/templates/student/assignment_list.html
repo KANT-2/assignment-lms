@@ -1,153 +1,102 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}과제 목록 | AX 과제 시스템{% endblock %}
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">
-<style>
-  .app-topbar .crumb { display:none; }
-  .app-topbar .utils { margin-left:auto; }
-  .assignment-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 24px; margin-bottom:14px; }
-  .assignment-list-summary { display:flex; align-items:center; gap:8px; order:1; width:100%; }
-  .assignment-list-summary .student-section-title { font-size:18px; }
-  .assignment-list-summary .assignment-count { font-size:13px; }
-  .assignment-date-view { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:10px; order:2; margin-left:auto; padding-bottom:2px; }
-  .assignment-calendar-filter { display:flex; align-items:center; gap:6px; margin-left:4px; }
-  .assignment-calendar-input { width:142px; padding:5px 10px; border:1px solid #d8dee8; border-radius:999px; color:#4f5d73; background:#fff; font-size:12px; font-weight:700; }
-  .assignment-calendar-input:focus { border-color:#a8c5f5; outline:3px solid rgb(40 112 230 / 12%); }
-  .assignment-calendar-clear { color:#7a8494; font-size:12px; text-decoration:none; }
-  .assignment-filters { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; order:3; width:100%; justify-content:flex-end; padding:4px 0; background:transparent; }
-  .assignment-filter-group { display:flex; align-items:center; gap:10px; }
-  .assignment-filter-label { color:var(--color-text-muted); font-size:12px; font-weight:700; white-space:nowrap; }
-  .assignment-filter-options { display:flex; flex-wrap:wrap; gap:6px; }
-  .assignment-filter-chip { padding:5px 12px; border:1px solid #d8dee8; border-radius:999px; color:#687386; background:#fff; font-size:12px; font-weight:700; line-height:1.35; text-decoration:none; transition:transform .15s ease, box-shadow .15s ease, background .15s ease; }
-  .assignment-filter-chip:hover { color:#315dba; background:#f7f9ff; transform:translateY(-1px); box-shadow:0 3px 8px rgb(49 93 186 / 12%); }
-  .assignment-filter-chip.is-deadline-active { border-color:#b9d2ff; color:#2159b5; background:#eaf2ff; }
-  .assignment-filter-chip.is-submission-active { border-color:#bde8d4; color:#16734a; background:#e9f8f0; }
-  .assignment-filter-chip.is-date-active { border-color:#d7c5f6; color:#6941a5; background:#f3edff; }
-  .assignment-date-heading { margin:16px 2px 8px; color:#4d5b70; font-size:13px; font-weight:800; }
-  .assignment-date-heading:first-child { margin-top:2px; }
-  .assignment-row .badge-personal { color:#80623a; background:#f7eddc; }
-  .assignment-pagination .btn { border-color:transparent; box-shadow:none; }
-  .assignment-pagination .btn-outline-secondary { color:#687386; background:transparent; }
-  .assignment-pagination .btn-outline-secondary:hover { color:#315dba; background:#f4f7fc; }
-  .assignment-pagination .btn-primary { color:#2867c7; background:#eaf2ff; }
-  .assignment-pagination .btn-primary:hover { color:#1f57ad; background:#dceaff; }
-  .assignment-pagination .assignment-page-move { background:transparent; }
-  .assignment-pagination .assignment-page-move:hover { background:transparent; }
-  .assignment-row.is-open { background:var(--color-surface); }
-  .assignment-row.is-past { background:#f1f3f6; }
-  .assignment-row[data-href] { cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
-  .assignment-row[data-href]:hover { border-color:#adc8f5; box-shadow:0 4px 12px rgb(45 92 170 / 10%); transform:translateY(-1px); }
-  .assignment-row[data-href]:focus-visible { outline:3px solid rgb(40 112 230 / 25%); outline-offset:2px; }
-  .deadline-state { display:inline-flex; align-items:center; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; white-space:nowrap; }
-  .deadline-open { color:#1858b8; background:#dceaff; }
-  .deadline-closed { color:#b42318; background:#fee4e2; }
-  .status-warning { color:#9a6700; background:#fff1cc; }
-  .assignment-locked-note { margin:6px 0 0; color:#9a6700; font-size:11px; font-weight:700; line-height:1.4; }
-  @media (max-width: 575px) {
-    .assignment-date-view { width:100%; margin-left:0; justify-content:flex-start; }
-    .assignment-filters { width:100%; margin-left:0; }
-    .assignment-filter-group { width:100%; justify-content:space-between; }
-  }
-  /* Header matching dashboard */
-  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-  .page-head-text { display: flex; flex-direction: column; gap: 6px; }
-  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  h1.page-title { font-size: 21px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
-  .page-sub { font-size: 13px; color: var(--color-text-muted); }
-</style>
-{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'student/css/assignments.css' %}">{% endblock %}
+
 {% block page_header %}
-<div class="page-head">
-  <div class="page-head-text">
-    <div class="title-row">
-      <h1 class="page-title">과제 목록</h1>
-    </div>
-    <div class="page-sub">진행 중인 과제와 마감된 과제를 한눈에 확인하세요.</div>
-  </div>
-</div>
+<header class="assignment-page-head">
+  <h1>과제 목록</h1>
+  <p>지금 해야 할 과제를 먼저 확인해보세요.</p>
+</header>
 {% endblock %}
+
 {% block content %}
-<section class="student-card" aria-labelledby="assignment-list-heading">
-  <div class="assignment-toolbar">
-    <div class="assignment-date-view" aria-label="생성일 보기 기준">
-      <span class="assignment-filter-label">생성일 기준</span>
-      <div class="assignment-filter-options" role="group" aria-label="생성일 묶음 선택">
-        <a class="assignment-filter-chip{% if date_group == 'all' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=all&amp;created_date={{ created_date }}">전체</a>
-        <a class="assignment-filter-chip{% if date_group == 'month' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=month&amp;created_date={{ created_date }}">월별</a>
-        <a class="assignment-filter-chip{% if date_group == 'day' %} is-date-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group=day&amp;created_date={{ created_date }}">일별</a>
+<section class="assignment-board" aria-labelledby="assignment-list-heading">
+  <h2 id="assignment-list-heading" class="visually-hidden">학생 과제 목록</h2>
+  <nav class="assignment-tabs" aria-label="과제 상태">
+    <a class="assignment-tab{% if status_filter == 'todo' %} is-active{% endif %}" href="?status=todo&amp;type={{ type_filter }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}"{% if status_filter == 'todo' %} aria-current="page"{% endif %}>해야 할 과제 <span>{{ status_counts.todo }}</span></a>
+    <a class="assignment-tab{% if status_filter == 'submitted' %} is-active{% endif %}" href="?status=submitted&amp;type={{ type_filter }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}"{% if status_filter == 'submitted' %} aria-current="page"{% endif %}>제출한 과제 <span>{{ status_counts.submitted }}</span></a>
+    <a class="assignment-tab{% if status_filter == 'feedback' %} is-active{% endif %}" href="?status=feedback&amp;type={{ type_filter }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}"{% if status_filter == 'feedback' %} aria-current="page"{% endif %}>피드백 된 과제 <span>{{ status_counts.feedback }}</span></a>
+  </nav>
+
+  <div class="assignment-panel">
+    <div class="assignment-toolbar">
+      <div class="assignment-type-filters" aria-label="과제 유형">
+        <a class="assignment-type-chip{% if type_filter == 'all' %} is-active{% endif %}" href="?status={{ status_filter }}&amp;type=all&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}">전체</a>
+        <a class="assignment-type-chip{% if type_filter == 'personal' %} is-active{% endif %}" href="?status={{ status_filter }}&amp;type=personal&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}">개인 과제</a>
+        <a class="assignment-type-chip{% if type_filter == 'team' %} is-active{% endif %}" href="?status={{ status_filter }}&amp;type=team&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}">팀 과제</a>
       </div>
-      <form class="assignment-calendar-filter" method="get">
-        <input type="hidden" name="submission" value="{{ submission_filter }}">
-        <input type="hidden" name="deadline" value="{{ deadline_filter }}">
-        <input type="hidden" name="date_group" value="{{ date_group }}">
-        <label class="visually-hidden" for="assignment-created-date">과제 생성 날짜 선택</label>
-        <input class="assignment-calendar-input" id="assignment-created-date" type="date" name="created_date" value="{{ created_date }}" aria-label="과제 생성 날짜 선택" onchange="this.form.submit()">
-        {% if created_date %}<a class="assignment-calendar-clear" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}">초기화</a>{% endif %}
+      <form class="assignment-controls" method="get" role="search">
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        <input type="hidden" name="type" value="{{ type_filter }}">
+        <label class="assignment-search">
+          <span class="visually-hidden">과제명 검색</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+          <input type="search" name="q" value="{{ search_query }}" placeholder="과제명 검색">
+        </label>
+        <label class="assignment-sort">
+          <span class="visually-hidden">과제 정렬</span>
+          <select name="sort" onchange="this.form.submit()">
+            <option value="deadline"{% if sort == 'deadline' %} selected{% endif %}>마감 임박순</option>
+            <option value="latest"{% if sort == 'latest' %} selected{% endif %}>최신 등록순</option>
+          </select>
+        </label>
+        <button class="visually-hidden" type="submit">검색</button>
       </form>
     </div>
-    <div class="assignment-list-summary">
-      <span aria-hidden="true">📋</span>
-      <h2 id="assignment-list-heading" class="student-section-title mb-0">전체 과제</h2>
-      <span class="assignment-count text-muted">{{ filtered_count }}개 / 전체 {{ total_count }}개</span>
-    </div>
-    <div class="assignment-filters" aria-label="과제 목록 필터">
-      <div class="assignment-filter-group deadline-filter">
-        <span class="assignment-filter-label">마감 상태</span>
-        <div class="assignment-filter-options" role="group" aria-label="마감 상태 선택">
-          <a class="assignment-filter-chip{% if deadline_filter == 'all' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=all&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">전체</a>
-          <a class="assignment-filter-chip{% if deadline_filter == 'open' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=open&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">진행 중</a>
-          <a class="assignment-filter-chip{% if deadline_filter == 'closed' %} is-deadline-active{% endif %}" href="?submission={{ submission_filter }}&amp;deadline=closed&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">마감</a>
-        </div>
-      </div>
-      <div class="assignment-filter-group submission-filter">
-        <span class="assignment-filter-label">제출 상태</span>
-        <div class="assignment-filter-options" role="group" aria-label="제출 상태 선택">
-          <a class="assignment-filter-chip{% if submission_filter == 'all' %} is-submission-active{% endif %}" href="?submission=all&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">전체</a>
-          <a class="assignment-filter-chip{% if submission_filter == 'unsubmitted' %} is-submission-active{% endif %}" href="?submission=unsubmitted&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">미제출</a>
-          <a class="assignment-filter-chip{% if submission_filter == 'submitted' %} is-submission-active{% endif %}" href="?submission=submitted&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}">제출완료</a>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="assignment-list">
-    {% for group in row_groups %}
-      {% if group.label %}<h3 class="assignment-date-heading">{{ group.label }}</h3>{% endif %}
-      {% for row in group.rows %}
-      <article class="assignment-row{% if row.is_past %} is-past{% else %} is-open{% endif %}"{% if row.submission %} data-href="{% url 'student:assignment-preview' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 제출 보기"{% elif row.can_submit %} data-href="{% url 'student:assignment-submit' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} {% if row.is_late_available %}지각 제출{% else %}제출하기{% endif %}"{% endif %}>
-        <div class="flex-grow-1 min-width-0">
+
+    <div class="assignment-list">
+      {% for row in rows %}
+      <article class="assignment-row{% if row.is_due_today %} is-urgent{% endif %}"{% if row.submission %} data-href="{% url 'student:assignment-preview' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 내 제출 보기"{% elif row.can_submit %} data-href="{% url 'student:assignment-submit' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 제출하기"{% endif %}>
+        <div class="assignment-row-copy">
           <h3 class="assignment-title">{{ row.assignment.title }}</h3>
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge-soft {% if row.assignment.is_required %}badge-required{% else %}badge-optional{% endif %}">{% if row.assignment.is_required %}필수{% else %}선택{% endif %}</span>
-            <span class="badge-soft {% if row.assignment.is_team %}badge-team{% else %}badge-personal{% endif %}">{% if row.assignment.is_team %}팀 과제{% else %}개인 과제{% endif %}</span>
-            <span class="deadline-state {% if row.is_past %}deadline-closed{% else %}deadline-open{% endif %}">{% if row.is_past %}마감{% else %}진행 중{% endif %}</span>
-            <span class="assignment-due">{{ row.assignment.due_at|date:"Y.m.d (D) H:i" }}</span>
-          </div>
-          {% if row.score_locked %}<p class="assignment-locked-note">회차 점수가 마감되어, 지금 제출해도 점수에 반영되지 않습니다</p>{% endif %}
+          <p class="assignment-meta">{% if row.assignment.is_team %}팀 과제{% else %}개인 과제{% endif %} <span>·</span> {% if row.assignment.is_required %}필수{% else %}선택{% endif %}</p>
+          <p class="assignment-date{% if row.is_due_today %} is-urgent{% endif %}">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+            {% if row.submission %}{{ row.submission.submitted_at|date:"n월 j일 제출" }}{% elif row.is_due_today %}오늘 {{ row.assignment.due_at|date:"A g시" }}까지{% else %}{{ row.assignment.due_at|date:"n월 j일 A g시" }}까지{% endif %}
+          </p>
+          {% if row.score_locked %}<p class="assignment-locked-note">회차 점수가 마감되어 지금 제출해도 점수에 반영되지 않습니다.</p>{% endif %}
+          {% if row.assignment.is_team and not row.can_submit and not row.submission %}<p class="assignment-locked-note">소속된 팀이 없어 제출할 수 없습니다.</p>{% endif %}
         </div>
-        <span class="status-pill status-{{ row.status_class }}">{{ row.status }}</span>
-        {% if row.submission %}
-          <a class="btn btn-outline-primary btn-sm" href="{% url 'student:assignment-preview' row.assignment.id %}">제출 보기</a>
-        {% elif row.can_submit %}
-          <a class="btn btn-primary btn-sm" href="{% url 'student:assignment-submit' row.assignment.id %}">{% if row.is_late_available %}지각 제출{% else %}제출하기{% endif %}</a>
-        {% endif %}
+        <div class="assignment-row-actions">
+          {% if row.tab_status == 'feedback' %}<span class="assignment-state is-feedback">피드백 완료</span>
+          {% elif row.submission %}<span class="assignment-state is-submitted">제출 완료</span>
+          {% elif row.is_due_today %}<span class="assignment-state is-urgent">오늘 마감</span>
+          {% elif row.days_left >= 0 %}<span class="assignment-state is-dday">D-{{ row.days_left }}</span>{% endif %}
+          {% if row.submission %}<a class="assignment-action is-outline" href="{% url 'student:assignment-preview' row.assignment.id %}">내 제출 보기</a>
+          {% elif row.can_submit %}<a class="assignment-action" href="{% url 'student:assignment-submit' row.assignment.id %}">제출하기</a>{% endif %}
+        </div>
       </article>
-      {% endfor %}
-    {% empty %}<div class="empty-state">선택한 조건에 맞는 과제가 없습니다.</div>{% endfor %}
-  </div>
-  {% if page_obj.paginator.num_pages > 1 %}
-    <nav class="assignment-pagination d-flex align-items-center justify-content-center gap-2 mt-4" aria-label="과제 목록 페이지">
-      {% if page_obj.has_previous %}
-        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_obj.previous_page_number }}">‹ 이전</a>
-      {% endif %}
-      {% for page_number in page_obj.paginator.page_range %}
-        <a class="btn btn-sm {% if page_number == page_obj.number %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_number }}"{% if page_number == page_obj.number %} aria-current="page"{% endif %}>{{ page_number }}</a>
-      {% endfor %}
-      {% if page_obj.has_next %}
-        <a class="assignment-page-move btn btn-outline-secondary btn-sm" href="?submission={{ submission_filter }}&amp;deadline={{ deadline_filter }}&amp;date_group={{ date_group }}&amp;created_date={{ created_date }}&amp;page={{ page_obj.next_page_number }}">다음 ›</a>
-      {% endif %}
+      {% empty %}<div class="assignment-empty">{% if search_query %}“{{ search_query }}”에 해당하는 과제가 없습니다.{% else %}이 상태에 해당하는 과제가 없습니다.{% endif %}</div>{% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="assignment-pagination" aria-label="과제 목록 페이지">
+      {% if page_obj.has_previous %}<a href="?status={{ status_filter }}&amp;type={{ type_filter }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}&amp;page={{ page_obj.previous_page_number }}">이전</a>{% endif %}
+      {% for page_number in page_obj.paginator.page_range %}<a class="{% if page_number == page_obj.number %}is-active{% endif %}" href="?status={{ status_filter }}&amp;type={{ type_filter }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}&amp;page={{ page_number }}"{% if page_number == page_obj.number %} aria-current="page"{% endif %}>{{ page_number }}</a>{% endfor %}
+      {% if page_obj.has_next %}<a href="?status={{ status_filter }}&amp;type={{ type_filter }}&amp;q={{ search_query|urlencode }}&amp;sort={{ sort }}&amp;page={{ page_obj.next_page_number }}">다음</a>{% endif %}
     </nav>
-  {% endif %}
+    {% endif %}
+
+    {% if status_filter == 'todo' and late_rows %}
+    <details class="late-assignment-section">
+      <summary><span>지각제출 허용 <strong>{{ late_rows|length }}</strong></span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></summary>
+      <div class="assignment-list late-assignment-list">
+        {% for row in late_rows %}
+        <article class="assignment-row is-late"{% if row.can_submit %} data-href="{% url 'student:assignment-submit' row.assignment.id %}" role="link" tabindex="0" aria-label="{{ row.assignment.title }} 지각 제출"{% endif %}>
+          <div class="assignment-row-copy">
+            <h3 class="assignment-title">{{ row.assignment.title }}</h3>
+            <p class="assignment-meta">{% if row.assignment.is_team %}팀 과제{% else %}개인 과제{% endif %} <span>·</span> {% if row.assignment.is_required %}필수{% else %}선택{% endif %}</p>
+            <p class="assignment-date"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{ row.assignment.due_at|date:"n월 j일 A g시 마감" }}</p>
+            {% if row.score_locked %}<p class="assignment-locked-note">회차 점수가 마감되어 지금 제출해도 점수에 반영되지 않습니다.</p>{% endif %}
+          </div>
+          <div class="assignment-row-actions"><span class="assignment-state is-late">지각 제출 가능</span>{% if row.can_submit %}<a class="assignment-action" href="{% url 'student:assignment-submit' row.assignment.id %}">지각 제출</a>{% endif %}</div>
+        </article>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}
 
@@ -156,14 +105,10 @@
 (() => {
   document.querySelectorAll(".assignment-row[data-href]").forEach((row) => {
     const navigate = () => { window.location.href = row.dataset.href; };
-    row.addEventListener("click", (event) => {
-      if (event.target.closest("a, button")) return;
-      navigate();
-    });
+    row.addEventListener("click", (event) => { if (!event.target.closest("a, button")) navigate(); });
     row.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      navigate();
+      event.preventDefault(); navigate();
     });
   });
 })();
