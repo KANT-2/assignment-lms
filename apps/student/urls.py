@@ -10,6 +10,7 @@ urlpatterns = [
     path("dashboard/", views_dashboard.dashboard, name="dashboard"),
     path("todos/add/", views_dashboard.todo_add, name="todo-add"),
     path("todos/<int:pk>/toggle/", views_dashboard.todo_toggle, name="todo-toggle"),
+    path("todos/<int:pk>/edit/", views_dashboard.todo_edit, name="todo-edit"),
     path("todos/<int:pk>/delete/", views_dashboard.todo_delete, name="todo-delete"),
     path("lecture/", views_lecture.student_lecture_list_view, name="lecture-list"),
     path("lecture/<int:lesson_id>/", views_lecture.student_lecture_detail_view, name="lecture-detail"),

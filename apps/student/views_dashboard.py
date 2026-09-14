@@ -336,6 +336,17 @@ def todo_toggle(request, pk):
 
 @student_required
 @require_POST
+def todo_edit(request, pk):
+    todo = get_object_or_404(Todo, pk=pk, student_id=request.user.id)
+    content = (request.POST.get("content") or "").strip()
+    if content:
+        todo.content = content[:500]
+        todo.save(update_fields=["content"])
+    return _redirect_to_day(todo.due_date.isoformat())
+
+
+@student_required
+@require_POST
 def todo_delete(request, pk):
     todo = Todo.objects.filter(pk=pk, student_id=request.user.id).first()
     day = todo.due_date.isoformat() if todo else None
