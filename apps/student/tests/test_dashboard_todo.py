@@ -89,6 +89,28 @@ class DashboardTodoTests(TestCase):
         t = Todo.objects.create(student_id=self.user.id + 999, content="남의것", due_date=self.today)
         self.assertEqual(self.client.post(reverse("student:todo-toggle", args=[t.pk])).status_code, 404)
 
+    # ---------- edit ----------
+    def test_edit_updates_content_and_redirects_back_to_todo_day(self):
+        d = self.today + timedelta(days=3)
+        t = Todo.objects.create(student_id=self.user.id, content="원래 내용", due_date=d)
+        resp = self.client.post(reverse("student:todo-edit", args=[t.pk]), {"content": "수정된 내용"})
+        self.assertIn(f"d={d.isoformat()}", resp["Location"])
+        t.refresh_from_db()
+        self.assertEqual(t.content, "수정된 내용")
+
+    def test_edit_with_blank_content_keeps_original(self):
+        t = Todo.objects.create(student_id=self.user.id, content="원래 내용", due_date=self.today)
+        self.client.post(reverse("student:todo-edit", args=[t.pk]), {"content": "   "})
+        t.refresh_from_db()
+        self.assertEqual(t.content, "원래 내용")
+
+    def test_cannot_edit_other_students_todo(self):
+        t = Todo.objects.create(student_id=self.user.id + 999, content="남의것", due_date=self.today)
+        resp = self.client.post(reverse("student:todo-edit", args=[t.pk]), {"content": "해킹"})
+        self.assertEqual(resp.status_code, 404)
+        t.refresh_from_db()
+        self.assertEqual(t.content, "남의것")
+
     # ---------- weekly submission status ----------
     def _assignment(self, title, due_date, **overrides):
         values = {

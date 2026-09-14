@@ -17,7 +17,12 @@
         {% csrf_token %}
         <button type="submit" class="chk {% if t.is_done %}done{% endif %}" aria-label="완료 토글">{% if t.is_done %}✓{% endif %}</button>
       </form>
-      <span class="txt">{{ t.content }}</span>
+      <span class="txt" data-todo-view>{{ t.content }}</span>
+      <form class="edit-form" method="post" action="{% url 'student:todo-edit' t.pk %}" data-todo-edit-form hidden>
+        {% csrf_token %}
+        <input type="text" name="content" maxlength="80" value="{{ t.content }}" data-todo-edit-input>
+      </form>
+      <button type="button" class="edit" data-todo-edit-btn aria-label="수정">✎</button>
       <form method="post" action="{% url 'student:todo-delete' t.pk %}">
         {% csrf_token %}
         <button type="submit" class="del" aria-label="삭제">×</button>

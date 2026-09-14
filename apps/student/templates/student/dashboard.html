@@ -91,8 +91,10 @@
   .dash .day-empty { padding:14px 0; text-align:center; color:var(--d-tfaint); font-size:12.5px; }
 
   /* 다가오는 마감 */
-  .dash .due-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--d-border); }
+  .dash .due-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--d-border);
+    text-decoration:none; color:inherit; border-radius:6px; }
   .dash .due-row:last-of-type { border-bottom:0; }
+  .dash .due-row:hover { background:var(--d-muted); }
   .dash .dday { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; flex-shrink:0; min-width:58px; text-align:center;
     background:var(--d-sunken); color:var(--d-tmuted); }
   .dash .dday.soon { background:var(--d-amber-soft); color:var(--d-amber); }
@@ -125,9 +127,17 @@
   .dash .todo-item .chk { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--d-bstrong); background:none;
     flex-shrink:0; cursor:pointer; color:#fff; font-size:10px; display:flex; align-items:center; justify-content:center; }
   .dash .todo-item .chk.done { background:var(--d-green); border-color:var(--d-green); }
-  .dash .todo-item .txt { flex:1; font-size:13px; word-break:break-all; }
+  .dash .todo-item .txt { flex:1; font-size:13px; word-break:break-all; cursor:text; }
   .dash .todo-item.done .txt { color:var(--d-tfaint); text-decoration:line-through; }
-  .dash .todo-item .del { border:none; background:none; color:var(--d-tfaint); cursor:pointer; font-size:15px; padding:2px 4px; }
+  .dash .todo-item .edit-form { flex:1; display:flex; }
+  .dash .todo-item .edit-form input { width:100%; border:1px solid var(--d-accent); background:var(--d-surface);
+    border-radius:6px; padding:4px 7px; font-size:13px; color:var(--d-text); font-family:inherit; }
+  .dash .todo-item .edit-form input:focus { outline:none; }
+  .dash .todo-item .edit, .dash .todo-item .del { border:none; background:none; color:var(--d-tfaint); cursor:pointer;
+    font-size:13px; padding:2px 4px; flex-shrink:0; }
+  .dash .todo-item .del { font-size:15px; }
+  .dash .todo-item .edit { opacity:0; }
+  .dash .todo-item:hover .edit { opacity:1; }
   .dash .todo-empty { color:var(--d-tfaint); font-size:12.5px; text-align:center; padding:18px 0; }
   .dash .todo-foot { margin-top:10px; font-size:11.5px; color:var(--d-tfaint); text-align:right; }
 
@@ -283,7 +293,7 @@
             <span class="grd">평가완료 <b>{{ assign_stats.graded }}</b></span>
           </div>
           {% for u in upcoming %}
-            <div class="due-row">
+            <a class="due-row" href="{% if u.is_team %}{% url 'student:assignment-list' %}{% else %}{% url 'student:assignment-submit' u.id %}{% endif %}">
               <span class="dday {% if u.dday <= 3 %}soon{% endif %}">
                 {% if u.dday == 0 %}오늘{% else %}D-{{ u.dday }}{% endif %}
               </span>
@@ -291,7 +301,8 @@
                 {{ u.title }}
                 <small>· {{ u.due|date:"n/j" }}{% if u.is_team %} · 팀{% endif %}{% if not u.allow_late %} · 지각 불가{% endif %}</small>
               </span>
-            </div>
+              <span style="color:var(--d-tfaint);">›</span>
+            </a>
           {% empty %}
             <div class="day-empty">다가오는 마감이 없습니다. 👍</div>
           {% endfor %}
@@ -327,6 +338,46 @@
   function render() { body.textContent = data[i]; idx.textContent = (i + 1) + " / " + data.length; }
   document.getElementById("noticePrev").addEventListener("click", function () { i = (i - 1 + data.length) % data.length; render(); });
   document.getElementById("noticeNext").addEventListener("click", function () { i = (i + 1) % data.length; render(); });
+})();
+
+(function () {
+  var list = document.querySelector(".todo-list");
+  if (!list) return;
+
+  function startEdit(item) {
+    var view = item.querySelector("[data-todo-view]");
+    var form = item.querySelector("[data-todo-edit-form]");
+    var input = item.querySelector("[data-todo-edit-input]");
+    view.hidden = true;
+    form.hidden = false;
+    input.focus();
+    input.select();
+  }
+
+  function cancelEdit(item) {
+    item.querySelector("[data-todo-view]").hidden = false;
+    item.querySelector("[data-todo-edit-form]").hidden = true;
+  }
+
+  list.addEventListener("click", function (e) {
+    if (e.target.matches("[data-todo-edit-btn], [data-todo-view]")) {
+      startEdit(e.target.closest(".todo-item"));
+    }
+  });
+
+  list.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && e.target.matches("[data-todo-edit-input]")) {
+      cancelEdit(e.target.closest(".todo-item"));
+    }
+  });
+
+  list.addEventListener("focusout", function (e) {
+    if (!e.target.matches("[data-todo-edit-input]")) return;
+    var item = e.target.closest(".todo-item");
+    setTimeout(function () {
+      if (!item.contains(document.activeElement)) cancelEdit(item);
+    }, 0);
+  });
 })();
 </script>
 {% endblock %}
