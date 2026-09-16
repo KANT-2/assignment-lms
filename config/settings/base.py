@@ -81,6 +81,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.common.context_processors.nav",
+                "apps.common.context_processors.analytics",
             ],
         },
     },
@@ -156,6 +157,10 @@ GITHUB_SYNC_SYNC = env_bool("GITHUB_SYNC_SYNC", False)
 # 기본은 백그라운드 스레드로 발송 (요청 사이클을 막지 않음).
 # True 면 그 자리에서 동기 실행 — 테스트/관리 명령에서 결과를 확정적으로 보고 싶을 때.
 SLACK_NOTIFY_SYNC = env_bool("SLACK_NOTIFY_SYNC", False)
+
+# --- Google Analytics (GA4) ---
+# 값이 있으면 base.html 이 gtag.js 스니펫을 심는다. 비우면 아무것도 안 함(no-op).
+GA_MEASUREMENT_ID = env("GA_MEASUREMENT_ID", "")
 
 # --- 인증 ---
 # 실제 로그인: ax_evaluation.accounts_user 이메일+비번 (AxPasswordBackend).

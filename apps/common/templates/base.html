@@ -6,6 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}AX 과제 시스템{% endblock %}</title>
 
+  {% if ga_measurement_id %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag("js", new Date());
+      gtag("config", "{{ ga_measurement_id }}");
+    </script>
+  {% endif %}
+
   {% comment %} Bootstrap 5.3 — DESIGN.md 는 로컬 벤더링을 권장. 현재는 임시 CDN.
   static/common/vendor/bootstrap/ 에 dist 파일 넣으면 아래 두 CDN 링크를 static 태그로 교체. {% endcomment %}
   <link rel="stylesheet"
